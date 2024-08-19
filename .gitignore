@@ -1,0 +1,65 @@
+# Dependencias
+/node_modules
+
+
+# Archivos generados por el entorno de desarrollo
+/.pnp
+.pnp.js
+
+# Archivos de registro
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos de compilación
+/dist
+/build
+/out
+/postgres
+
+uploads/images/*
+uploads/videos/*
+!uploads/images/.gitkeep
+!uploads/videos/.gitkeep
+
+
+# Archivos de configuración local
+.env.local
+.env.development
+.env.test.local
+.env.production
+
+# Archivos de caché y respaldo
+/.eslintcache
+/.next
+/out
+/.cache
+/.yarn
+/.yarnrc
+.yarn-integrity
+
+# Otros archivos y carpetas generados
+/.idea
+/.vscode
+/.DS_Store
+/*.iml
+/.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Dependencias específicas del sistema operativo
+/.idea
+/.vscode
+/.DS_Store
+/*.iml
+/.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Dependencias específicas del sistema operativo
+.DS_Store
+Thumbs.db

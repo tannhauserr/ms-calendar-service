@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "redbluecode-416110",
+  "private_key_id": "5795c08ce805377192b49ead4c03e7e38cfe224b",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCMo9h9Knbnu9zd\nu+vDF8gMIsgMB85rRe87fRQ9HqREONCuA/3OPShuedUaJQIM0+/NtNmTw5n47o3T\n/PsRDjnwZELx2gcoIO5wGhidD4tIfKi8L4KR+tCGzl+FSdFf7xiwd3hBn8tflyck\nlm0HCHEzZZPwZ1T4zfSSfm77QCPznRBX3w8YVoSV/c4N6dGxNcjR6VPGoaQFMdah\np8Yd2Bud3yslNDk81c8mr4pC1a5VJMiq/dLgPiYlxWt9U1nsebWX6XCCeblRDFja\nxrGJXBw8ufoc4V5TmYpNoM+qNiWUT5fYF1m0m3mmzkxhBQusTDtg/u7oAJ2a9/uH\nwnDlYT31AgMBAAECggEAFm991evMB6g3sfSsRdVZn5v90zN8ma7QnOoVbDGi7VIt\n8hCncLrfZA5R8UeFlfPKTcPDsNeTjLtLi02QZLZjBkcMSeYo3Z0xRFdZZVbJNqFS\nTqD6oJyFHvg1kz8FJFtxUhdg6wEZkbB8eVD46BYP7u3NpZxqWP2L/kGmpTSkd5Ry\nb29RhKQyzh+//o3yuBxFPcPc/cw8VysU7P6F7Ub9z+Plx26FWjq5Q/q6yQv9Cocc\nXu6XxkVMi6Iigv4o6VdmGec8uK3xe4us6WrDjNOfqnfSKZ61LGHxa6vuxMk62CB9\n22W+Bw6oOVzzCEFofevIUXB6TD25e1mqe6m5TE9fAQKBgQDAJGxVOXWC+4IHcEpQ\nnMxXjRvgLelexxckSbZ8nbxi6jTuF8wN7WeJwM+spq843Z0itP+KYEv0ISPLUT97\nBXIWRZnEWdLlQqHyhl2qKv8NRSqAIN9srx2loV0e6yEsHSk4mFwFA9Whnu1H7dDz\nf+OW7l19iwK2VtdtvZR9pjq49QKBgQC7YZSg9OShrpkIxt83qvedVNBrnbvlr7xV\n8SMmTlXcyRkHj0nAASCTW6CDPfGtFNh8m7scmuEgbq2I6CqSb/HGlAS9pno/KqN3\nbNZcmQKvaAPSH/s9W84kXAN54Q0DX6vfa4X9JnAlhIqgItpCfYN0kK44DaxmmzD7\ndOZ4D31RAQKBgG/bhHnk9oVneB5uf8UIU2nQy16qO8ciblWA2E0Z4xdOs7u8fN3K\nzNEEP6KKc03OrnELIA1l3DHmrRjrVuJ+nBldMZR+mmk/blprYNH1MACAuKpY+Nkj\n5UWMeFLMncY5v8qj4EZHIjJx/D84ssFfPZabdC/nIpAWZFoN2QmBIYSVAoGBAJCH\nKnGfkj1XAziu0/sHBqg2g++NoSD/FEAhlx/zqex6u7CGB7dt5ydhtAOmoqMCghxS\nrdbZay1t0LHZiQScDZtCDgoNvxq7k4wIyapwZo7OpqvK+SkRh4Wp5xB50mS4xUO1\nlop0vGljutzbJQfF8b/V3FrlyQT3TKeXOjB+mgUBAoGBAIPD+lasVkYOXbzPQ93Z\nFqhLKjBu1dO5xqgkuu2dV5bMDZyARatbKXz1tfSORMJ0XlqSV/736kwccv8hgNMY\nNqtOuA9DlQVO10yer2VCW72bkLCwkv3g/i0UFCrVWdfQdVuJm8WCWLmOodU3e1/q\nbtM76IvR8ax16OUUCcI9YiXv\n-----END PRIVATE KEY-----\n",
+  "client_email": "rbc-run@redbluecode-416110.iam.gserviceaccount.com",
+  "client_id": "101839334155998173300",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/rbc-run%40redbluecode-416110.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

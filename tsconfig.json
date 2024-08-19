@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "strictNullChecks": false,
+    "target": "es5",
+    "module": "commonjs",
+    "lib": [
+      "es6"
+    ],
+    "allowJs": true,
+    "outDir": "build",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "strictPropertyInitialization": false,
+    "noImplicitAny": false,
+    "downlevelIteration": true,
+  },
+  "include": [ 
+    "src/**/*"
+  ],
+  "exclude": [
+    "webpack.config.js",
+    "build",
+    "node_modules"
+  ]
+}
