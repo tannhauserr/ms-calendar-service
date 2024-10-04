@@ -2,26 +2,41 @@ import { Router } from 'express';
 
 const router = Router();
 
+// Webhook routes
+router.use("/api", require('./webhook/channel-calendar-google.routes'));
 
-// Notificaciones
-// router.use("/", require('./notification/notification.routes'));
+
 // Para acceder a archivos estáticos
 router.use("/", require('./cache-control/cache-control.routes'));
-// Configuration
-// router.use("/", require('./configuration.routes'));
-
-// Auth
-router.use("/", require('./auth/auth.routes'));
-// Google Oauth
-router.use("/api", require('./google-oauth/google-oauth.routes'));
-// user
-router.use("/api", require('./user/user.routes'));
-// role
-router.use("/api", require('./role/role.routes'));
-
-
 
 // upload file
 router.use("/api", require('./upload-file/upload-file.routes'));
+
+// Calendar routes
+router.use("/api", require('./calendar.routes'));
+
+// UserColor routes
+router.use("/api", require('./user-color.routes'));
+
+// Event routes
+router.use("/api", require('./event.routes'));
+
+// Service routes
+router.use("/api", require('./service.routes'));
+
+// UserService routes
+router.use("/api", require('./user-service.routes'));
+
+// UserCalendar routes
+router.use("/api", require('./user-calendar.routes'));
+
+// businessHour routes
+router.use("/api", require('./business-hour.routes'));
+
+// WorkerBusinessHour routes
+router.use("/api", require('./worker-business-hour.routes'));
+
+// TemporaryBusinessHour routes
+router.use("/api", require('./temporary-business-hour.routes'));
 
 export default router;

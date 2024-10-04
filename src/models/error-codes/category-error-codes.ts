@@ -1,8 +1,0 @@
-// Códigos de Error para Categorías
-export enum CategoryErrorCodes {
-    MISSING_SUBCATEGORY = 201,
-    MISSING_PARENT_CATEGORY = 202,
-    MISSING_TAG = 203,
-    SUBCATEGORY_HAS_SUBCATEGORIES = 204,
-    CATEGORY_WITHOUT_SUBCATEGORIES = 205,
-}

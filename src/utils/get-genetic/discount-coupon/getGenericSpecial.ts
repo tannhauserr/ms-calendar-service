@@ -104,8 +104,8 @@ async function getGenericSpecial(
         if (endDate) where.createdDate.lte = endDate;
     }
 
-    console.log("mira where", JSON.stringify(where, null, 2))
-    console.log("mira include", includeRelations)
+    // console.log("mira where", JSON.stringify(where, null, 2))
+    // console.log("mira include", includeRelations)
 
     where = { ...where, deletedDate: null };
 
