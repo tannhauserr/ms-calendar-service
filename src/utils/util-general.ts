@@ -1,6 +1,7 @@
 import moment from "moment";
 import { CONSOLE_COLOR } from "../constant/console-color";
 import bcryptjs from "bcryptjs";
+import { v4 as uuidv4 } from 'uuid';
 
 
 export class UtilGeneral {
@@ -52,6 +53,9 @@ export class UtilGeneral {
     }
 
 
+    static generateUUIDv4 = () => {
+        return uuidv4();
+    }
 
 }
 

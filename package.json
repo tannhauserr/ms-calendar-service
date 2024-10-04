@@ -1,5 +1,5 @@
 {
-  "name": "app",
+  "name": "ms-calendar-gl",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -11,7 +11,7 @@
     "prisma:migrate:dev": "dotenv -e .env.development -- npx prisma migrate dev",
     "prisma:migrate:deploy": "dotenv -e .env.production -- npx prisma migrate deploy",
     "prisma:migrate:reset": "dotenv -e .env.development -- npx prisma migrate reset",
-    "prisma:seed": "dotenv -e .env.development -- ts-node ./src/seed/seed.ts"
+    "prisma:seed": "dotenv -e .env.development -- ts-node ./prisma/seed/seed.ts"
   },
   "author": "",
   "license": "ISC",
@@ -32,7 +32,9 @@
     "@prisma/client": "^5.18.0",
     "@react-spring/web": "^9.7.3",
     "@types/jsonwebtoken": "^8.5.0",
+    "@types/node-schedule": "^2.1.7",
     "@types/uuid": "^8.3.0",
+    "amqplib": "^0.10.4",
     "axios": "^0.27.2",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",

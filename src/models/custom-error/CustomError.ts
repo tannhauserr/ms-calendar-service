@@ -3,6 +3,7 @@ import path from 'path';
 import { UtilGeneral } from '../../utils/util-general';
 
 
+type MessageStoredType = 'simple' | 'verbose' | 'none';
 
 class CustomError extends Error {
     serviceName: string;
@@ -11,7 +12,7 @@ class CustomError extends Error {
     errorFile: string;
     errorLine: number;
 
-    constructor(serviceName: string, originalError: Error) {
+    constructor(serviceName: string, originalError: Error, messageStoredType: MessageStoredType = 'verbose') {
         super(`Error in service ${serviceName}: ${originalError.message}`);
         this.name = 'CustomError';
         this.serviceName = serviceName;
@@ -24,8 +25,8 @@ class CustomError extends Error {
 
 
         // Log the error to a file
-        this.logErrorToFile();
-
+        if (messageStoredType === 'simple') this.logErrorToFileSimple();
+        else if (messageStoredType === "verbose") this.logErrorToFileVerbose();
 
         // Mantiene el stack trace del error original.
         if (Error.captureStackTrace) {
@@ -35,11 +36,11 @@ class CustomError extends Error {
 
 
 
-        public logErrorToFile = () => {
-            const logFilePath = path.join(__dirname, '../../../error_service.log');
-            const localISOTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString();
+    public logErrorToFileVerbose = () => {
+        const logFilePath = path.join(__dirname, '../../../error_service.log');
+        const localISOTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString();
 
-            const errorMessage = `
+        const errorMessage = `
     =====================================================
     Date: ${localISOTime}
     Service: ${this.serviceName}
@@ -48,51 +49,51 @@ class CustomError extends Error {
     =====================================================
     `;
 
-            fs.appendFile(logFilePath, errorMessage, (err) => {
-                if (err) {
-                    console.error('Failed to write error to log file:', err);
-                } else {
-                    console.log('Error logged to file:', logFilePath);
-                }
-            });
+        fs.appendFile(logFilePath, errorMessage, (err) => {
+            if (err) {
+                console.error('Failed to write error to log file:', err);
+            } else {
+                console.log('Error logged to file:', logFilePath);
+            }
+        });
+    }
+
+    private extractErrorLocation = (error: Error): { errorFile: string; errorLine: number } => {
+        const stackLines = error.stack?.split('\n') || [];
+
+        // Busca en cada línea del stack hasta encontrar una que contenga la ubicación del archivo
+        for (const line of stackLines) {
+            const match = line.match(/\((.*):(\d+):\d+\)/) || line.match(/at (.*):(\d+):\d+/);
+            if (match) {
+                return {
+                    errorFile: match[1],
+                    errorLine: parseInt(match[2], 10),
+                };
+            }
         }
 
-    // private extractErrorLocation = (error: Error): { errorFile: string; errorLine: number } => {
-    //     const stackLines = error.stack?.split('\n') || [];
+        return {
+            errorFile: undefined,
+            errorLine: undefined,
+        };
+    }
 
-    //     // Busca en cada línea del stack hasta encontrar una que contenga la ubicación del archivo
-    //     for (const line of stackLines) {
-    //         const match = line.match(/\((.*):(\d+):\d+\)/) || line.match(/at (.*):(\d+):\d+/);
-    //         if (match) {
-    //             return {
-    //                 errorFile: match[1],
-    //                 errorLine: parseInt(match[2], 10),
-    //             };
-    //         }
-    //     }
+    private logErrorToFileSimple = () => {
+        const logFilePath = path.join(__dirname, '../../../error_service_simple.log');
+        const currentTime = new Date();
+        const localTime = currentTime.toLocaleTimeString('es-Es', { hour12: false });
+        const formattedDate = currentTime.toISOString().split('T')[0]; // Solo la fecha en formato YYYY-MM-DD
 
-    //     return {
-    //         errorFile: undefined,
-    //         errorLine: undefined,
-    //     };
-    // }
+        const errorMessage = `[${formattedDate}][${localTime}][${this.serviceName}][${this.originalError.message}][File: ${this.errorFile}, Line: ${this.errorLine}]\n`;
 
-    // private logErrorToFile = () => {
-    //     const logFilePath = path.join(__dirname, '../../../error_service.log');
-    //     const currentTime = new Date();
-    //     const localTime = currentTime.toLocaleTimeString('es-Es', { hour12: false });
-    //     const formattedDate = currentTime.toISOString().split('T')[0]; // Solo la fecha en formato YYYY-MM-DD
-
-    //     const errorMessage = `[${formattedDate}][${localTime}][${this.serviceName}][${this.originalError.message}][File: ${this.errorFile}, Line: ${this.errorLine}]\n`;
-
-    //     fs.appendFile(logFilePath, errorMessage, (err) => {
-    //         if (err) {
-    //             console.error('Failed to write error to log file:', err);
-    //         } else {
-    //             console.log('Error logged to file:', logFilePath);
-    //         }
-    //     });
-    // };
+        fs.appendFile(logFilePath, errorMessage, (err) => {
+            if (err) {
+                console.error('Failed to write error to log file:', err);
+            } else {
+                console.log('Error logged to file:', logFilePath);
+            }
+        });
+    };
 
 }
 
