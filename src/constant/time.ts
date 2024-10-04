@@ -1,0 +1,20 @@
+export const TIME_SECONDS = {
+    SECOND: 1,
+    MINUTE: 60,
+    HOUR: 3600,
+    DAY: 86400,
+    WEEK: 604800,
+    MONTH: 2592000,
+    YEAR: 31536000,
+};
+
+
+export const TIME_MILLISECONDS = {
+    SECOND: 1000,
+    MINUTE: 60000,
+    HOUR: 3600000,
+    DAY: 86400000,
+    WEEK: 604800000,
+    MONTH: 2592000000,
+    YEAR: 31536000000,
+};

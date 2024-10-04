@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { Message } from '../../models/messages/failure';
 import { Response } from '../../models/messages/response';
 import { generatePrivateKey } from '../../utils/jwt/generatePrivateKey';
-import config from './config';
+// import config from './config';
 import { NodeCacheService } from '../@cache/node-cache.service';
 import moment from 'moment';
 import { CONSOLE_COLOR } from '../../constant/console-color';
@@ -31,8 +31,11 @@ export class JWTService {
 
     public async getPrivateKey() {
         if (!this._privateKey) {
-            await config.init();
-            this._privateKey = config.getPrivateKey();
+            // await config.init();
+            // this._privateKey = config.getPrivateKey();
+            // Caso especial de este backend. Se coge la clave privada de las variables de entorno
+            this._privateKey = process.env.JWT_PRIVATE_KEY;
+
         }
         return this._privateKey;
     }
@@ -92,6 +95,7 @@ export class JWTService {
   */
     public async verify(token): Promise<any> {
         if (!this._privateKey) {
+            // Esto que se ve comentado ya estaba comentado antes de coger la variable de entorno
             // await this.getPrivateKey()
             console.log(`${CONSOLE_COLOR.FgRed}Clave privada no disponible.${CONSOLE_COLOR.Reset}`);
             // throw new Error("Clave privada no disponible.");
