@@ -8,10 +8,14 @@ type IncludeRelations = {
 };
 
 type ModelType =
-  | 'role'
-  | 'user'
-  | 'googleAccount'
-  | 'permission'
+  | 'calendar'
+  | 'service'
+  | 'userService'
+  | 'event'
+  | 'userColor'
+  | 'businessHour'
+  | 'workerBusinessHour'
+  | 'temporaryBusinessHour'
 
   ;
 
@@ -84,8 +88,8 @@ async function getGeneric(
     if (endDate) where.createdDate.lte = endDate;
   }
 
-  console.log("mira where", JSON.stringify(where, null, 2))
-  console.log("mira include", includeRelations)
+  // console.log("mira where", JSON.stringify(where, null, 2))
+  // console.log("mira include", includeRelations)
 
   where = { ...where, deletedDate: null };
 
