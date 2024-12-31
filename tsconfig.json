@@ -1,10 +1,12 @@
 {
   "compilerOptions": {
     "strictNullChecks": false,
-    "target": "es5",
+    // "target": "es5",
+    "target": "ES2019",
     "module": "commonjs",
     "lib": [
-      "es6"
+      "ES2019"
+      // "es6"
     ],
     "allowJs": true,
     "outDir": "build",
@@ -18,7 +20,7 @@
     "noImplicitAny": false,
     "downlevelIteration": true,
   },
-  "include": [ 
+  "include": [
     "src/**/*"
   ],
   "exclude": [

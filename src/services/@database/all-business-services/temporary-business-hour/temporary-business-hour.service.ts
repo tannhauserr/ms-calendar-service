@@ -4,6 +4,8 @@ import CustomError from "../../../../models/custom-error/CustomError";
 import { Pagination } from "../../../../models/pagination";
 import { getGeneric } from "../../../../utils/get-genetic/getGenetic";
 import moment from "moment";
+import { TemporaryHoursMapType } from "../../../../models/interfaces/temporary-business-hours-type";
+import { TemporaryHoursStrategy } from "../../../@redis/cache/strategies/temporaryHours/temporaryHours.strategy";
 
 export class TemporaryBusinessHourService {
     constructor() { }
@@ -312,4 +314,69 @@ export class TemporaryBusinessHourService {
         }
     }
 
+
+    /**
+     * Devuelve los horarios temporales de los trabajadores en un rango de fechas.
+     * Intenta obtener los horarios temporales desde Redis, si no los encuentra, los obtiene de la base de datos.
+     * @param userIds 
+     * @param idCompany 
+     * @returns 
+     */
+    getTemporaryHoursFromRedis = async (userIds: string[], idCompany: string): Promise<TemporaryHoursMapType> => {
+        const temporaryHoursMap: TemporaryHoursMapType = {};
+        const temporaryHoursStrategy = new TemporaryHoursStrategy();
+
+        for (const userId of userIds) {
+            // Intentar obtener los horarios temporales desde Redis
+            let temporaryHours = await temporaryHoursStrategy.getTemporaryHours(idCompany, userId);
+
+            if (temporaryHours) {
+                console.log(`Horarios temporales del usuario ${userId} obtenidos de Redis ${JSON.stringify(temporaryHours)}`);
+                temporaryHoursMap[userId] = temporaryHours;
+                continue;
+            }
+
+            // Obtenemos los registros de horarios temporales de la base de datos
+            const temporaryHoursRecords = await prisma.temporaryBusinessHour.findMany({
+                where: {
+                    idCompanyFk: idCompany,
+                    idUserFk: userId,
+                    deletedDate: null,
+                },
+            });
+
+            // Inicializamos el mapa de horarios temporales para el usuario
+            const userTemporaryHours: { [date: string]: string[][] | null } = {};
+
+            for (const record of temporaryHoursRecords) {
+                const dateStr = moment(record.date).format('YYYY-MM-DD'); // Fecha en formato 'YYYY-MM-DD'
+
+                if (record.closed) {
+                    // Registrar que el trabajador está cerrado en esta fecha
+                    userTemporaryHours[dateStr] = null;
+                    continue; // Pasar al siguiente registro
+                }
+
+                // Si startTime o endTime son nulos, omitimos este registro
+                if (!record.startTime || !record.endTime) continue;
+
+                // Convertir los tiempos a cadenas en formato 'HH:mm'
+                const startTime = moment(record.startTime).format('HH:mm');
+                const endTime = moment(record.endTime).format('HH:mm');
+
+                // Asegurar que existe una entrada para la fecha
+                if (!userTemporaryHours[dateStr]) {
+                    userTemporaryHours[dateStr] = [];
+                }
+
+                // Añadir el rango de tiempo a la fecha correspondiente
+                (userTemporaryHours[dateStr] as string[][]).push([startTime, endTime]);
+            }
+
+            // Guardamos los horarios temporales del usuario en el mapa principal
+            temporaryHoursMap[userId] = userTemporaryHours;
+        }
+
+        return temporaryHoursMap;
+    }
 }

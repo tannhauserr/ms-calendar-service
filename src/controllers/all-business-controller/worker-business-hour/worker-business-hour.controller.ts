@@ -108,31 +108,46 @@ export class WorkerBusinessHourController {
         }
     }
 
-
-    public autocomplete = async (req: any, res: any, next: any) => {
+    getWorkerHoursFromRedis = async (req: any, res: any, next: any) => {
         try {
-            const { idUser } = req.body;
+            const { idUserList, idCompany } = req.body;
+
             const token = req.token;
             await this.jwtService.verify(token);
 
-            let result = undefined;
-            let pagination: Pagination = {
-                page: 1,
-                itemsPerPage: 10000,
-            }
-            if (idUser) {
-                pagination.filters = {
-                    idUserFk: idUser
-                }
-                result = await this.workBusinessHourService.getWorkerBusinessHours();
-            } else {
-                result = await this.workBusinessHourService.getWorkerBusinessHours();
-            }
-
-            // const result = await this.workBusinessHourWorkBusinessHour.autocompleteWorkerWorkBusinessHours(search, pagination);
-            res.status(200).json({ message: "Registros encontrados", ok: true, item: result && result?.rows ? result.rows : [] });
+            const result = await this.workBusinessHourService.getWorkerHoursFromRedis(idUserList, idCompany);
+            res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
         }
     }
+
+
+    // public autocomplete = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { idUser } = req.body;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+
+    //         let result = undefined;
+    //         let pagination: Pagination = {
+    //             page: 1,
+    //             itemsPerPage: 10000,
+    //         }
+    // // ESTO NO VALE PORQUE TIENE QUE RECIBIR EL ID DE LA COMPAÑIA, SE PODRIA COGER DEL TOKEN
+    //         if (idUser) {
+    //             pagination.filters = {
+    //                 idUserFk: idUser
+    //             }
+    //             result = await this.workBusinessHourService.getWorkerBusinessHours();
+    //         } else {
+    //             result = await this.workBusinessHourService.getWorkerBusinessHours();
+    //         }
+
+    //         // const result = await this.workBusinessHourWorkBusinessHour.autocompleteWorkerWorkBusinessHours(search, pagination);
+    //         res.status(200).json({ message: "Registros encontrados", ok: true, item: result && result?.rows ? result.rows : [] });
+    //     } catch (err: any) {
+    //         res.status(500).json({ message: err.message });
+    //     }
+    // }
 }

@@ -117,7 +117,9 @@ export class EventController {
                 idUserPlatformFk,
                 idCalendarFk,
                 idServiceFk,
-                eventSourceType
+                eventSourceType,
+                eventPurposeType,
+                eventStatusType
             } = req.body;
 
             await this.jwtService.verify(req.token);
@@ -130,25 +132,27 @@ export class EventController {
                 idUserPlatformFk,
                 idCalendarFk,
                 idServiceFk,
-                eventSourceType
+                eventSourceType,
+                eventPurposeType,
+                eventStatusType,
             });
 
-            const idGoogleCalendar = newEvent.calendar.idGoogleCalendar;
-            const userColor = await this._getUserColor(idUserPlatformFk);
-            const eventColor = userColor?.eventColorGoogle?.idColorGoogle || googleCalendarColors.get("1").id;
+            // const idGoogleCalendar = newEvent.calendar.idGoogleCalendar;
+            // const userColor = await this._getUserColor(idUserPlatformFk);
+            // const eventColor = userColor?.eventColorGoogle?.idColorGoogle || googleCalendarColors.get("1").id;
 
 
 
-            RedisSubscriptionStrategyFactory.execute('publish', 'createEventGoogle', {
-                idRowEventDB: newEvent.id,
-                idUserPlatformFk,
-                idGoogleCalendar,
-                title,
-                startDate,
-                endDate,
-                description,
-                eventColor
-            });
+            // RedisSubscriptionStrategyFactory.execute('publish', 'createEventGoogle', {
+            //     idRowEventDB: newEvent.id,
+            //     idUserPlatformFk,
+            //     idGoogleCalendar,
+            //     title,
+            //     startDate,
+            //     endDate,
+            //     description,
+            //     eventColor
+            // });
 
             res.status(200).json(Response.build("Evento creado exitosamente", 200, true, newEvent));
         } catch (err: any) {
@@ -156,10 +160,10 @@ export class EventController {
         }
     }
 
-    private async _getUserColor(idUserPlatformFk: string): Promise<UserColorCalendar | null> {
-        const userColorService = new UserColorService();
-        return await userColorService.getUserColorByIdUser(idUserPlatformFk, true);
-    }
+    // private async _getUserColor(idUserPlatformFk: string): Promise<UserColorCalendar | null> {
+    //     const userColorService = new UserColorService();
+    //     return await userColorService.getUserColorByIdUser(idUserPlatformFk, true);
+    // }
 
     // private async _validadorCreateEvent(idUser: string, idCalendarGoogle, eventData: {
     //     summary: string;
@@ -208,7 +212,20 @@ export class EventController {
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.eventService.getEvents(pagination);
+            const result = await this.eventService.getEvents(pagination, true);
+            res.status(200).json({ message: "Eventos encontrados", ok: true, item: result });
+        } catch (err: any) {
+            res.status(500).json({ message: err.message });
+        }
+    }
+
+    public getList = async (req: any, res: any, next: any) => {
+        try {
+            const { pagination } = req.body;
+            const token = req.token;
+            await this.jwtService.verify(token);
+
+            const result = await this.eventService.getEvents(pagination, false);
             res.status(200).json({ message: "Eventos encontrados", ok: true, item: result });
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -240,6 +257,8 @@ export class EventController {
                 idCalendarFk,
                 idServiceFk,
                 eventSourceType,
+                eventPurposeType,
+                eventStatusType
             } = req.body;
             await this.jwtService.verify(req.token);
 
@@ -250,29 +269,31 @@ export class EventController {
                 startDate,
                 endDate,
                 idUserPlatformFk,
-                idCalendarFk,
+                // idCalendarFk,
                 idServiceFk,
                 eventSourceType,
+                eventPurposeType,
+                eventStatusType
             });
 
-            const idGoogleCalendar = updatedEvent.calendar.idGoogleCalendar;
-            const idGoogleEvent = updatedEvent.idGoogleEvent;
+            // const idGoogleCalendar = updatedEvent.calendar.idGoogleCalendar;
+            // const idGoogleEvent = updatedEvent.idGoogleEvent;
 
-            const userColor = await this._getUserColor(idUserPlatformFk);
-            const eventColor = userColor?.eventColorGoogle?.idColorGoogle || googleCalendarColors.get("1").id;
+            // const userColor = await this._getUserColor(idUserPlatformFk);
+            // const eventColor = userColor?.eventColorGoogle?.idColorGoogle || googleCalendarColors.get("1").id;
 
-            // Publicar en Pub/Sub para actualizar el evento en Google Calendar
-            RedisSubscriptionStrategyFactory.execute('publish', 'updateEventGoogle', {
-                idRowEventDB: updatedEvent.id,
-                idUserPlatformFk,
-                idGoogleCalendar,
-                idGoogleEvent,
-                title,
-                startDate,
-                endDate,
-                description,
-                eventColor
-            });
+            // // Publicar en Pub/Sub para actualizar el evento en Google Calendar
+            // RedisSubscriptionStrategyFactory.execute('publish', 'updateEventGoogle', {
+            //     idRowEventDB: updatedEvent.id,
+            //     idUserPlatformFk,
+            //     idGoogleCalendar,
+            //     idGoogleEvent,
+            //     title,
+            //     startDate,
+            //     endDate,
+            //     description,
+            //     eventColor
+            // });
 
             res.status(200).json(Response.build("Evento actualizado exitosamente", 200, true, updatedEvent));
         } catch (err: any) {
@@ -466,6 +487,20 @@ export class EventController {
             res.status(200).json(Response.build("Evento eliminado exitosamente", 200, true, result));
         } catch (err: any) {
             console.error("Error al eliminar el evento:", err);
+            res.status(500).json({ message: err.message });
+        }
+    }
+
+
+    changeEventStatus = async (req: any, res: any, next: any) => {
+        try {
+            const { id, status } = req.body;
+            const token = req.token;
+            await this.jwtService.verify(token);
+
+            const result = await this.eventService.changeEventStatus(id, status);
+            res.status(200).json(Response.build("Estado del evento actualizado", 200, true, result));
+        } catch (err: any) {
             res.status(500).json({ message: err.message });
         }
     }

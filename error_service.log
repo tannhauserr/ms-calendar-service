@@ -1,0 +1,2127 @@
+
+    =====================================================
+    Date: 2024-12-27T14:31:44.046Z
+    Service: EventService.getEvents
+    Error Message: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+
+  101   
+  102   
+  103 try {
+→ 104   const items = await prisma[modelName as string].findMany({
+          where: {
+            startDate: {
+              contains: "2024-12-18T23:00:00.000Z",
+              ~~~~~~~~
+        ?     equals?: DateTime | DateTimeFieldRefInput,
+        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     lt?: DateTime | DateTimeFieldRefInput,
+        ?     lte?: DateTime | DateTimeFieldRefInput,
+        ?     gt?: DateTime | DateTimeFieldRefInput,
+        ?     gte?: DateTime | DateTimeFieldRefInput,
+        ?     not?: DateTime | NestedDateTimeFilter
+            },
+            idCalendarFk: {
+              contains: "calendar-1-uuid"
+            },
+            createdDate: {
+              gte: "2024-12-18T23:00:00.000Z",
+              lte: "2025-01-14T23:00:00.000Z"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {},
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            idClientFk: true,
+            idUserPlatformFk: true,
+            eventStatusType: true,
+            eventPurposeType: true,
+            eventSourceType: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            }
+          }
+        })
+
+Unknown argument `contains`. Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+
+  101   
+  102   
+  103 try {
+→ 104   const items = await prisma[modelName as string].findMany({
+          where: {
+            startDate: {
+              contains: "2024-12-18T23:00:00.000Z",
+              ~~~~~~~~
+        ?     equals?: DateTime | DateTimeFieldRefInput,
+        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     lt?: DateTime | DateTimeFieldRefInput,
+        ?     lte?: DateTime | DateTimeFieldRefInput,
+        ?     gt?: DateTime | DateTimeFieldRefInput,
+        ?     gte?: DateTime | DateTimeFieldRefInput,
+        ?     not?: DateTime | NestedDateTimeFilter
+            },
+            idCalendarFk: {
+              contains: "calendar-1-uuid"
+            },
+            createdDate: {
+              gte: "2024-12-18T23:00:00.000Z",
+              lte: "2025-01-14T23:00:00.000Z"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {},
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            idClientFk: true,
+            idUserPlatformFk: true,
+            eventStatusType: true,
+            eventPurposeType: true,
+            eventSourceType: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            }
+          }
+        })
+
+Unknown argument `contains`. Available options are marked with ?.
+    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:129:13)
+    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:223:28)
+    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-27T14:33:29.581Z
+    Service: EventService.getEvents
+    Error Message: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+
+  101   
+  102   
+  103 try {
+→ 104   const items = await prisma[modelName as string].findMany({
+          where: {
+            startDate: {
+              contains: "2024-12-19T23:00:00.000Z",
+              ~~~~~~~~
+        ?     equals?: DateTime | DateTimeFieldRefInput,
+        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     lt?: DateTime | DateTimeFieldRefInput,
+        ?     lte?: DateTime | DateTimeFieldRefInput,
+        ?     gt?: DateTime | DateTimeFieldRefInput,
+        ?     gte?: DateTime | DateTimeFieldRefInput,
+        ?     not?: DateTime | NestedDateTimeFilter
+            },
+            idCalendarFk: {
+              contains: "calendar-1-uuid"
+            },
+            createdDate: {
+              gte: "2024-12-19T23:00:00.000Z",
+              lte: "2025-01-22T23:00:00.000Z"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {},
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            idClientFk: true,
+            idUserPlatformFk: true,
+            eventStatusType: true,
+            eventPurposeType: true,
+            eventSourceType: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            }
+          }
+        })
+
+Unknown argument `contains`. Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+
+  101   
+  102   
+  103 try {
+→ 104   const items = await prisma[modelName as string].findMany({
+          where: {
+            startDate: {
+              contains: "2024-12-19T23:00:00.000Z",
+              ~~~~~~~~
+        ?     equals?: DateTime | DateTimeFieldRefInput,
+        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     lt?: DateTime | DateTimeFieldRefInput,
+        ?     lte?: DateTime | DateTimeFieldRefInput,
+        ?     gt?: DateTime | DateTimeFieldRefInput,
+        ?     gte?: DateTime | DateTimeFieldRefInput,
+        ?     not?: DateTime | NestedDateTimeFilter
+            },
+            idCalendarFk: {
+              contains: "calendar-1-uuid"
+            },
+            createdDate: {
+              gte: "2024-12-19T23:00:00.000Z",
+              lte: "2025-01-22T23:00:00.000Z"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {},
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            idClientFk: true,
+            idUserPlatformFk: true,
+            eventStatusType: true,
+            eventPurposeType: true,
+            eventSourceType: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            }
+          }
+        })
+
+Unknown argument `contains`. Available options are marked with ?.
+    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:129:13)
+    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:223:28)
+    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-27T14:35:51.247Z
+    Service: EventService.getEvents
+    Error Message: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+
+  101   
+  102   
+  103 try {
+→ 104   const items = await prisma[modelName as string].findMany({
+          where: {
+            startDate: {
+              contains: "2024-12-18T23:00:00.000Z",
+              ~~~~~~~~
+        ?     equals?: DateTime | DateTimeFieldRefInput,
+        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     lt?: DateTime | DateTimeFieldRefInput,
+        ?     lte?: DateTime | DateTimeFieldRefInput,
+        ?     gt?: DateTime | DateTimeFieldRefInput,
+        ?     gte?: DateTime | DateTimeFieldRefInput,
+        ?     not?: DateTime | NestedDateTimeFilter
+            },
+            idCalendarFk: {
+              contains: "calendar-1-uuid"
+            },
+            createdDate: {
+              gte: "2024-12-18T23:00:00.000Z",
+              lte: "2025-01-22T23:00:00.000Z"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {},
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            idClientFk: true,
+            idUserPlatformFk: true,
+            eventStatusType: true,
+            eventPurposeType: true,
+            eventSourceType: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            }
+          }
+        })
+
+Unknown argument `contains`. Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+
+  101   
+  102   
+  103 try {
+→ 104   const items = await prisma[modelName as string].findMany({
+          where: {
+            startDate: {
+              contains: "2024-12-18T23:00:00.000Z",
+              ~~~~~~~~
+        ?     equals?: DateTime | DateTimeFieldRefInput,
+        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     lt?: DateTime | DateTimeFieldRefInput,
+        ?     lte?: DateTime | DateTimeFieldRefInput,
+        ?     gt?: DateTime | DateTimeFieldRefInput,
+        ?     gte?: DateTime | DateTimeFieldRefInput,
+        ?     not?: DateTime | NestedDateTimeFilter
+            },
+            idCalendarFk: {
+              contains: "calendar-1-uuid"
+            },
+            createdDate: {
+              gte: "2024-12-18T23:00:00.000Z",
+              lte: "2025-01-22T23:00:00.000Z"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {},
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            idClientFk: true,
+            idUserPlatformFk: true,
+            eventStatusType: true,
+            eventPurposeType: true,
+            eventSourceType: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            }
+          }
+        })
+
+Unknown argument `contains`. Available options are marked with ?.
+    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:129:13)
+    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:223:28)
+    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-27T14:39:16.565Z
+    Service: EventService.getEvents
+    Error Message: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+
+  101   
+  102   
+  103 try {
+→ 104   const items = await prisma[modelName as string].findMany({
+          where: {
+            startDate: {
+              contains: "2024-12-17T23:00:00.000Z",
+              ~~~~~~~~
+        ?     equals?: DateTime | DateTimeFieldRefInput,
+        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     lt?: DateTime | DateTimeFieldRefInput,
+        ?     lte?: DateTime | DateTimeFieldRefInput,
+        ?     gt?: DateTime | DateTimeFieldRefInput,
+        ?     gte?: DateTime | DateTimeFieldRefInput,
+        ?     not?: DateTime | NestedDateTimeFilter
+            },
+            idCalendarFk: {
+              contains: "calendar-1-uuid"
+            },
+            createdDate: {
+              gte: "2024-12-17T23:00:00.000Z",
+              lte: "2025-01-24T23:00:00.000Z"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {},
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            idClientFk: true,
+            idUserPlatformFk: true,
+            eventStatusType: true,
+            eventPurposeType: true,
+            eventSourceType: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            }
+          }
+        })
+
+Unknown argument `contains`. Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+
+  101   
+  102   
+  103 try {
+→ 104   const items = await prisma[modelName as string].findMany({
+          where: {
+            startDate: {
+              contains: "2024-12-17T23:00:00.000Z",
+              ~~~~~~~~
+        ?     equals?: DateTime | DateTimeFieldRefInput,
+        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
+        ?     lt?: DateTime | DateTimeFieldRefInput,
+        ?     lte?: DateTime | DateTimeFieldRefInput,
+        ?     gt?: DateTime | DateTimeFieldRefInput,
+        ?     gte?: DateTime | DateTimeFieldRefInput,
+        ?     not?: DateTime | NestedDateTimeFilter
+            },
+            idCalendarFk: {
+              contains: "calendar-1-uuid"
+            },
+            createdDate: {
+              gte: "2024-12-17T23:00:00.000Z",
+              lte: "2025-01-24T23:00:00.000Z"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {},
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            idClientFk: true,
+            idUserPlatformFk: true,
+            eventStatusType: true,
+            eventPurposeType: true,
+            eventSourceType: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            }
+          }
+        })
+
+Unknown argument `contains`. Available options are marked with ?.
+    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:129:13)
+    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:223:28)
+    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-27T14:51:23.620Z
+    Service: EventService.getEvents
+    Error Message: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+
+  101   
+  102   
+  103 try {
+→ 104   const items = await prisma[modelName as string].findMany({
+          where: {
+            idCalendarFk: {
+              contains: "calendar-1-uuid"
+            },
+            createdDate: {
+              gte: "2024-12-10",
+                   ~~~~~~~~~~~~
+              lte: "2025-01-23"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {},
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            idClientFk: true,
+            idUserPlatformFk: true,
+            eventStatusType: true,
+            eventPurposeType: true,
+            eventSourceType: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            }
+          }
+        })
+
+Invalid value for argument `gte`: premature end of input. Expected ISO-8601 DateTime.
+    Stack Trace: Error: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+
+  101   
+  102   
+  103 try {
+→ 104   const items = await prisma[modelName as string].findMany({
+          where: {
+            idCalendarFk: {
+              contains: "calendar-1-uuid"
+            },
+            createdDate: {
+              gte: "2024-12-10",
+                   ~~~~~~~~~~~~
+              lte: "2025-01-23"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {},
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            idClientFk: true,
+            idUserPlatformFk: true,
+            eventStatusType: true,
+            eventPurposeType: true,
+            eventSourceType: true,
+            service: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
+            }
+          }
+        })
+
+Invalid value for argument `gte`: premature end of input. Expected ISO-8601 DateTime.
+    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:129:13)
+    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:223:28)
+    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-27T17:41:22.377Z
+    Service: EventService.getEvents
+    Error Message: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              nameMember: "asc",
+              ~~~~~~~~~~
+          ?   id?: SortOrder,
+          ?   title?: SortOrder,
+          ?   description?: SortOrder | SortOrderInput,
+          ?   startDate?: SortOrder,
+          ?   endDate?: SortOrder,
+          ?   idCalendarFk?: SortOrder,
+          ?   idServiceFk?: SortOrder | SortOrderInput,
+          ?   idClientFk?: SortOrder | SortOrderInput,
+          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
+          ?   commentClient?: SortOrder | SortOrderInput,
+          ?   idGoogleEvent?: SortOrder | SortOrderInput,
+          ?   eventPurposeType?: SortOrder,
+          ?   eventSourceType?: SortOrder,
+          ?   eventStatusType?: SortOrder,
+          ?   createdDate?: SortOrder,
+          ?   updatedDate?: SortOrder,
+          ?   deletedDate?: SortOrder | SortOrderInput,
+          ?   service?: ServiceOrderByWithRelationInput,
+          ?   calendar?: CalendarOrderByWithRelationInput
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idClientFk: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              }
+            }
+          })
+
+Unknown argument `nameMember`. Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              nameMember: "asc",
+              ~~~~~~~~~~
+          ?   id?: SortOrder,
+          ?   title?: SortOrder,
+          ?   description?: SortOrder | SortOrderInput,
+          ?   startDate?: SortOrder,
+          ?   endDate?: SortOrder,
+          ?   idCalendarFk?: SortOrder,
+          ?   idServiceFk?: SortOrder | SortOrderInput,
+          ?   idClientFk?: SortOrder | SortOrderInput,
+          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
+          ?   commentClient?: SortOrder | SortOrderInput,
+          ?   idGoogleEvent?: SortOrder | SortOrderInput,
+          ?   eventPurposeType?: SortOrder,
+          ?   eventSourceType?: SortOrder,
+          ?   eventStatusType?: SortOrder,
+          ?   createdDate?: SortOrder,
+          ?   updatedDate?: SortOrder,
+          ?   deletedDate?: SortOrder | SortOrderInput,
+          ?   service?: ServiceOrderByWithRelationInput,
+          ?   calendar?: CalendarOrderByWithRelationInput
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idClientFk: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              }
+            }
+          })
+
+Unknown argument `nameMember`. Available options are marked with ?.
+    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
+    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:229:32)
+    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-27T17:43:21.165Z
+    Service: EventService.getEvents
+    Error Message: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              nameClient: "asc",
+              ~~~~~~~~~~
+          ?   id?: SortOrder,
+          ?   title?: SortOrder,
+          ?   description?: SortOrder | SortOrderInput,
+          ?   startDate?: SortOrder,
+          ?   endDate?: SortOrder,
+          ?   idCalendarFk?: SortOrder,
+          ?   idServiceFk?: SortOrder | SortOrderInput,
+          ?   idClientFk?: SortOrder | SortOrderInput,
+          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
+          ?   commentClient?: SortOrder | SortOrderInput,
+          ?   idGoogleEvent?: SortOrder | SortOrderInput,
+          ?   eventPurposeType?: SortOrder,
+          ?   eventSourceType?: SortOrder,
+          ?   eventStatusType?: SortOrder,
+          ?   createdDate?: SortOrder,
+          ?   updatedDate?: SortOrder,
+          ?   deletedDate?: SortOrder | SortOrderInput,
+          ?   service?: ServiceOrderByWithRelationInput,
+          ?   calendar?: CalendarOrderByWithRelationInput
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idClientFk: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              }
+            }
+          })
+
+Unknown argument `nameClient`. Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              nameClient: "asc",
+              ~~~~~~~~~~
+          ?   id?: SortOrder,
+          ?   title?: SortOrder,
+          ?   description?: SortOrder | SortOrderInput,
+          ?   startDate?: SortOrder,
+          ?   endDate?: SortOrder,
+          ?   idCalendarFk?: SortOrder,
+          ?   idServiceFk?: SortOrder | SortOrderInput,
+          ?   idClientFk?: SortOrder | SortOrderInput,
+          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
+          ?   commentClient?: SortOrder | SortOrderInput,
+          ?   idGoogleEvent?: SortOrder | SortOrderInput,
+          ?   eventPurposeType?: SortOrder,
+          ?   eventSourceType?: SortOrder,
+          ?   eventStatusType?: SortOrder,
+          ?   createdDate?: SortOrder,
+          ?   updatedDate?: SortOrder,
+          ?   deletedDate?: SortOrder | SortOrderInput,
+          ?   service?: ServiceOrderByWithRelationInput,
+          ?   calendar?: CalendarOrderByWithRelationInput
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idClientFk: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              }
+            }
+          })
+
+Unknown argument `nameClient`. Available options are marked with ?.
+    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
+    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:229:32)
+    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-27T17:43:29.658Z
+    Service: EventService.getEvents
+    Error Message: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              nameClient: "asc",
+              ~~~~~~~~~~
+          ?   id?: SortOrder,
+          ?   title?: SortOrder,
+          ?   description?: SortOrder | SortOrderInput,
+          ?   startDate?: SortOrder,
+          ?   endDate?: SortOrder,
+          ?   idCalendarFk?: SortOrder,
+          ?   idServiceFk?: SortOrder | SortOrderInput,
+          ?   idClientFk?: SortOrder | SortOrderInput,
+          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
+          ?   commentClient?: SortOrder | SortOrderInput,
+          ?   idGoogleEvent?: SortOrder | SortOrderInput,
+          ?   eventPurposeType?: SortOrder,
+          ?   eventSourceType?: SortOrder,
+          ?   eventStatusType?: SortOrder,
+          ?   createdDate?: SortOrder,
+          ?   updatedDate?: SortOrder,
+          ?   deletedDate?: SortOrder | SortOrderInput,
+          ?   service?: ServiceOrderByWithRelationInput,
+          ?   calendar?: CalendarOrderByWithRelationInput
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idClientFk: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              }
+            }
+          })
+
+Unknown argument `nameClient`. Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              nameClient: "asc",
+              ~~~~~~~~~~
+          ?   id?: SortOrder,
+          ?   title?: SortOrder,
+          ?   description?: SortOrder | SortOrderInput,
+          ?   startDate?: SortOrder,
+          ?   endDate?: SortOrder,
+          ?   idCalendarFk?: SortOrder,
+          ?   idServiceFk?: SortOrder | SortOrderInput,
+          ?   idClientFk?: SortOrder | SortOrderInput,
+          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
+          ?   commentClient?: SortOrder | SortOrderInput,
+          ?   idGoogleEvent?: SortOrder | SortOrderInput,
+          ?   eventPurposeType?: SortOrder,
+          ?   eventSourceType?: SortOrder,
+          ?   eventStatusType?: SortOrder,
+          ?   createdDate?: SortOrder,
+          ?   updatedDate?: SortOrder,
+          ?   deletedDate?: SortOrder | SortOrderInput,
+          ?   service?: ServiceOrderByWithRelationInput,
+          ?   calendar?: CalendarOrderByWithRelationInput
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idClientFk: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              }
+            }
+          })
+
+Unknown argument `nameClient`. Available options are marked with ?.
+    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
+    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:229:32)
+    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-28T14:46:31.797Z
+    Service: EventService.getEvents
+    Error Message: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              nameClient: "asc",
+              ~~~~~~~~~~
+          ?   id?: SortOrder,
+          ?   title?: SortOrder,
+          ?   description?: SortOrder | SortOrderInput,
+          ?   startDate?: SortOrder,
+          ?   endDate?: SortOrder,
+          ?   idCalendarFk?: SortOrder,
+          ?   idServiceFk?: SortOrder | SortOrderInput,
+          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
+          ?   commentClient?: SortOrder | SortOrderInput,
+          ?   idGoogleEvent?: SortOrder | SortOrderInput,
+          ?   eventPurposeType?: SortOrder,
+          ?   eventSourceType?: SortOrder,
+          ?   isEditableByClient?: SortOrder,
+          ?   numberUpdates?: SortOrder | SortOrderInput,
+          ?   eventStatusType?: SortOrder,
+          ?   createdDate?: SortOrder,
+          ?   updatedDate?: SortOrder,
+          ?   deletedDate?: SortOrder | SortOrderInput,
+          ?   service?: ServiceOrderByWithRelationInput,
+          ?   calendar?: CalendarOrderByWithRelationInput,
+          ?   eventParticipant?: EventParticipantOrderByRelationAggregateInput
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              },
+              eventParticipant: {
+                select: {
+                  id: true,
+                  idClientFk: true
+                }
+              }
+            }
+          })
+
+Unknown argument `nameClient`. Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              nameClient: "asc",
+              ~~~~~~~~~~
+          ?   id?: SortOrder,
+          ?   title?: SortOrder,
+          ?   description?: SortOrder | SortOrderInput,
+          ?   startDate?: SortOrder,
+          ?   endDate?: SortOrder,
+          ?   idCalendarFk?: SortOrder,
+          ?   idServiceFk?: SortOrder | SortOrderInput,
+          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
+          ?   commentClient?: SortOrder | SortOrderInput,
+          ?   idGoogleEvent?: SortOrder | SortOrderInput,
+          ?   eventPurposeType?: SortOrder,
+          ?   eventSourceType?: SortOrder,
+          ?   isEditableByClient?: SortOrder,
+          ?   numberUpdates?: SortOrder | SortOrderInput,
+          ?   eventStatusType?: SortOrder,
+          ?   createdDate?: SortOrder,
+          ?   updatedDate?: SortOrder,
+          ?   deletedDate?: SortOrder | SortOrderInput,
+          ?   service?: ServiceOrderByWithRelationInput,
+          ?   calendar?: CalendarOrderByWithRelationInput,
+          ?   eventParticipant?: EventParticipantOrderByRelationAggregateInput
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              },
+              eventParticipant: {
+                select: {
+                  id: true,
+                  idClientFk: true
+                }
+              }
+            }
+          })
+
+Unknown argument `nameClient`. Available options are marked with ?.
+    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
+    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:323:32)
+    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-28T14:47:26.698Z
+    Service: EventService.getEvents
+    Error Message: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              nameService: "asc",
+              ~~~~~~~~~~~
+          ?   id?: SortOrder,
+          ?   title?: SortOrder,
+          ?   description?: SortOrder | SortOrderInput,
+          ?   startDate?: SortOrder,
+          ?   endDate?: SortOrder,
+          ?   idCalendarFk?: SortOrder,
+          ?   idServiceFk?: SortOrder | SortOrderInput,
+          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
+          ?   commentClient?: SortOrder | SortOrderInput,
+          ?   idGoogleEvent?: SortOrder | SortOrderInput,
+          ?   eventPurposeType?: SortOrder,
+          ?   eventSourceType?: SortOrder,
+          ?   isEditableByClient?: SortOrder,
+          ?   numberUpdates?: SortOrder | SortOrderInput,
+          ?   eventStatusType?: SortOrder,
+          ?   createdDate?: SortOrder,
+          ?   updatedDate?: SortOrder,
+          ?   deletedDate?: SortOrder | SortOrderInput,
+          ?   service?: ServiceOrderByWithRelationInput,
+          ?   calendar?: CalendarOrderByWithRelationInput,
+          ?   eventParticipant?: EventParticipantOrderByRelationAggregateInput
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              },
+              eventParticipant: {
+                select: {
+                  id: true,
+                  idClientFk: true
+                }
+              }
+            }
+          })
+
+Unknown argument `nameService`. Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              nameService: "asc",
+              ~~~~~~~~~~~
+          ?   id?: SortOrder,
+          ?   title?: SortOrder,
+          ?   description?: SortOrder | SortOrderInput,
+          ?   startDate?: SortOrder,
+          ?   endDate?: SortOrder,
+          ?   idCalendarFk?: SortOrder,
+          ?   idServiceFk?: SortOrder | SortOrderInput,
+          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
+          ?   commentClient?: SortOrder | SortOrderInput,
+          ?   idGoogleEvent?: SortOrder | SortOrderInput,
+          ?   eventPurposeType?: SortOrder,
+          ?   eventSourceType?: SortOrder,
+          ?   isEditableByClient?: SortOrder,
+          ?   numberUpdates?: SortOrder | SortOrderInput,
+          ?   eventStatusType?: SortOrder,
+          ?   createdDate?: SortOrder,
+          ?   updatedDate?: SortOrder,
+          ?   deletedDate?: SortOrder | SortOrderInput,
+          ?   service?: ServiceOrderByWithRelationInput,
+          ?   calendar?: CalendarOrderByWithRelationInput,
+          ?   eventParticipant?: EventParticipantOrderByRelationAggregateInput
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              },
+              eventParticipant: {
+                select: {
+                  id: true,
+                  idClientFk: true
+                }
+              }
+            }
+          })
+
+Unknown argument `nameService`. Available options are marked with ?.
+    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
+    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:323:32)
+    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-28T17:49:58.230Z
+    Service: EventService.getEvents
+    Error Message: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idEstablishmentFk: {
+              ~~~~~~~~~~~~~~~~~
+                contains: "13fbe22z-1i14-453a-8e74-ac0f81515jo8"
+              },
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null,
+          ?   AND?: EventWhereInput | EventWhereInput[],
+          ?   OR?: EventWhereInput[],
+          ?   NOT?: EventWhereInput | EventWhereInput[],
+          ?   id?: IntFilter | Int,
+          ?   title?: StringFilter | String,
+          ?   description?: StringNullableFilter | String | Null,
+          ?   startDate?: DateTimeFilter | DateTime,
+          ?   endDate?: DateTimeFilter | DateTime,
+          ?   idServiceFk?: IntNullableFilter | Int | Null,
+          ?   idUserPlatformFk?: StringNullableFilter | String | Null,
+          ?   commentClient?: StringNullableFilter | String | Null,
+          ?   idGoogleEvent?: StringNullableFilter | String | Null,
+          ?   eventPurposeType?: EnumeventPurposeTypeFilter | eventPurposeType,
+          ?   eventSourceType?: EnumEventSourceTypeFilter | EventSourceType,
+          ?   isEditableByClient?: BoolFilter | Boolean,
+          ?   numberUpdates?: IntNullableFilter | Int | Null,
+          ?   eventStatusType?: EnumEventStatusTypeFilter | EventStatusType,
+          ?   createdDate?: DateTimeFilter | DateTime,
+          ?   updatedDate?: DateTimeFilter | DateTime,
+          ?   service?: ServiceNullableRelationFilter | ServiceWhereInput | Null,
+          ?   calendar?: CalendarNullableRelationFilter | CalendarWhereInput | Null,
+          ?   eventParticipant?: EventParticipantListRelationFilter
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              title: "desc"
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              },
+              eventParticipant: {
+                select: {
+                  id: true,
+                  idClientFk: true
+                }
+              }
+            }
+          })
+
+Unknown argument `idEstablishmentFk`. Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idEstablishmentFk: {
+              ~~~~~~~~~~~~~~~~~
+                contains: "13fbe22z-1i14-453a-8e74-ac0f81515jo8"
+              },
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null,
+          ?   AND?: EventWhereInput | EventWhereInput[],
+          ?   OR?: EventWhereInput[],
+          ?   NOT?: EventWhereInput | EventWhereInput[],
+          ?   id?: IntFilter | Int,
+          ?   title?: StringFilter | String,
+          ?   description?: StringNullableFilter | String | Null,
+          ?   startDate?: DateTimeFilter | DateTime,
+          ?   endDate?: DateTimeFilter | DateTime,
+          ?   idServiceFk?: IntNullableFilter | Int | Null,
+          ?   idUserPlatformFk?: StringNullableFilter | String | Null,
+          ?   commentClient?: StringNullableFilter | String | Null,
+          ?   idGoogleEvent?: StringNullableFilter | String | Null,
+          ?   eventPurposeType?: EnumeventPurposeTypeFilter | eventPurposeType,
+          ?   eventSourceType?: EnumEventSourceTypeFilter | EventSourceType,
+          ?   isEditableByClient?: BoolFilter | Boolean,
+          ?   numberUpdates?: IntNullableFilter | Int | Null,
+          ?   eventStatusType?: EnumEventStatusTypeFilter | EventStatusType,
+          ?   createdDate?: DateTimeFilter | DateTime,
+          ?   updatedDate?: DateTimeFilter | DateTime,
+          ?   service?: ServiceNullableRelationFilter | ServiceWhereInput | Null,
+          ?   calendar?: CalendarNullableRelationFilter | CalendarWhereInput | Null,
+          ?   eventParticipant?: EventParticipantListRelationFilter
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              title: "desc"
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              },
+              eventParticipant: {
+                select: {
+                  id: true,
+                  idClientFk: true
+                }
+              }
+            }
+          })
+
+Unknown argument `idEstablishmentFk`. Available options are marked with ?.
+    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
+    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:323:32)
+    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-28T17:49:58.254Z
+    Service: EventService.getEvents
+    Error Message: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idEstablishmentFk: {
+              ~~~~~~~~~~~~~~~~~
+                contains: "13fbe22z-1i14-453a-8e74-ac0f81515jo8"
+              },
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null,
+          ?   AND?: EventWhereInput | EventWhereInput[],
+          ?   OR?: EventWhereInput[],
+          ?   NOT?: EventWhereInput | EventWhereInput[],
+          ?   id?: IntFilter | Int,
+          ?   title?: StringFilter | String,
+          ?   description?: StringNullableFilter | String | Null,
+          ?   startDate?: DateTimeFilter | DateTime,
+          ?   endDate?: DateTimeFilter | DateTime,
+          ?   idServiceFk?: IntNullableFilter | Int | Null,
+          ?   idUserPlatformFk?: StringNullableFilter | String | Null,
+          ?   commentClient?: StringNullableFilter | String | Null,
+          ?   idGoogleEvent?: StringNullableFilter | String | Null,
+          ?   eventPurposeType?: EnumeventPurposeTypeFilter | eventPurposeType,
+          ?   eventSourceType?: EnumEventSourceTypeFilter | EventSourceType,
+          ?   isEditableByClient?: BoolFilter | Boolean,
+          ?   numberUpdates?: IntNullableFilter | Int | Null,
+          ?   eventStatusType?: EnumEventStatusTypeFilter | EventStatusType,
+          ?   createdDate?: DateTimeFilter | DateTime,
+          ?   updatedDate?: DateTimeFilter | DateTime,
+          ?   service?: ServiceNullableRelationFilter | ServiceWhereInput | Null,
+          ?   calendar?: CalendarNullableRelationFilter | CalendarWhereInput | Null,
+          ?   eventParticipant?: EventParticipantListRelationFilter
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              title: "desc"
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              },
+              eventParticipant: {
+                select: {
+                  id: true,
+                  idClientFk: true
+                }
+              }
+            }
+          })
+
+Unknown argument `idEstablishmentFk`. Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+
+  127 
+  128 
+  129 try {
+→ 130     const items = await prisma[modelName as string].findMany({
+            where: {
+              idEstablishmentFk: {
+              ~~~~~~~~~~~~~~~~~
+                contains: "13fbe22z-1i14-453a-8e74-ac0f81515jo8"
+              },
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null,
+          ?   AND?: EventWhereInput | EventWhereInput[],
+          ?   OR?: EventWhereInput[],
+          ?   NOT?: EventWhereInput | EventWhereInput[],
+          ?   id?: IntFilter | Int,
+          ?   title?: StringFilter | String,
+          ?   description?: StringNullableFilter | String | Null,
+          ?   startDate?: DateTimeFilter | DateTime,
+          ?   endDate?: DateTimeFilter | DateTime,
+          ?   idServiceFk?: IntNullableFilter | Int | Null,
+          ?   idUserPlatformFk?: StringNullableFilter | String | Null,
+          ?   commentClient?: StringNullableFilter | String | Null,
+          ?   idGoogleEvent?: StringNullableFilter | String | Null,
+          ?   eventPurposeType?: EnumeventPurposeTypeFilter | eventPurposeType,
+          ?   eventSourceType?: EnumEventSourceTypeFilter | EventSourceType,
+          ?   isEditableByClient?: BoolFilter | Boolean,
+          ?   numberUpdates?: IntNullableFilter | Int | Null,
+          ?   eventStatusType?: EnumEventStatusTypeFilter | EventStatusType,
+          ?   createdDate?: DateTimeFilter | DateTime,
+          ?   updatedDate?: DateTimeFilter | DateTime,
+          ?   service?: ServiceNullableRelationFilter | ServiceWhereInput | Null,
+          ?   calendar?: CalendarNullableRelationFilter | CalendarWhereInput | Null,
+          ?   eventParticipant?: EventParticipantListRelationFilter
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              title: "desc"
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              },
+              eventParticipant: {
+                select: {
+                  id: true,
+                  idClientFk: true
+                }
+              }
+            }
+          })
+
+Unknown argument `idEstablishmentFk`. Available options are marked with ?.
+    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
+    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:323:32)
+    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-29T23:36:32.524Z
+    Service: ServiceService.getServices
+    Error Message: Error in getGeneric for model service: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
+
+   99   
+  100   
+  101 try {
+→ 102   const items = await prisma[modelName as string].findMany({
+          where: {
+            idCompanyFk: {
+              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {
+            type: "asc",
+            ~~~~
+        ?   id?: SortOrder,
+        ?   idCompanyFk?: SortOrder,
+        ?   name?: SortOrder,
+        ?   description?: SortOrder,
+        ?   duration?: SortOrder,
+        ?   price?: SortOrder,
+        ?   idCategoryFk?: SortOrder | SortOrderInput,
+        ?   createdDate?: SortOrder,
+        ?   updatedDate?: SortOrder,
+        ?   deletedDate?: SortOrder | SortOrderInput,
+        ?   category?: CategoryOrderByWithRelationInput,
+        ?   userServices?: UserServiceOrderByRelationAggregateInput,
+        ?   events?: EventOrderByRelationAggregateInput
+          },
+          select: {
+            id: true,
+            duration: true,
+            price: true,
+            name: true,
+            description: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+                color: true
+              }
+            }
+          }
+        })
+
+Unknown argument `type`. Did you mean `name`? Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model service: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
+
+   99   
+  100   
+  101 try {
+→ 102   const items = await prisma[modelName as string].findMany({
+          where: {
+            idCompanyFk: {
+              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {
+            type: "asc",
+            ~~~~
+        ?   id?: SortOrder,
+        ?   idCompanyFk?: SortOrder,
+        ?   name?: SortOrder,
+        ?   description?: SortOrder,
+        ?   duration?: SortOrder,
+        ?   price?: SortOrder,
+        ?   idCategoryFk?: SortOrder | SortOrderInput,
+        ?   createdDate?: SortOrder,
+        ?   updatedDate?: SortOrder,
+        ?   deletedDate?: SortOrder | SortOrderInput,
+        ?   category?: CategoryOrderByWithRelationInput,
+        ?   userServices?: UserServiceOrderByRelationAggregateInput,
+        ?   events?: EventOrderByRelationAggregateInput
+          },
+          select: {
+            id: true,
+            duration: true,
+            price: true,
+            name: true,
+            description: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+                color: true
+              }
+            }
+          }
+        })
+
+Unknown argument `type`. Did you mean `name`? Available options are marked with ?.
+    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:127:13)
+    at ServiceService.getServices (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/service/service.service.ts:101:28)
+    at ServiceController.get (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/service/service.controller.ts:35:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-29T23:36:37.444Z
+    Service: ServiceService.getServices
+    Error Message: Error in getGeneric for model service: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
+
+   99   
+  100   
+  101 try {
+→ 102   const items = await prisma[modelName as string].findMany({
+          where: {
+            idCompanyFk: {
+              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {
+            type: "asc",
+            ~~~~
+        ?   id?: SortOrder,
+        ?   idCompanyFk?: SortOrder,
+        ?   name?: SortOrder,
+        ?   description?: SortOrder,
+        ?   duration?: SortOrder,
+        ?   price?: SortOrder,
+        ?   idCategoryFk?: SortOrder | SortOrderInput,
+        ?   createdDate?: SortOrder,
+        ?   updatedDate?: SortOrder,
+        ?   deletedDate?: SortOrder | SortOrderInput,
+        ?   category?: CategoryOrderByWithRelationInput,
+        ?   userServices?: UserServiceOrderByRelationAggregateInput,
+        ?   events?: EventOrderByRelationAggregateInput
+          },
+          select: {
+            id: true,
+            duration: true,
+            price: true,
+            name: true,
+            description: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+                color: true
+              }
+            }
+          }
+        })
+
+Unknown argument `type`. Did you mean `name`? Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model service: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
+
+   99   
+  100   
+  101 try {
+→ 102   const items = await prisma[modelName as string].findMany({
+          where: {
+            idCompanyFk: {
+              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {
+            type: "asc",
+            ~~~~
+        ?   id?: SortOrder,
+        ?   idCompanyFk?: SortOrder,
+        ?   name?: SortOrder,
+        ?   description?: SortOrder,
+        ?   duration?: SortOrder,
+        ?   price?: SortOrder,
+        ?   idCategoryFk?: SortOrder | SortOrderInput,
+        ?   createdDate?: SortOrder,
+        ?   updatedDate?: SortOrder,
+        ?   deletedDate?: SortOrder | SortOrderInput,
+        ?   category?: CategoryOrderByWithRelationInput,
+        ?   userServices?: UserServiceOrderByRelationAggregateInput,
+        ?   events?: EventOrderByRelationAggregateInput
+          },
+          select: {
+            id: true,
+            duration: true,
+            price: true,
+            name: true,
+            description: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+                color: true
+              }
+            }
+          }
+        })
+
+Unknown argument `type`. Did you mean `name`? Available options are marked with ?.
+    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:127:13)
+    at ServiceService.getServices (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/service/service.service.ts:101:28)
+    at ServiceController.get (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/service/service.controller.ts:35:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-30T00:03:40.321Z
+    Service: ServiceService.getServices
+    Error Message: Error in getGeneric for model service: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
+
+   99   
+  100   
+  101 try {
+→ 102   const items = await prisma[modelName as string].findMany({
+          where: {
+            idCompanyFk: {
+              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {
+            categoryName: "asc",
+            ~~~~~~~~~~~~
+        ?   id?: SortOrder,
+        ?   idCompanyFk?: SortOrder,
+        ?   name?: SortOrder,
+        ?   description?: SortOrder,
+        ?   duration?: SortOrder,
+        ?   price?: SortOrder,
+        ?   idCategoryFk?: SortOrder | SortOrderInput,
+        ?   createdDate?: SortOrder,
+        ?   updatedDate?: SortOrder,
+        ?   deletedDate?: SortOrder | SortOrderInput,
+        ?   category?: CategoryOrderByWithRelationInput,
+        ?   userServices?: UserServiceOrderByRelationAggregateInput,
+        ?   events?: EventOrderByRelationAggregateInput
+          },
+          select: {
+            id: true,
+            duration: true,
+            price: true,
+            name: true,
+            description: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+                color: true
+              }
+            }
+          }
+        })
+
+Unknown argument `categoryName`. Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model service: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
+
+   99   
+  100   
+  101 try {
+→ 102   const items = await prisma[modelName as string].findMany({
+          where: {
+            idCompanyFk: {
+              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {
+            categoryName: "asc",
+            ~~~~~~~~~~~~
+        ?   id?: SortOrder,
+        ?   idCompanyFk?: SortOrder,
+        ?   name?: SortOrder,
+        ?   description?: SortOrder,
+        ?   duration?: SortOrder,
+        ?   price?: SortOrder,
+        ?   idCategoryFk?: SortOrder | SortOrderInput,
+        ?   createdDate?: SortOrder,
+        ?   updatedDate?: SortOrder,
+        ?   deletedDate?: SortOrder | SortOrderInput,
+        ?   category?: CategoryOrderByWithRelationInput,
+        ?   userServices?: UserServiceOrderByRelationAggregateInput,
+        ?   events?: EventOrderByRelationAggregateInput
+          },
+          select: {
+            id: true,
+            duration: true,
+            price: true,
+            name: true,
+            description: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+                color: true
+              }
+            }
+          }
+        })
+
+Unknown argument `categoryName`. Available options are marked with ?.
+    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:127:13)
+    at ServiceService.getServices (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/service/service.service.ts:101:28)
+    at ServiceController.get (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/service/service.controller.ts:35:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-30T00:03:44.064Z
+    Service: ServiceService.getServices
+    Error Message: Error in getGeneric for model service: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
+
+   99   
+  100   
+  101 try {
+→ 102   const items = await prisma[modelName as string].findMany({
+          where: {
+            idCompanyFk: {
+              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {
+            categoryName: "asc",
+            ~~~~~~~~~~~~
+        ?   id?: SortOrder,
+        ?   idCompanyFk?: SortOrder,
+        ?   name?: SortOrder,
+        ?   description?: SortOrder,
+        ?   duration?: SortOrder,
+        ?   price?: SortOrder,
+        ?   idCategoryFk?: SortOrder | SortOrderInput,
+        ?   createdDate?: SortOrder,
+        ?   updatedDate?: SortOrder,
+        ?   deletedDate?: SortOrder | SortOrderInput,
+        ?   category?: CategoryOrderByWithRelationInput,
+        ?   userServices?: UserServiceOrderByRelationAggregateInput,
+        ?   events?: EventOrderByRelationAggregateInput
+          },
+          select: {
+            id: true,
+            duration: true,
+            price: true,
+            name: true,
+            description: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+                color: true
+              }
+            }
+          }
+        })
+
+Unknown argument `categoryName`. Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model service: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
+
+   99   
+  100   
+  101 try {
+→ 102   const items = await prisma[modelName as string].findMany({
+          where: {
+            idCompanyFk: {
+              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
+            },
+            deletedDate: null
+          },
+          skip: 0,
+          take: 10,
+          orderBy: {
+            categoryName: "asc",
+            ~~~~~~~~~~~~
+        ?   id?: SortOrder,
+        ?   idCompanyFk?: SortOrder,
+        ?   name?: SortOrder,
+        ?   description?: SortOrder,
+        ?   duration?: SortOrder,
+        ?   price?: SortOrder,
+        ?   idCategoryFk?: SortOrder | SortOrderInput,
+        ?   createdDate?: SortOrder,
+        ?   updatedDate?: SortOrder,
+        ?   deletedDate?: SortOrder | SortOrderInput,
+        ?   category?: CategoryOrderByWithRelationInput,
+        ?   userServices?: UserServiceOrderByRelationAggregateInput,
+        ?   events?: EventOrderByRelationAggregateInput
+          },
+          select: {
+            id: true,
+            duration: true,
+            price: true,
+            name: true,
+            description: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+                color: true
+              }
+            }
+          }
+        })
+
+Unknown argument `categoryName`. Available options are marked with ?.
+    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:127:13)
+    at ServiceService.getServices (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/service/service.service.ts:101:28)
+    at ServiceController.get (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/service/service.controller.ts:35:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2024-12-30T11:59:37.551Z
+    Service: EventService.getEvents
+    Error Message: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:137:57
+
+  134 
+  135 
+  136 try {
+→ 137     const items = await prisma[modelName as string].findMany({
+            where: {
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              eventDate: "asc",
+              ~~~~~~~~~
+          ?   id?: SortOrder,
+          ?   title?: SortOrder,
+          ?   description?: SortOrder | SortOrderInput,
+          ?   startDate?: SortOrder,
+          ?   endDate?: SortOrder,
+          ?   idCalendarFk?: SortOrder,
+          ?   idServiceFk?: SortOrder | SortOrderInput,
+          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
+          ?   commentClient?: SortOrder | SortOrderInput,
+          ?   idGoogleEvent?: SortOrder | SortOrderInput,
+          ?   eventPurposeType?: SortOrder,
+          ?   eventSourceType?: SortOrder,
+          ?   isEditableByClient?: SortOrder,
+          ?   numberUpdates?: SortOrder | SortOrderInput,
+          ?   eventStatusType?: SortOrder,
+          ?   createdDate?: SortOrder,
+          ?   updatedDate?: SortOrder,
+          ?   deletedDate?: SortOrder | SortOrderInput,
+          ?   service?: ServiceOrderByWithRelationInput,
+          ?   calendar?: CalendarOrderByWithRelationInput,
+          ?   eventParticipant?: EventParticipantOrderByRelationAggregateInput
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              },
+              eventParticipant: {
+                select: {
+                  id: true,
+                  idClientFk: true
+                }
+              }
+            }
+          })
+
+Unknown argument `eventDate`. Did you mean `endDate`? Available options are marked with ?.
+    Stack Trace: Error: Error in getGeneric for model event: 
+Invalid `string].findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:137:57
+
+  134 
+  135 
+  136 try {
+→ 137     const items = await prisma[modelName as string].findMany({
+            where: {
+              idCalendarFk: {
+                contains: "calendar-1-uuid"
+              },
+              deletedDate: null
+            },
+            skip: 0,
+            take: 10,
+            orderBy: {
+              eventDate: "asc",
+              ~~~~~~~~~
+          ?   id?: SortOrder,
+          ?   title?: SortOrder,
+          ?   description?: SortOrder | SortOrderInput,
+          ?   startDate?: SortOrder,
+          ?   endDate?: SortOrder,
+          ?   idCalendarFk?: SortOrder,
+          ?   idServiceFk?: SortOrder | SortOrderInput,
+          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
+          ?   commentClient?: SortOrder | SortOrderInput,
+          ?   idGoogleEvent?: SortOrder | SortOrderInput,
+          ?   eventPurposeType?: SortOrder,
+          ?   eventSourceType?: SortOrder,
+          ?   isEditableByClient?: SortOrder,
+          ?   numberUpdates?: SortOrder | SortOrderInput,
+          ?   eventStatusType?: SortOrder,
+          ?   createdDate?: SortOrder,
+          ?   updatedDate?: SortOrder,
+          ?   deletedDate?: SortOrder | SortOrderInput,
+          ?   service?: ServiceOrderByWithRelationInput,
+          ?   calendar?: CalendarOrderByWithRelationInput,
+          ?   eventParticipant?: EventParticipantOrderByRelationAggregateInput
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startDate: true,
+              endDate: true,
+              idUserPlatformFk: true,
+              eventStatusType: true,
+              eventPurposeType: true,
+              eventSourceType: true,
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              },
+              eventParticipant: {
+                select: {
+                  id: true,
+                  idClientFk: true
+                }
+              }
+            }
+          })
+
+Unknown argument `eventDate`. Did you mean `endDate`? Available options are marked with ?.
+    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:164:15)
+    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:325:32)
+    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+    =====================================================
+    

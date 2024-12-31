@@ -1,0 +1,2 @@
+[2024-12-18][16:05:17][deleteEventGoogleSubscription][Error in service EventsGoogleService.deleteEvent: Error in service EventsGoogleService.refreshAccessToken_catch: Request failed with status code 404][File: undefined, Line: undefined]
+[2024-12-18][16:05:37][deleteEventGoogleSubscription][Error in service EventsGoogleService.deleteEvent: Error in service EventsGoogleService.refreshAccessToken_catch: Request failed with status code 404][File: undefined, Line: undefined]

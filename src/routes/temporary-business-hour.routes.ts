@@ -3,6 +3,7 @@ import express from 'express';
 import { JWTService } from '../services/jwt/jwt.service';
 import { TemporaryBusinessHourController } from '../controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller';
 import { BusinessHourMiddleware } from '../middlewares/business-hour/business-hour.middleware';
+import { OnlyAdminMiddleware } from '../middlewares/only-admin.middleware';
 
 const router = express.Router();
 const controller = new TemporaryBusinessHourController();
@@ -11,6 +12,8 @@ const controller = new TemporaryBusinessHourController();
 router.post('/temporary-business-hours/add',
     [
         JWTService.verifyCookieToken,
+        OnlyAdminMiddleware.accessOnlyAdminOrManager,
+
         // TODO: No se agrega ya que las fechas vienen de otra manera
         // BusinessHourMiddleware.convertToISOTime_FirstPart,
         BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
@@ -31,9 +34,13 @@ router.post('/temporary-business-hours/by-worker-and-date', JWTService.verifyCoo
 
 router.post('/temporary-business-hours/exception/by-worker-and-date-exception', JWTService.verifyCookieToken, controller.getDistinctDatesWithExceptionsByWorker);
 
+router.post('/temporary-business-hours/r-temporary-business', JWTService.verifyCookieToken, controller.getTemporaryHoursFromRedis);
+
 // Actualizar un horario de trabajo
 router.post('/temporary-business-hours/update-:id', [
     JWTService.verifyCookieToken,
+    OnlyAdminMiddleware.accessOnlyAdminOrManager,
+
     // TODO: No se agrega ya que las fechas vienen de otra manera
     // BusinessHourMiddleware.convertToISOTime_FirstPart,
     BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
@@ -43,6 +50,7 @@ router.post('/temporary-business-hours/update-:id', [
 // Eliminar un horario de trabajo por ID
 router.post('/temporary-business-hours/delete', [
     JWTService.verifyCookieToken,
+    OnlyAdminMiddleware.accessOnlyAdminOrManager,
     // TODO: No se agrega ya que las fechas vienen de otra manera
     // BusinessHourMiddleware.convertToISOTime_FirstPart,
     BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
@@ -51,5 +59,8 @@ router.post('/temporary-business-hours/delete', [
 
 // Autocompletar horarios de trabajo
 router.post('/temporary-business-hours/autocomplete', JWTService.verifyCookieToken, controller.autocomplete);
+
+
+router.post('/temporary-business-hours/r-temporary-business-hours', [ JWTService.verifyCookieToken, OnlyAdminMiddleware.accessOnlyAdminOrManagerOrUser, ], controller.getTemporaryHoursFromRedis);
 
 module.exports = router;

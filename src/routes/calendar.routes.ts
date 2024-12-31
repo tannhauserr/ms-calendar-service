@@ -1,24 +1,50 @@
-import express from 'express';
-import { CalendarController } from '../controllers/calendar/calendar.controller';
-import { JWTService } from '../services/jwt/jwt.service';
-
+import express from "express";
+import { CalendarController } from "../controllers/calendar/calendar.controller";
+import { JWTService } from "../services/jwt/jwt.service";
+import { CheckCompanyMiddleware } from "../middlewares/check-company/check-company.middleware";
 
 const router = express.Router();
 const controller = new CalendarController();
 
-// Obtener calendarios con paginación
-router.post('/calendars', JWTService.verifyCookieToken, controller.get);
+/**
+ * Middleware para verificar el token JWT a través de cookies.
+ */
+const verifyTokenMiddleware = JWTService.verifyCookieToken;
 
-// Añadir un nuevo calendario
-router.post('/calendars/add', JWTService.verifyCookieToken, controller.add);
+/**
+ * Rutas de Calendario
+ */
+
+// Obtener todos los calendarios con paginación
+// router.get("/calendars", verifyTokenMiddleware, controller.getAll);
 
 // Obtener un calendario por su ID
-router.get('/calendars/:id', JWTService.verifyCookieToken, controller.getById);
+router.get("/calendars-:id", [
+    verifyTokenMiddleware,
+    CheckCompanyMiddleware.validateCompanyAccessInEstablishment,
+], controller.getById);
 
-// Actualizar un calendario
-router.post('/calendars/update', JWTService.verifyCookieToken, controller.update);
+// Añadir un nuevo calendario
+router.post("/calendars", verifyTokenMiddleware, controller.create);
 
-// Borrar un calendario
-router.post('/calendars/delete-google-total', JWTService.verifyCookieToken, controller.deleteGoogleTotal);
+// Actualizar un calendario existente
+// router.post("/calendars/update", verifyTokenMiddleware, controller.update);
+
+// Borrar varios calendarios mediante sus IDs
+router.post("/calendars/delete-definitive", verifyTokenMiddleware, controller.delete);
+
+// Buscar o crear un calendario
+router.post("/calendars/find-or-create", verifyTokenMiddleware, controller.findOrCreate);
+router.post("/calendars/find-or-create-data", [
+    verifyTokenMiddleware,
+    CheckCompanyMiddleware.validateCompanyAccessInEstablishment
+], controller.findOrCreateWithData);
+
+router.post(
+    "/calendars/by-company-establishment",
+    verifyTokenMiddleware,
+    controller.getByCompanyAndEstablishment
+);
+
 
 module.exports = router;

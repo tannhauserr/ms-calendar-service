@@ -36,73 +36,73 @@ export class CalendarChannelRefreshCronService {
     }
 
     start() {
-        if (!this.job) {
-            // Programa el cron job para que se ejecute una vez por semana
-            // this.job = schedule.scheduleJob('0 0 * * 0', async () => {
-            this.job = schedule.scheduleJob(rule, async () => {
-                console.log(`${CONSOLE_COLOR.FgGreen}Entrando en cron channel calendar${CONSOLE_COLOR.Reset}`)
-                try {
-                    // Obtén el último calendario creado
-                    const pag: Pagination = {
-                        page: 1,
-                        itemsPerPage: 1,
-                        orderBy: {
-                            field: "createdDate",
-                            order: "desc",
-                        }
-                    };
+        // if (!this.job) {
+        //     // Programa el cron job para que se ejecute una vez por semana
+        //     // this.job = schedule.scheduleJob('0 0 * * 0', async () => {
+        //     this.job = schedule.scheduleJob(rule, async () => {
+        //         console.log(`${CONSOLE_COLOR.FgGreen}Entrando en cron channel calendar${CONSOLE_COLOR.Reset}`)
+        //         try {
+        //             // Obtén el último calendario creado
+        //             const pag: Pagination = {
+        //                 page: 1,
+        //                 itemsPerPage: 1,
+        //                 orderBy: {
+        //                     field: "createdDate",
+        //                     order: "desc",
+        //                 }
+        //             };
 
-                    const result: { rows: any[], pagination: Pagination } = await this.calendarService.getCalendars(pag);
+        //             // const result: { rows: any[], pagination: Pagination } = await this.calendarService.getCalendars(pag);
 
-                    if (result && result?.rows?.length > 0) {
-                        const calendar = result.rows[0];
-                        const channelConfig = calendar.channelConfig;
+        //             if (result && result?.rows?.length > 0) {
+        //                 const calendar = result.rows[0];
+        //                 const channelConfig = calendar.channelConfig;
 
-                        // Revisa si el canal está a punto de expirar
-                        if (channelConfig.expiration && Date.now() > channelConfig.expiration - (TIME_MILLISECONDS.DAY * 2)) {
-                            // Refresca el canal en Google Calendar
-                            const newExpirationMills = Date.now() + TIME_MILLISECONDS.WEEK;
-                            const newExpirationSeconds = newExpirationMills / 1000;
+        //                 // Revisa si el canal está a punto de expirar
+        //                 if (channelConfig.expiration && Date.now() > channelConfig.expiration - (TIME_MILLISECONDS.DAY * 2)) {
+        //                     // Refresca el canal en Google Calendar
+        //                     const newExpirationMills = Date.now() + TIME_MILLISECONDS.WEEK;
+        //                     const newExpirationSeconds = newExpirationMills / 1000;
 
-                            const newChannelId = UtilGeneral.generateUUIDv4(); // Genera un nuevo UUID
-                            const newResourceId = UtilGeneral.generateUUIDv4(); // Genera un nuevo Resource ID
+        //                     const newChannelId = UtilGeneral.generateUUIDv4(); // Genera un nuevo UUID
+        //                     const newResourceId = UtilGeneral.generateUUIDv4(); // Genera un nuevo Resource ID
 
-                            // Actualiza la configuración del canal
-                            calendar.channelConfig = {
-                                ...channelConfig,
-                                channelId: newChannelId,
-                                resourceId: newResourceId,
-                                expiration: newExpirationMills,
-                            };
+        //                     // Actualiza la configuración del canal
+        //                     calendar.channelConfig = {
+        //                         ...channelConfig,
+        //                         channelId: newChannelId,
+        //                         resourceId: newResourceId,
+        //                         expiration: newExpirationMills,
+        //                     };
 
-                            // Llama al servicio de Google Calendar para actualizar el canal
-                            await this.channelCalGoogleaApiService.refreshChannel(
-                                calendar.idGoogleCalendar,
-                                calendar.channelConfig,
-                                `${newExpirationSeconds}` // Se convierte a string
+        //                     // Llama al servicio de Google Calendar para actualizar el canal
+        //                     await this.channelCalGoogleaApiService.refreshChannel(
+        //                         calendar.idGoogleCalendar,
+        //                         calendar.channelConfig,
+        //                         `${newExpirationSeconds}` // Se convierte a string
 
-                            );
+        //                     );
 
-                            // Actualiza el calendario en tu base de datos
-                            await this.calendarService.updateCalendar(calendar);
+        //                     // Actualiza el calendario en tu base de datos
+        //                     // await this.calendarService.updateCalendar(calendar);
 
-                            console.log(`${CONSOLE_COLOR.FgGreen}Canal de calendario actualizado con éxito.${CONSOLE_COLOR.Reset}`);
-                        }
-                    }
-                } catch (error: any) {
-                    if (error instanceof CustomError || error?.name == "CustomError") {
-                        console.log(`${CONSOLE_COLOR.FgRed}**********************************************${CONSOLE_COLOR.Reset}`)
-                        console.log(`${CONSOLE_COLOR.FgRed}************* START CUSTOM ERROR *************${CONSOLE_COLOR.Reset}`)
-                        console.error(error);
-                        console.log(`${CONSOLE_COLOR.FgRed}**********************************************${CONSOLE_COLOR.Reset}`)
-                    } else {
-                        console.error("Error en el cron job para refrescar el canal del calendario:", error);
-                        this.stop();
-                        setTimeout(() => this.start(), 1000);
-                    }
-                }
-            });
-        }
+        //                     console.log(`${CONSOLE_COLOR.FgGreen}Canal de calendario actualizado con éxito.${CONSOLE_COLOR.Reset}`);
+        //                 }
+        //             }
+        //         } catch (error: any) {
+        //             if (error instanceof CustomError || error?.name == "CustomError") {
+        //                 console.log(`${CONSOLE_COLOR.FgRed}**********************************************${CONSOLE_COLOR.Reset}`)
+        //                 console.log(`${CONSOLE_COLOR.FgRed}************* START CUSTOM ERROR *************${CONSOLE_COLOR.Reset}`)
+        //                 console.error(error);
+        //                 console.log(`${CONSOLE_COLOR.FgRed}**********************************************${CONSOLE_COLOR.Reset}`)
+        //             } else {
+        //                 console.error("Error en el cron job para refrescar el canal del calendario:", error);
+        //                 this.stop();
+        //                 setTimeout(() => this.start(), 1000);
+        //             }
+        //         }
+        //     });
+        // }
     }
 
     stop() {

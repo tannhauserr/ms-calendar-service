@@ -44,7 +44,7 @@ export class ServiceController {
             const { id } = req.params;
             const token = req.token;
             await this.jwtService.verify(token);
-
+            
             const result = await this.serviceService.getServiceById(id);
             res.status(200).json(Response.build("Servicio encontrado", 200, true, result));
         } catch (err: any) {

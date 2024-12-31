@@ -3,6 +3,10 @@ import prisma from "../../../../lib/prisma";
 import CustomError from "../../../../models/custom-error/CustomError";
 import { Pagination } from "../../../../models/pagination";
 import { getGeneric } from "../../../../utils/get-genetic/getGenetic";
+import { WorkerHoursMapType } from "../../../../models/interfaces";
+import { WorkerHoursStrategy } from "../../../@redis/cache/strategies/workerHours/workerHours.strategy";
+import moment from "moment";
+import { TIME_SECONDS } from "../../../../constant/time";
 
 export class WorkerBusinessHourService {
     constructor() { }
@@ -205,6 +209,97 @@ export class WorkerBusinessHourService {
             console.error('Error checking overlapping worker business hours:', error);
             throw new CustomError('WorkerBusinessHourWorkerBusinessHour.checkOverlappingWorkerBusinessHour', error);
         }
+    }
+
+
+
+
+
+
+    /**
+     * Usado para obtener los horarios de los trabajadores de una empresa.
+     *  Se intenta obtener los horarios de los trabajadores desde Redis, si no están disponibles se obtienen de la base de datos.
+     * 
+     * 
+     * @param userIds 
+     * @param idCompany 
+     * @returns 
+     */
+    getWorkerHoursFromRedis = async (userIds: string[], idCompany: string): Promise<WorkerHoursMapType> => {
+        const workerHoursMap: WorkerHoursMapType = {};
+        const workerHoursStrategy = new WorkerHoursStrategy();
+
+        for (const userId of userIds) {
+            // Intentar obtener los horarios del trabajador desde Redis
+            let workerHours = await workerHoursStrategy.getWorkerHours(idCompany, userId);
+
+
+            // if (workerHours) {
+            //     console.log(`Horarios del trabajador ${userId} obtenidos de Redis`);
+            //     workerHoursMap[userId] = workerHours;
+            //     continue;
+            // }
+
+            // Si no están en Redis, obtenerlos de la base de datos
+            const workerHoursRecords = await prisma.workerBusinessHour.findMany({
+                where: {
+                    idUserFk: userId,
+                    idCompanyFk: idCompany,
+                    deletedDate: null,
+                },
+            });
+
+            console.log(`Horarios del trabajador ${userId} obtenidos de la base de datos ${idCompany}`);
+            console.log(workerHoursRecords);
+
+            // Estructurar los datos
+            workerHours = {};
+
+            for (const record of workerHoursRecords) {
+                const weekDay = record.weekDayType; // e.g., 'MONDAY'
+
+                // TODO: En el caso de los workerHours no debería ser necesario omitir los días cerrados
+                // if (record.closed) continue; // Omitir días cerrados
+                if (!workerHours[weekDay]) {
+                    workerHours[weekDay] = [];
+                }
+
+                if (record.closed) {
+                    workerHours[weekDay] = null;
+                    continue;
+                }
+
+                if (workerHours[weekDay] === null) {
+                    continue;
+                }
+
+                // Convertir los tiempos a cadenas en formato 'HH:mm' usando moment
+                const startTime = moment(record.startTime).format('HH:mm');
+                const endTime = moment(record.endTime).format('HH:mm');
+
+                // Asegurar que existe una entrada para el día de la semana
+                // if (!workerHours[weekDay]) {
+                //     workerHours[weekDay] = [];
+                // }
+
+                // Añadir el rango de tiempo al día correspondiente
+                workerHours[weekDay].push([startTime, endTime]);
+
+
+
+            }
+
+            // Guardar en Redis para futuras consultas
+            await workerHoursStrategy.saveWorkerHours(idCompany, userId, workerHours, TIME_SECONDS.HOUR);
+
+            console.log(`-------- Horarios del trabajador ${userId} guardados en Redis`);
+
+            workerHoursMap[userId] = workerHours;
+        }
+
+
+
+        return workerHoursMap;
     }
 
 }

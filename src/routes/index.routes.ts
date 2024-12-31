@@ -21,6 +21,12 @@ router.use("/api", require('./user-color.routes'));
 // Event routes
 router.use("/api", require('./event.routes'));
 
+// Category routes
+router.use("/api", require('./category.routes'));
+
+// CategoryEstablishment routes
+router.use("/api", require('./category-establishment.routes'));
+
 // Service routes
 router.use("/api", require('./service.routes'));
 
@@ -38,5 +44,8 @@ router.use("/api", require('./worker-business-hour.routes'));
 
 // TemporaryBusinessHour routes
 router.use("/api", require('./temporary-business-hour.routes'));
+
+// WorkerAbsence routes
+router.use("/api", require('./worker-absence.routes'));
 
 export default router;
