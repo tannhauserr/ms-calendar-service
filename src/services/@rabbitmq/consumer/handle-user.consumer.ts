@@ -87,89 +87,89 @@ const fn = async (content: any, ack: () => void) => {
                     const { action: userAction, ...userData } = user;
                     console.log(`${CONSOLE_COLOR.FgBlue}Procesando acción de usuario: ${userAction}${CONSOLE_COLOR.Reset}`);
 
-                    switch (userAction) {
-                        case 'add':
-                            try {
-                                // Crear el usuario
-                                await txPrisma.user.create({
-                                    data: {
-                                        id: userData.id,
-                                        email: userData.email,
-                                        emailGoogle: userData.emailGoogle,
-                                        name: userData.name || '',
-                                        lastName: userData.lastName || '',
-                                        image: userData.image || null,
-                                        companyRoleJson: userData.companyRoleJson || '[]',
-                                    },
-                                });
-                                console.log('Usuario agregado:', userData.id);
-                            } catch (error) {
-                                console.error('Error al agregar usuario:', error);
-                                throw error;
-                            }
-                            break;
+                    // switch (userAction) {
+                    //     case 'add':
+                    //         try {
+                    //             // Crear el usuario
+                    //             await txPrisma.user.create({
+                    //                 data: {
+                    //                     id: userData.id,
+                    //                     email: userData.email,
+                    //                     emailGoogle: userData.emailGoogle,
+                    //                     name: userData.name || '',
+                    //                     lastName: userData.lastName || '',
+                    //                     image: userData.image || null,
+                    //                     companyRoleJson: userData.companyRoleJson || '[]',
+                    //                 },
+                    //             });
+                    //             console.log('Usuario agregado:', userData.id);
+                    //         } catch (error) {
+                    //             console.error('Error al agregar usuario:', error);
+                    //             throw error;
+                    //         }
+                    //         break;
 
-                        case 'update':
-                            try {
-                                const updateData: any = {};
-                                if (userData.email !== undefined) updateData.email = userData.email;
-                                if (userData.emailGoogle !== undefined) updateData.emailGoogle = userData.emailGoogle;
-                                if (userData.name !== undefined) updateData.name = userData.name;
-                                if (userData.lastName !== undefined) updateData.lastName = userData.lastName;
-                                if (userData.image !== undefined) updateData.image = userData.image;
-                                if (userData.companyRoleJson !== undefined) updateData.companyRoleJson = userData.companyRoleJson;
+                    //     case 'update':
+                    //         try {
+                    //             const updateData: any = {};
+                    //             if (userData.email !== undefined) updateData.email = userData.email;
+                    //             if (userData.emailGoogle !== undefined) updateData.emailGoogle = userData.emailGoogle;
+                    //             if (userData.name !== undefined) updateData.name = userData.name;
+                    //             if (userData.lastName !== undefined) updateData.lastName = userData.lastName;
+                    //             if (userData.image !== undefined) updateData.image = userData.image;
+                    //             if (userData.companyRoleJson !== undefined) updateData.companyRoleJson = userData.companyRoleJson;
 
-                                await txPrisma.user.update({
-                                    where: { id: userData.id },
-                                    data: updateData,
-                                });
-                                console.log('Usuario actualizado:', userData.id);
-                            } catch (error) {
-                                console.error('Error al actualizar usuario:', error);
-                                throw error;
-                            }
-                            break;
+                    //             await txPrisma.user.update({
+                    //                 where: { id: userData.id },
+                    //                 data: updateData,
+                    //             });
+                    //             console.log('Usuario actualizado:', userData.id);
+                    //         } catch (error) {
+                    //             console.error('Error al actualizar usuario:', error);
+                    //             throw error;
+                    //         }
+                    //         break;
 
-                        case 'delete':
-                            try {
-                                const now = new Date();
-                                // Marcar registros relacionados y el usuario como eliminados (soft delete)
-                                await txPrisma.userCalendar.updateMany({
-                                    where: { idUserFk: userData.id },
-                                    data: { deletedDate: now },
-                                });
-                                await txPrisma.userColor.updateMany({
-                                    where: { idUserFk: userData.id },
-                                    data: { deletedDate: now },
-                                });
-                                await txPrisma.workerBusinessHour.updateMany({
-                                    where: { idUserFk: userData.id },
-                                    data: { deletedDate: now },
-                                });
-                                await txPrisma.userService.updateMany({
-                                    where: { idUserFk: userData.id },
-                                    data: { deletedDate: now },
-                                });
-                                await txPrisma.temporaryBusinessHour.updateMany({
-                                    where: { idUserFk: userData.id },
-                                    data: { deletedDate: now },
-                                });
-                                await txPrisma.user.update({
-                                    where: { id: userData.id },
-                                    data: { deletedDate: now },
-                                });
+                    //     case 'delete':
+                    //         try {
+                    //             const now = new Date();
+                    //             // Marcar registros relacionados y el usuario como eliminados (soft delete)
+                    //             await txPrisma.userCalendar.updateMany({
+                    //                 where: { idUserFk: userData.id },
+                    //                 data: { deletedDate: now },
+                    //             });
+                    //             await txPrisma.userColor.updateMany({
+                    //                 where: { idUserFk: userData.id },
+                    //                 data: { deletedDate: now },
+                    //             });
+                    //             await txPrisma.workerBusinessHour.updateMany({
+                    //                 where: { idUserFk: userData.id },
+                    //                 data: { deletedDate: now },
+                    //             });
+                    //             await txPrisma.userService.updateMany({
+                    //                 where: { idUserFk: userData.id },
+                    //                 data: { deletedDate: now },
+                    //             });
+                    //             await txPrisma.temporaryBusinessHour.updateMany({
+                    //                 where: { idUserFk: userData.id },
+                    //                 data: { deletedDate: now },
+                    //             });
+                    //             await txPrisma.user.update({
+                    //                 where: { id: userData.id },
+                    //                 data: { deletedDate: now },
+                    //             });
 
-                                console.log(`Usuario y registros relacionados marcados como eliminados: ${userData.id}`);
-                            } catch (error) {
-                                console.error('Error al realizar soft delete del usuario:', error);
-                                throw error;
-                            }
-                            break;
+                    //             console.log(`Usuario y registros relacionados marcados como eliminados: ${userData.id}`);
+                    //         } catch (error) {
+                    //             console.error('Error al realizar soft delete del usuario:', error);
+                    //             throw error;
+                    //         }
+                    //         break;
 
-                        default:
-                            console.log('Acción de usuario no reconocida:', userAction);
-                            break;
-                    }
+                    //     default:
+                    //         console.log('Acción de usuario no reconocida:', userAction);
+                    //         break;
+                    // }
                 } else {
                     console.log('No hay acción válida de usuario o usuario es null');
                 }
@@ -182,116 +182,116 @@ const fn = async (content: any, ack: () => void) => {
 
                     console.log(`${CONSOLE_COLOR.FgBlue}Procesando acción de compañía: ${companyAction}${CONSOLE_COLOR.Reset}`);
 
-                    switch (companyAction) {
-                        case 'add':
-                            try {
-                                // Obtener el usuario actual
-                                const existingUser = await txPrisma.user.findUnique({
-                                    where: { id: userId },
-                                });
+                    // switch (companyAction) {
+                    //     case 'add':
+                    //         try {
+                    //             // Obtener el usuario actual
+                    //             const existingUser = await txPrisma.user.findUnique({
+                    //                 where: { id: userId },
+                    //             });
 
-                                if (existingUser) {
-                                    // Actualizar el campo companyRoleJson
-                                    const companyRoles = existingUser.companyRoleJson as any[] || [];
-                                    companyRoles.push({
-                                        companyId: companyId,
-                                        role: companyData.roleType || 'ROLE_USER',
-                                    });
+                    //             if (existingUser) {
+                    //                 // Actualizar el campo companyRoleJson
+                    //                 const companyRoles = existingUser.companyRoleJson as any[] || [];
+                    //                 companyRoles.push({
+                    //                     companyId: companyId,
+                    //                     role: companyData.roleType || 'ROLE_USER',
+                    //                 });
 
-                                    await txPrisma.user.update({
-                                        where: { id: userId },
-                                        data: {
-                                            companyRoleJson: companyRoles,
-                                        },
-                                    });
-                                    console.log(`Usuario ${userId} actualizado con nueva compañía ${companyId}`);
-                                }
-                            } catch (error) {
-                                console.error('Error al agregar compañía al usuario:', error);
-                                throw error;
-                            }
-                            break;
+                    //                 await txPrisma.user.update({
+                    //                     where: { id: userId },
+                    //                     data: {
+                    //                         companyRoleJson: companyRoles,
+                    //                     },
+                    //                 });
+                    //                 console.log(`Usuario ${userId} actualizado con nueva compañía ${companyId}`);
+                    //             }
+                    //         } catch (error) {
+                    //             console.error('Error al agregar compañía al usuario:', error);
+                    //             throw error;
+                    //         }
+                    //         break;
 
-                        case 'update':
-                            try {
-                                const existingUser = await txPrisma.user.findUnique({
-                                    where: { id: userId },
-                                });
+                    //     case 'update':
+                    //         try {
+                    //             const existingUser = await txPrisma.user.findUnique({
+                    //                 where: { id: userId },
+                    //             });
 
-                                if (existingUser) {
-                                    let companyRoles = existingUser.companyRoleJson as any[] || [];
+                    //             if (existingUser) {
+                    //                 let companyRoles = existingUser.companyRoleJson as any[] || [];
 
-                                    companyRoles = companyRoles.map((entry) => {
-                                        if (entry.companyId === companyId) {
-                                            return {
-                                                ...entry,
-                                                role: companyData.roleType || entry.role,
-                                            };
-                                        }
-                                        return entry;
-                                    });
+                    //                 companyRoles = companyRoles.map((entry) => {
+                    //                     if (entry.companyId === companyId) {
+                    //                         return {
+                    //                             ...entry,
+                    //                             role: companyData.roleType || entry.role,
+                    //                         };
+                    //                     }
+                    //                     return entry;
+                    //                 });
 
-                                    await txPrisma.user.update({
-                                        where: { id: userId },
-                                        data: {
-                                            companyRoleJson: companyRoles,
-                                        },
-                                    });
-                                    console.log(`Rol del usuario ${userId} actualizado en la compañía ${companyId}`);
-                                }
-                            } catch (error) {
-                                console.error('Error al actualizar rol en compañía:', error);
-                                throw error;
-                            }
-                            break;
+                    //                 await txPrisma.user.update({
+                    //                     where: { id: userId },
+                    //                     data: {
+                    //                         companyRoleJson: companyRoles,
+                    //                     },
+                    //                 });
+                    //                 console.log(`Rol del usuario ${userId} actualizado en la compañía ${companyId}`);
+                    //             }
+                    //         } catch (error) {
+                    //             console.error('Error al actualizar rol en compañía:', error);
+                    //             throw error;
+                    //         }
+                    //         break;
 
-                        case 'delete':
-                            try {
-                                const now = new Date();
-                                // Actualizar el campo companyRoleJson del usuario
-                                const existingUser = await txPrisma.user.findUnique({
-                                    where: { id: userId },
-                                });
+                    //     case 'delete':
+                    //         try {
+                    //             const now = new Date();
+                    //             // Actualizar el campo companyRoleJson del usuario
+                    //             const existingUser = await txPrisma.user.findUnique({
+                    //                 where: { id: userId },
+                    //             });
 
-                                if (existingUser) {
-                                    const companyRoles = (existingUser.companyRoleJson as any[] || []).filter(
-                                        (entry) => entry.companyId !== companyId
-                                    );
+                    //             if (existingUser) {
+                    //                 const companyRoles = (existingUser.companyRoleJson as any[] || []).filter(
+                    //                     (entry) => entry.companyId !== companyId
+                    //                 );
 
-                                    await txPrisma.user.update({
-                                        where: { id: userId },
-                                        data: {
-                                            companyRoleJson: companyRoles,
-                                        },
-                                    });
-                                    console.log(`Compañía ${companyId} eliminada del usuario ${userId}`);
-                                }
+                    //                 await txPrisma.user.update({
+                    //                     where: { id: userId },
+                    //                     data: {
+                    //                         companyRoleJson: companyRoles,
+                    //                     },
+                    //                 });
+                    //                 console.log(`Compañía ${companyId} eliminada del usuario ${userId}`);
+                    //             }
 
-                                // Marcar registros relacionados donde estén ambos como eliminados
-                                await txPrisma.workerBusinessHour.updateMany({
-                                    where: { idUserFk: userId, idCompanyFk: companyId },
-                                    data: { deletedDate: now },
-                                });
-                                await txPrisma.temporaryBusinessHour.updateMany({
-                                    where: { idUserFk: userId, idCompanyFk: companyId },
-                                    data: { deletedDate: now },
-                                });
+                    //             // Marcar registros relacionados donde estén ambos como eliminados
+                    //             await txPrisma.workerBusinessHour.updateMany({
+                    //                 where: { idUserFk: userId, idCompanyFk: companyId },
+                    //                 data: { deletedDate: now },
+                    //             });
+                    //             await txPrisma.temporaryBusinessHour.updateMany({
+                    //                 where: { idUserFk: userId, idCompanyFk: companyId },
+                    //                 data: { deletedDate: now },
+                    //             });
 
-                                await processSoftDeleteUserServiceByCompany(userId, companyId, txPrisma);
+                    //             await processSoftDeleteUserServiceByCompany(userId, companyId, txPrisma);
 
-                                // Otros registros si aplica
+                    //             // Otros registros si aplica
 
-                                console.log(`Registros relacionados marcados como eliminados para usuario ${userId} y compañía ${companyId}`);
-                            } catch (error) {
-                                console.error('Error al realizar soft delete de registros relacionados con la compañía:', error);
-                                throw error;
-                            }
-                            break;
+                    //             console.log(`Registros relacionados marcados como eliminados para usuario ${userId} y compañía ${companyId}`);
+                    //         } catch (error) {
+                    //             console.error('Error al realizar soft delete de registros relacionados con la compañía:', error);
+                    //             throw error;
+                    //         }
+                    //         break;
 
-                        default:
-                            console.log('Acción de compañía no reconocida:', companyAction);
-                            break;
-                    }
+                    //     default:
+                    //         console.log('Acción de compañía no reconocida:', companyAction);
+                    //         break;
+                    // }
                 } else {
                     console.log('No hay acción válida de compañía o compañía es null');
                 }

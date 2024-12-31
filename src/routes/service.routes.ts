@@ -16,7 +16,7 @@ router.post('/services/autocomplete', JWTService.verifyCookieToken, controller.a
 router.post('/services/add', JWTService.verifyCookieToken, controller.add);
 
 // Obtener un servicio por su ID
-router.get('/services/:id', JWTService.verifyCookieToken, controller.getById);
+router.get('/services-:id', JWTService.verifyCookieToken, controller.getById);
 
 // Actualizar un servicio
 router.post('/services/update', JWTService.verifyCookieToken, controller.update);

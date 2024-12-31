@@ -152,4 +152,18 @@ export class TemporaryBusinessHourController {
             res.status(500).json({ message: err.message });
         }
     }
+
+
+    getTemporaryHoursFromRedis = async (req: any, res: any, next: any) => {
+        try {
+            const { idUserList, idCompany} = req.body;
+            const token = req.token;
+            await this.jwtService.verify(token);
+
+            const result = await this.workBusinessHourService.getTemporaryHoursFromRedis(idUserList, idCompany);
+            res.status(200).json(Response.build("Registros encontrados", 200, true, result));
+        } catch (err: any) {
+            res.status(500).json({ message: err.message });
+        }
+    }
 }

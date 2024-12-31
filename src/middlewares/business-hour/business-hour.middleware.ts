@@ -70,9 +70,15 @@ export class BusinessHourMiddleware {
 
 
 
+    /**
+     * Eliminar los registros cerrados de la base de datos 
+     * @param req 
+     * @param res 
+     * @param next 
+     */
     static handleDeleteClosedRecords_SecondPart = async (req: any, res: Response, next: any) => {
 
-        const { idUserFk, date, weekDayType } = req.body;
+        const { idUserFk, date, weekDayType, idEstablishmentFk } = req.body;
 
         if (req.body.closed) {
             // Detectar si es un horario de trabajador, general o temporal
@@ -84,7 +90,7 @@ export class BusinessHourMiddleware {
                 await BusinessHourMiddleware.workerBusinessHourService.deleteWorkerBusinessHourByWorker(weekDayType, idUserFk);
             } else {
                 // Es un horario general
-                await BusinessHourMiddleware.businessHourService.deleteBusinessHourByWeekDay(weekDayType);
+                await BusinessHourMiddleware.businessHourService.deleteBusinessHourByWeekDay(weekDayType, idEstablishmentFk);
             }
 
         } else if (req.body.startTime && req.body.endTime) {
@@ -96,7 +102,7 @@ export class BusinessHourMiddleware {
                 await BusinessHourMiddleware.workerBusinessHourService.deleteClosedRecordsByWorker(weekDayType, idUserFk);
             } else {
                 // Es un horario general
-                await BusinessHourMiddleware.businessHourService.deleteClosedRecordsByWeekDay(weekDayType);
+                await BusinessHourMiddleware.businessHourService.deleteClosedRecordsByWeekDay(weekDayType, idEstablishmentFk);
             }
 
         }
@@ -107,7 +113,7 @@ export class BusinessHourMiddleware {
 
 
     static preventOverlapping_ThirdPart = async (req: any, res: any, next: any) => {
-        const { startTime, endTime, idUserFk, date, weekDayType } = req.body;
+        const { startTime, endTime, idUserFk, date, weekDayType, idEstablishmentFk } = req.body;
 
         if (startTime && endTime) {
             let isOverlapping = false;
@@ -124,7 +130,12 @@ export class BusinessHourMiddleware {
                 isOverlapping = await BusinessHourMiddleware.workerBusinessHourService.checkOverlappingWorkerBusinessHour(startTime, endTime, weekDayType, idUserFk);
             } else {
                 // Es un horario general
-                isOverlapping = await BusinessHourMiddleware.businessHourService.checkOverlappingBusinessHour(startTime, endTime, weekDayType);
+                isOverlapping = await BusinessHourMiddleware.businessHourService.checkOverlappingBusinessHour(
+                    startTime,
+                    endTime,
+                    weekDayType,
+                    idEstablishmentFk
+                );
             }
             // Verificar si el horario se superpone con otro horario
 
