@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { EventStatusType, Prisma } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import { Pagination } from "../../../models/pagination";
 
@@ -20,7 +20,8 @@ type ModelType =
 async function getGenericSpecial(
     pagination: Pagination,
     modelName: ModelType,
-    includeRelations?: any) {
+    includeRelations?: any,
+    notCancelled?: boolean) {
     const {
         orderBy,
         filters,
@@ -155,10 +156,14 @@ async function getGenericSpecial(
         }
     }
 
-    console.log("mira where", JSON.stringify(where, null, 2))
-    console.log("mira include", includeRelations)
+    // console.log("mira where", JSON.stringify(where, null, 2))
+    // console.log("mira include", includeRelations)
 
-    where = { ...where, deletedDate: null };
+    if (notCancelled) {
+        where = { ...where, deletedDate: null, eventStatusType: { not: EventStatusType.CANCELLED } };
+    } else {
+        where = { ...where, deletedDate: null };
+    }
 
     try {
         const items = await prisma[modelName as string].findMany({

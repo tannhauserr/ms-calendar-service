@@ -121,7 +121,7 @@ const router = express.Router();
 //                         startDate: new Date(event.start.dateTime || event.start.date),
 //                         endDate: new Date(event.end.dateTime || event.end.date),
 //                         idGoogleEvent: event.id,
-//                         eventType: 'APPOINTMENT', // Ajusta según tu lógica
+//                         eventPurposeType: 'APPOINTMENT', // Ajusta según tu lógica
 //                         idCalendarFk: calendarData.id, // Asociar con el calendario
 //                         idUserPlatformFk: userCalendar?.idUserFk,
 //                         eventSourceType: EventSourceType.GOOGLE

@@ -12,13 +12,39 @@ export class UserServiceController {
         this.userServiceService = new UserServiceService();
     }
 
-    public add = async (req: any, res: any, next: any) => {
+    public get = async (req: any, res: any, next: any) => {
+        try {
+            const { pagination } = req.body;
+            const token = req.token;
+            await this.jwtService.verify(token);
+
+            const result = await this.userServiceService.getUserService(pagination);
+            res.status(200).json({ message: "Servicios de usuario encontrados", ok: true, item: result });
+        } catch (err: any) {
+            res.status(500).json({ message: err.message });
+        }
+    }
+
+    // public add = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const body = req.body;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+
+    //         const result = await this.userServiceService.addUserService(body);
+    //         res.status(200).json(Response.build("Servicio de usuario creado", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json({ message: err.message });
+    //     }
+    // }
+
+    public addMultiple = async (req: any, res: any, next: any) => {
         try {
             const body = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
-       
-            const result = await this.userServiceService.addUserService(body);
+
+            const result = await this.userServiceService.addMultipleUserService(body);
             res.status(200).json(Response.build("Servicio de usuario creado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -53,11 +79,11 @@ export class UserServiceController {
 
     public delete = async (req: any, res: any, next: any) => {
         try {
-            const { id } = req.body;
+            const { idList } = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.userServiceService.deleteUserService(id);
+            const result = await this.userServiceService.deleteUserService(idList);
             res.status(200).json(Response.build("Servicio de usuario eliminado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });

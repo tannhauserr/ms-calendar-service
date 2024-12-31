@@ -1,174 +1,211 @@
-import { Prisma, Calendar } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
 import { Pagination } from "../../../models/pagination";
-import { getGeneric } from "../../../utils/get-genetic/getGenetic";
-import { UtilGeneral } from "../../../utils/util-general";
-import { v4 as uuidv4 } from 'uuid';
-import { TIME_MILLISECONDS } from "../../../constant/time";
 
 export class CalendarService {
     constructor() { }
 
-    async addCalendar(item: any): Promise<Calendar> {
+    /**
+     * Crea un nuevo calendario.
+     * @param data - Datos del calendario a crear.
+     * @returns Calendario creado.
+     */
+    async createCalendar(data: { idCompanyFk: string; idEstablishmentFk?: string }) {
         try {
-
-            const channelId = uuidv4(); // Genera un ID único para el canal
-            const resourceId = uuidv4(); // Genera un ID único para el recurso
-            const address = process.env.WEBHOOK_URL_CHANNEL_CALENDAR || '';
-
-            const expiration = Date.now() + TIME_MILLISECONDS.WEEK; // 7 días en milisegundos
-
             return await prisma.calendar.create({
                 data: {
-                    ...item,
-                    channelConfig: {
-                        channelId: channelId,
-                        resourceId: resourceId,
-                        type: 'web_hook',
-                        address: address,
-                        expiration: expiration,
-                    },
+                    idCompanyFk: data.idCompanyFk,
+                    idEstablishmentFk: data.idEstablishmentFk || null,
                     createdDate: new Date(),
                     updatedDate: new Date(),
                 },
             });
         } catch (error: any) {
-            throw new CustomError('CalendarService.addCalendar', error);
+            throw new CustomError("CalendarService.createCalendar", error);
         }
     }
 
-    async getCalendarById(id: number): Promise<Calendar | null> {
+    /**
+     * Obtiene un calendario por ID.
+     * @param id - ID del calendario.
+     * @returns Calendario encontrado o null.
+     */
+    async getCalendarById(id: string) {
         try {
             return await prisma.calendar.findUnique({
-                where: { id: id, deletedDate: null },
+                where: { id },
             });
         } catch (error: any) {
-            throw new CustomError('CalendarService.getCalendarById', error);
+            throw new CustomError("CalendarService.getCalendarById", error);
         }
     }
 
-    async updateCalendar(item: Partial<Calendar>): Promise<Calendar> {
+    /**
+     * Busca calendarios por compañía y establecimiento.
+     * @param idCompanyFk - ID de la compañía.
+     * @param idEstablishmentFk - ID del establecimiento (opcional).
+     * @returns Lista de calendarios.
+     */
+    async getCalendarsByCompanyAndEstablishment(idCompanyFk: string, idEstablishmentFk?: string) {
         try {
-            const id = item.id as number;
-            delete item.id;
+            return await prisma.calendar.findMany({
+                select: {
+                    id: true,
+                    event: true,
+                },
+                where: {
+                    idCompanyFk,
+                    idEstablishmentFk: idEstablishmentFk,
+                },
+                orderBy: { createdDate: "desc" },
+            });
+        } catch (error: any) {
+            throw new CustomError("CalendarService.getCalendarsByCompanyAndEstablishment", error);
+        }
+    }
 
+    /**
+     * Actualiza un calendario.
+     * @param id - ID del calendario.
+     * @param data - Datos a actualizar.
+     * @returns Calendario actualizado.
+     */
+    async updateCalendar(id: string, data: Partial<{ idCompanyFk: string; idEstablishmentFk: string }>) {
+        try {
             return await prisma.calendar.update({
-                where: { id: id },
+                where: { id },
                 data: {
-                    ...item,
+                    ...data,
                     updatedDate: new Date(),
                 },
             });
         } catch (error: any) {
-            throw new CustomError('CalendarService.updateCalendar', error);
+            throw new CustomError("CalendarService.updateCalendar", error);
         }
     }
 
-    // async deleteCalendar(id: number): Promise<Calendar> {
-    //     try {
-    //         return await prisma.calendar.delete({
-    //             where: { id: id },
-    //         });
-    //     } catch (error: any) {
-    //         throw new CustomError('CalendarService.deleteCalendar', error);
-    //     }
-    // }
-
-    async deleteCalendar(id: number): Promise<Calendar> {
+    /**
+     * Elimina calendarios de forma permanente por sus IDs.
+     * @param ids - Array de IDs de calendarios a eliminar.
+     * @returns Resultado de las eliminaciones.
+     */
+    async deleteCalendars(ids: string[]) {
         try {
-            return await prisma.calendar.update({
-                data: {
-                    deletedDate: new Date(),
-                },
-                where: { id: id },
-            });
+            return await prisma.$transaction(
+                ids.map((id) =>
+                    prisma.calendar.delete({
+                        where: { id },
+                    })
+                )
+            );
         } catch (error: any) {
-            throw new CustomError('CalendarService.deleteCalendar', error);
+            throw new CustomError("CalendarService.deleteCalendars", error);
         }
     }
 
-    async getCalendars(pagination: Pagination) {
+    /**
+  * Comprueba si existe un calendario por compañía y establecimiento.
+  * Si no existe, lo crea y lo devuelve junto con los eventos en el rango de fechas especificado.
+  * @param idCompanyFk - ID de la compañía.
+  * @param idEstablishmentFk - ID del establecimiento (opcional).
+  * @param startDate - Fecha inicial del rango (opcional).
+  * @param endDate - Fecha final del rango (opcional).
+  * @returns Calendario existente o recién creado con eventos en el rango.
+  */
+    async findOrCreateCalendar(
+        idCompanyFk: string,
+        idEstablishmentFk: string,
+        startDate?: Date,
+        endDate?: Date
+    ) {
         try {
-            let select: Prisma.CalendarSelect = {
-                id: true,
-                name: true,
-                // idUserFk: true,
-                idGoogleCalendar: true,
-                channelConfig: true,
-                createdDate: true,
-                updatedDate: true,
-                events: true,
-            };
+            // Ajustar fechas para incluir todo el día
+            const adjustedStartDate = startDate
+                ? new Date(startDate.setHours(0, 0, 0, 0)) // 00:00:00
+                : null;
+            const adjustedEndDate = endDate
+                ? new Date(endDate.setHours(23, 59, 59, 999)) // 23:59:59
+                : null;
 
-            const result = await getGeneric(pagination, "calendar", select);
-            return result;
-        } catch (error: any) {
-            throw new CustomError('CalendarService.getCalendars', error);
-        }
-    }
-
-
-    getLastCalendarSyncWithGoogle = async () => {
-        try {
-
+            // Buscar calendario existente
             const calendar = await prisma.calendar.findFirst({
-                select: {
-                    id: true,
-                    idGoogleCalendar: true,
-                    syncToken: true,
+                where: {
+                    idCompanyFk,
+                    idEstablishmentFk: idEstablishmentFk || null,
                 },
-                where: { deletedDate: null, idGoogleCalendar: { not: null } },
-                orderBy: {
-                    createdDate: 'desc',
-                },
+                // select: {
+                //     id: true,
+                //     event: adjustedStartDate && adjustedEndDate
+                //         ? {
+                //             where: {
+                //                 startDate: {
+                //                     gte: adjustedStartDate,
+                //                 },
+                //                 endDate: {
+                //                     lte: adjustedEndDate,
+                //                 },
+                //             },
+                //         }
+                //         : true, // Si no se especifica rango, devolver todos los eventos
+                // },
             });
 
-            return calendar;
+            if (calendar) {
+                return calendar; // Si existe, devolverlo directamente
+            }
 
-        } catch (error: any) {
-            throw new CustomError('CalendarService.getLastCalendar', error);
-        }
-    }
-
-    getLastCalendarWithoutGoogle = async () => {
-        try {
-
-            const calendar = await prisma.calendar.findFirst({
-                select: {
-                    id: true,
-                    idGoogleCalendar: true,
-                    syncToken: true,
-                },
-                where: { deletedDate: null, idGoogleCalendar: null },
-                orderBy: {
-                    createdDate: 'desc',
-                },
-            });
-
-            return calendar;
-
-        } catch (error: any) {
-            throw new CustomError('CalendarService.getLastCalendar', error);
-        }
-    }
-
-    async updateSyncToken(id: number, syncToken: string): Promise<void> {
-        try {
-            await prisma.calendar.update({
-                where: { id: id },
+            // Si no existe, crear el calendario
+            const newCalendar = await prisma.calendar.create({
                 data: {
-                    syncToken: syncToken,
+                    idCompanyFk,
+                    idEstablishmentFk: idEstablishmentFk || null,
+                    createdDate: new Date(),
                     updatedDate: new Date(),
                 },
+                // select: {
+                //     id: true,
+                //     event: adjustedStartDate && adjustedEndDate
+                //         ? {
+                //             where: {
+                //                 startDate: {
+                //                     gte: adjustedStartDate,
+                //                 },
+                //                 endDate: {
+                //                     lte: adjustedEndDate,
+                //                 },
+                //             },
+                //         }
+                //         : true, // Si no se especifica rango, devolver todos los eventos
+                // },
             });
+
+            return newCalendar;
         } catch (error: any) {
-            throw new CustomError('CalendarService.updateSyncToken', error);
+            throw new CustomError("CalendarService.findOrCreateCalendar", error);
         }
     }
 
 
+    /**
+     * Obtiene todos los calendarios con paginación.
+     * @param pagination - Objeto de paginación.
+     * @returns Lista de calendarios.
+     */
+    async getAllCalendars(pagination: Pagination) {
+        try {
+            const { page, itemsPerPage, orderBy } = pagination;
+            const skip = (page - 1) * itemsPerPage;
+            const order = orderBy || { field: "createdDate", order: "desc" };
 
-
-
+            return await prisma.calendar.findMany({
+                skip,
+                take: itemsPerPage,
+                orderBy: {
+                    [order.field]: order.order,
+                },
+            });
+        } catch (error: any) {
+            throw new CustomError("CalendarService.getAllCalendars", error);
+        }
+    }
 }

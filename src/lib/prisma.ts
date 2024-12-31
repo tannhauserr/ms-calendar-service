@@ -1,9 +1,11 @@
 import { PrismaClient } from "@prisma/client"
-import prismaExtension from "./prisma-extension";
+import { eventExtension } from "../middlewares/@prisma/event.prisma.mw";
 
 const prismaClientSingleton = () => {
-    return new PrismaClient()
-}
+    // Aplica la extensión al Prisma Client
+    const prisma = new PrismaClient().$extends(eventExtension);
+    return prisma;
+};
 
 // const prismaClientSingleton = () => {
 //     return prismaExtension;
