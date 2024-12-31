@@ -29,11 +29,11 @@ export class BusinessHourController {
 
     public get = async (req: any, res: any, next: any) => {
         try {
-            const { pagination } = req.body;
+            const { idEstablishment } = req.body;
             const token = req.token;
             await this.jwtBusinessHour.verify(token);
 
-            const result = await this.businessHourBusinessHour.getBusinessHours();
+            const result = await this.businessHourBusinessHour.getBusinessHours(idEstablishment);
             res.status(200).json({ message: "Registros encontrados", ok: true, item: result });
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -92,23 +92,37 @@ export class BusinessHourController {
         }
     }
 
-
-    public autocomplete = async (req: any, res: any, next: any) => {
+    public getBusinessHoursFromRedis = async (req: any, res: any, next: any) => {
         try {
+            const { idCompany, idEstablishment } = req.body;
 
             const token = req.token;
             await this.jwtBusinessHour.verify(token);
 
-            let result = undefined;
-        
-
-            result = await this.businessHourBusinessHour.getBusinessHours();
-
-
-            // const result = await this.businessHourBusinessHour.autocompleteBusinessHours(search, pagination);
-            res.status(200).json({ message: "Registros encontrados", ok: true, item: result && result?.rows ? result.rows : [] });
+            const result = await this.businessHourBusinessHour.getBusinessHoursFromRedis(idCompany, idEstablishment);
+            res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
         }
     }
+
+
+    // public autocomplete = async (req: any, res: any, next: any) => {
+    //     try {
+
+    //         const token = req.token;
+    //         await this.jwtBusinessHour.verify(token);
+
+    //         let result = undefined;
+
+
+    //         result = await this.businessHourBusinessHour.getBusinessHours();
+
+
+    //         // const result = await this.businessHourBusinessHour.autocompleteBusinessHours(search, pagination);
+    //         res.status(200).json({ message: "Registros encontrados", ok: true, item: result && result?.rows ? result.rows : [] });
+    //     } catch (err: any) {
+    //         res.status(500).json({ message: err.message });
+    //     }
+    // }
 }

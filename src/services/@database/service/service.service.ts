@@ -10,6 +10,13 @@ export class ServiceService {
 
     async addService(item: Prisma.ServiceCreateInput): Promise<Service> {
         try {
+
+            if (item?.duration) {
+                item.duration = Number(item?.duration || 0);
+            }
+            if (item?.price) {
+                item.price = Number(item?.price || 0);
+            }
             return await prisma.service.create({
                 data: {
                     ...item,
@@ -24,6 +31,7 @@ export class ServiceService {
 
     async getServiceById(id: number): Promise<Service | null> {
         try {
+            id = Number(id);
             return await prisma.service.findUnique({
                 where: { id: id },
                 include: {
@@ -38,6 +46,12 @@ export class ServiceService {
     async updateService(item: Service): Promise<Service> {
         try {
             const id = item.id as number;
+            if (item?.duration) {
+                item.duration = Number(item?.duration || 0);
+            }
+            if (item?.price) {
+                item.price = Number(item?.price || 0);
+            }
             delete item.id;
 
             return await prisma.service.update({
@@ -66,12 +80,22 @@ export class ServiceService {
         try {
             let select: Prisma.ServiceSelect = {
                 id: true,
-                name: true,
+
                 duration: true,
+                price: true,
+                name: true,
                 description: true,
                 // createdDate: true,
                 // updatedDate: true,
-                userServices: isUserServices,
+                // userServices: isUserServices,
+                category: {
+                    select: {
+                        id: true,
+                        name: true,
+                        color: true,
+
+                    },
+                }
             };
 
             const result = await getGeneric(pagination, "service", select);

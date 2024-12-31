@@ -17,6 +17,7 @@ import { RedisSubscriberService } from "./services/@redis/pubsub/redis-subscribe
 import { initializeSubscriptionsRedis } from "./services/@redis/pubsub/initializeSubscriptions";
 import { initializeChannels } from "./services/caledar-googleapi/channel-calendar/initializeChannelCalendar";
 import { initializeConsumerRabbitMQ } from "./services/@rabbitmq/initializeConsumers";
+import { initializeConsumerRCP_RabbitMQ } from "./services/@rabbitmq/rpc/initializeRpcConsumer";
 
 // const ip = process.env.IP || "127.0.0.1";
 
@@ -102,6 +103,7 @@ app.listen(port, () => {
 
     // Inicializar los consumers de RabbitMQ
     initializeConsumerRabbitMQ();
+    initializeConsumerRCP_RabbitMQ();
 
 /**
    * IMPORTANTE LEER:

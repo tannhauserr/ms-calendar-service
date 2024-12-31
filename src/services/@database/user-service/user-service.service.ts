@@ -1,21 +1,60 @@
 import { Prisma, UserService } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
+import { getGeneric } from "../../../utils/get-genetic/getGenetic";
+import { Pagination } from "../../../models/pagination";
 
 export class UserServiceService {
     constructor() { }
 
-    async addUserService(item: Prisma.UserServiceCreateInput): Promise<UserService> {
+    async getUserService(pagination: Pagination, isUserServices = true) {
         try {
-            return await prisma.userService.create({
-                data: {
-                    ...item,
-                    createdDate: new Date(),
-                    updatedDate: new Date(),
+            let select: Prisma.UserServiceSelect = {
+                id: true,
+                idUserFk: true,
+                service: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+
                 },
+            };
+
+            const result = await getGeneric(pagination, "userService", select);
+            return result;
+        } catch (error: any) {
+            throw new CustomError('ServiceService.getServices', error);
+        }
+    }
+
+    // async addUserService(item: Prisma.UserServiceCreateInput): Promise<UserService> {
+    //     try {
+    //         return await prisma.userService.create({
+    //             data: {
+    //                 ...item,
+    //                 createdDate: new Date(),
+    //                 updatedDate: new Date(),
+    //             }
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError('UserServiceService.addUserService', error);
+    //     }
+    // }
+
+    async addMultipleUserService(
+        item: Prisma.UserServiceCreateManyInput | Prisma.UserServiceCreateManyInput[]
+    ): Promise<any> {
+        try {
+            // Convertir item a array si no lo es
+            const itemsArray = Array.isArray(item) ? item : [item];
+
+            return await prisma.userService.createMany({
+                data: itemsArray,
+                skipDuplicates: true,
             });
         } catch (error: any) {
-            throw new CustomError('UserServiceService.addUserService', error);
+            throw new CustomError('UserServiceService.addMultipleUserService', error);
         }
     }
 
@@ -49,10 +88,14 @@ export class UserServiceService {
         }
     }
 
-    async deleteUserService(id: number): Promise<UserService> {
+    async deleteUserService(ids: number[]): Promise<Prisma.BatchPayload> {
         try {
-            return await prisma.userService.delete({
-                where: { id: id },
+            return await prisma.userService.deleteMany({
+                where: {
+                    id: {
+                        in: ids,
+                    },
+                },
             });
         } catch (error: any) {
             throw new CustomError('UserServiceService.deleteUserService', error);

@@ -3,6 +3,7 @@ import express from 'express';
 import { JWTService } from '../services/jwt/jwt.service';
 import { WorkerBusinessHourController } from '../controllers/all-business-controller/worker-business-hour/worker-business-hour.controller';
 import { BusinessHourMiddleware } from '../middlewares/business-hour/business-hour.middleware';
+import { OnlyAdminMiddleware } from '../middlewares/only-admin.middleware';
 
 const router = express.Router();
 const controller = new WorkerBusinessHourController();
@@ -11,6 +12,7 @@ const controller = new WorkerBusinessHourController();
 router.post('/worker-business-hours/add',
     [
         JWTService.verifyCookieToken,
+        OnlyAdminMiddleware.accessOnlyAdminOrManager,
         BusinessHourMiddleware.convertToISOTime_FirstPart,
         BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
         BusinessHourMiddleware.preventOverlapping_ThirdPart,
@@ -31,6 +33,7 @@ router.get('/worker-business-hours/by-worker-:idWorker', JWTService.verifyCookie
 // Actualizar un horario de trabajo
 router.post('/worker-business-hours/update-:id', [
     JWTService.verifyCookieToken,
+    OnlyAdminMiddleware.accessOnlyAdminOrManager,
     BusinessHourMiddleware.convertToISOTime_FirstPart,
     BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
     BusinessHourMiddleware.preventOverlapping_ThirdPart,
@@ -39,12 +42,19 @@ router.post('/worker-business-hours/update-:id', [
 // Eliminar un horario de trabajo por ID
 router.post('/worker-business-hours/delete', [
     JWTService.verifyCookieToken,
+    OnlyAdminMiddleware.accessOnlyAdminOrManager,
     BusinessHourMiddleware.convertToISOTime_FirstPart,
     BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
     BusinessHourMiddleware.preventOverlapping_ThirdPart,
 ], controller.delete);
 
+router.post('/worker-business-hours/r-worker-business-hours', [
+    JWTService.verifyCookieToken,
+    OnlyAdminMiddleware.accessOnlyAdminOrManagerOrUser,
+
+], controller.getWorkerHoursFromRedis);
+
 // Autocompletar horarios de trabajo
-router.post('/worker-business-hours/autocomplete', JWTService.verifyCookieToken, controller.autocomplete);
+// router.post('/worker-business-hours/autocomplete', JWTService.verifyCookieToken, controller.autocomplete);
 
 module.exports = router;

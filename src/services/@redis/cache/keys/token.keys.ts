@@ -1,21 +1,47 @@
 
-
-export const KEY_PROJECT = process.env.KEY_PROJECT;
-
 export const TokenKeys = {
     // OAUTH
-    googleAccessToken: (userId: string) => `${KEY_PROJECT}:user:${userId}:googleAccessToken`,
-    googleRefreshToken: (userId: string) => `${KEY_PROJECT}:user:${userId}:googleRefreshToken`,
+    googleAccessToken: (userId: string) => `user:${userId}:googleAccessToken`,
+    googleRefreshToken: (userId: string) => `user:${userId}:googleRefreshToken`,
 
     // CHANNEL Google Calendar
-    channelConfigCalendar: () => `${KEY_PROJECT}:channelConfigCalendar`,
-    handleOutgoingEvent: (eventId: string) => `${KEY_PROJECT}:handleOutgoingEvent:${eventId}`,
+    channelConfigCalendar: () => `channelConfigCalendar`,
+    handleOutgoingEvent: (eventId: string) => `handleOutgoingEvent:${eventId}`,
 
     // Event UserColor
-    userColor: (userId: string) => `${KEY_PROJECT}:userColor:${userId}`,
+    userColor: (userId: string) => `userColor:${userId}`,
 
     // ChangeChatHandler    
-    changeChatHandler: (chatId: string) => `${KEY_PROJECT}:changeChatHandler:${chatId}`,
+    changeChatHandler: (chatId: string) => `changeChatHandler:${chatId}`,
 
-    // Puedes agregar más claves relacionadas aquí
+    /**
+    * Saved basic information to create a reservetation by idEstablishment
+    * Ms-Chat - MS-Login y MS-Calendar
+    */
+    savedBasicInformationToCreateReservationByIdEstablishment: (idEstablishment: string) => `savedBasicInformationToCreateReservationByIdEstablishment:${idEstablishment}`,
+
+
+    /**
+     * Usada en getAvailableTimeSlots(
+     * @param idEstablishment 
+     * @returns 
+     */
+    businessHours: (idEstablishment: string) => `businessHours:${idEstablishment}`,
+
+    /**
+     * Usada en getAvailableTimeSlots
+     * @param idCompany 
+     * @param idUser 
+     * @returns 
+     */
+    workerHours: (idCompany: string, idUser: string) => `workerHours:${idCompany}:${idUser}`,
+
+
+    /**
+    * Usada en getAvailableTimeSlots
+    * @param idCompany 
+    * @param idUser 
+    * @returns 
+    */
+    temporaryHours: (idCompany: string, idUser: string) => `temporaryHours:${idCompany}:${idUser}`,
 };

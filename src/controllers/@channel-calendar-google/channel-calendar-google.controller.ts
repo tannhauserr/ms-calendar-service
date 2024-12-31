@@ -25,16 +25,16 @@ export class ChannelCalendarGoogleController {
                 return;
             }
 
-            const calendarData = await this.calendarService.getLastCalendarSyncWithGoogle();
-            const eventsResponse = await this.fetchCalendarEvents(calendarId, calendarData?.syncToken);
-            const events = eventsResponse.data.items;
-            const newSyncToken = eventsResponse.data.nextSyncToken;
+            // const calendarData = await this.calendarService.getLastCalendarSyncWithGoogle();
+            // const eventsResponse = await this.fetchCalendarEvents(calendarId, calendarData?.syncToken);
+            // const events = eventsResponse.data.items;
+            // const newSyncToken = eventsResponse.data.nextSyncToken;
 
-            await this.processEvents(events, calendarData);
+            // await this.processEvents(events, calendarData);
 
-            if (newSyncToken && calendarData?.id) {
-                await this.calendarService.updateSyncToken(calendarData.id, newSyncToken);
-            }
+            // if (newSyncToken && calendarData?.id) {
+            //     // await this.calendarService.updateSyncToken(calendarData.id, newSyncToken);
+            // }
 
             res.status(200).send('Notificación recibida y procesada.');
         } catch (error) {
@@ -100,14 +100,14 @@ export class ChannelCalendarGoogleController {
                 await this.handleCancelledEvent(event.id);
             } else {
                 
-                const userCalendar = await this.userCalendarService.getByIdCalendarAndEmailGoogle(calendarData.id, event.creator.email);
+                // const userCalendar = await this.userCalendarService.getByIdCalendarAndEmailGoogle(calendarData.id, event.creator.email);
 
-                if (!userCalendar) {
-                    console.log(`No se encontró registro en userCalendar para el evento: ${event.id}`);
-                    continue;
-                }
+                // if (!userCalendar) {
+                //     console.log(`No se encontró registro en userCalendar para el evento: ${event.id}`);
+                //     continue;
+                // }
 
-                await this.handleUpsertEvent(event, userCalendar, calendarData.id);
+                // await this.handleUpsertEvent(event, userCalendar, calendarData.id);
             }
         }
     }
@@ -136,7 +136,7 @@ export class ChannelCalendarGoogleController {
             await this.eventService.updateEvent({ id: existingEvent.id, ...eventData });
             console.log(`Evento actualizado: ${event.id}`);
         } else {
-            await this.eventService.addEvent({ ...eventData, eventType: 'APPOINTMENT', idCalendarFk: calendarId });
+            await this.eventService.addEvent({ ...eventData, eventPurposeType: 'APPOINTMENT', idCalendarFk: calendarId });
             console.log(`Evento creado: ${event.id}`);
         }
     }
