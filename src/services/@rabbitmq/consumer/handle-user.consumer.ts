@@ -5,8 +5,8 @@ import { CONSOLE_COLOR } from '../../../constant/console-color';
 import { PrismaClient } from '@prisma/client';
 import { RabbitMQFacade } from '../facade/rabbitmq.facade';
 import { ActionPayloads } from '../actions/rabbitmq.action';
+import prisma from '../../../lib/prisma';
 
-const prisma = new PrismaClient();
 
 export const handleUserConsumer = async (): Promise<void> => {
     const queue = RabbitMQKeys.handleUserQueue();

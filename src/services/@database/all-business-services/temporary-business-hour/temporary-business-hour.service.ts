@@ -6,19 +6,22 @@ import { getGeneric } from "../../../../utils/get-genetic/getGenetic";
 import moment from "moment";
 import { TemporaryHoursMapType } from "../../../../models/interfaces/temporary-business-hours-type";
 import { TemporaryHoursStrategy } from "../../../@redis/cache/strategies/temporaryHours/temporaryHours.strategy";
+import { TIME_SECONDS } from "../../../../constant/time";
+import { HoursRangeInput, normalizeRange, isWithin, listDaysInclusive } from "../interfaces";
 
 export class TemporaryBusinessHourService {
     constructor() { }
 
     async addTemporaryBusinessHour(item: Prisma.TemporaryBusinessHourCreateInput): Promise<TemporaryBusinessHour> {
         try {
+            // Elimina la propiedad 'id' si viene en el objeto
+            const { id, ...dataWithoutId } = item as any;
 
-            console.log("que voy a agregar?", item)
-
+            console.log("que voy a agregar?", dataWithoutId);
 
             return await prisma.temporaryBusinessHour.create({
                 data: {
-                    ...item,
+                    ...dataWithoutId,
                     createdDate: new Date(),
                     updatedDate: new Date(),
                 },
@@ -28,7 +31,7 @@ export class TemporaryBusinessHourService {
         }
     }
 
-    async getTemporaryBusinessHourById(id: number): Promise<TemporaryBusinessHour | null> {
+    async getTemporaryBusinessHourById(id: string): Promise<TemporaryBusinessHour | null> {
         try {
             return await prisma.temporaryBusinessHour.findUnique({
                 where: { id: id },
@@ -39,6 +42,7 @@ export class TemporaryBusinessHourService {
                     endTime: true,
                     closed: true,
                     idUserFk: true,
+                    idWorkspaceFk: true,
                     idCompanyFk: true,
                     deletedDate: true,
                     createdDate: true,
@@ -66,6 +70,7 @@ export class TemporaryBusinessHourService {
                 select: {
                     id: true,
                     date: true,
+                    idWorkspaceFk: true,
                     idCompanyFk: true,
                     startTime: true,
                     endTime: true,
@@ -83,12 +88,12 @@ export class TemporaryBusinessHourService {
     }
 
     async getTemporaryBusinessHourByWorkerAndDate(idWorker: string, date: Date): Promise<{
-        id: number;
+        id: string;
         idUserFk: string;
         date: Date;
         closed: boolean;
-        startTime: Date;
-        endTime: Date;
+        startTime: string;
+        endTime: string;
     }[]> {
         try {
             // Obtener el inicio y fin del día
@@ -174,11 +179,14 @@ export class TemporaryBusinessHourService {
 
     async updateTemporaryBusinessHour(item: TemporaryBusinessHour): Promise<TemporaryBusinessHour> {
         try {
-            const id = item.id as number;
+
+            console.log("el item entrante en updateTemporaryBusinessHour", item);
+            // Convertimos el ID a string para usarlo en el where
+            const id = String(item.id);
             delete item.id;
 
             return await prisma.temporaryBusinessHour.update({
-                where: { id: id },
+                where: { id },
                 data: {
                     ...item,
                     updatedDate: new Date(),
@@ -189,7 +197,7 @@ export class TemporaryBusinessHourService {
         }
     }
 
-    async deleteTemporaryBusinessHour(idList: number[]): Promise<any> {
+    async deleteTemporaryBusinessHour(idList: string[]): Promise<any> {
         try {
             const listAux = Array.isArray(idList) ? idList : [idList];
             return await prisma.temporaryBusinessHour.deleteMany({
@@ -213,7 +221,7 @@ export class TemporaryBusinessHourService {
                 endTime: true,
                 closed: true,
                 idUserFk: true,
-
+                idWorkspaceFk: true,
             };
 
             const result = await getGeneric(pagination, "temporaryBusinessHour", select);
@@ -222,6 +230,226 @@ export class TemporaryBusinessHourService {
             throw new CustomError('TemporaryBusinessHour.getTemporaryTemporaryBusinessHours', error);
         }
     }
+
+
+
+
+
+    // async getTemporaryBusinessHours2(pagination: Pagination): Promise<any> {
+    //     try {
+    //         const skip = (pagination.page - 1) * pagination.itemsPerPage;
+    //         const take = pagination.itemsPerPage;
+    //         const idUserFk = pagination.filters?.idUserFk?.value;
+    //         const idWorkspaceFk = pagination.filters?.idWorkspaceFk?.value;
+
+    //         let groups: any[] = [];
+    //         let countResult: any;
+
+    //         if (idUserFk) {
+    //             groups = await prisma.$queryRaw`
+    //     SELECT
+    //       MIN("id") AS "id",
+    //       "idUserFk",
+    //       DATE("date") AS "day",
+    //       bool_or("closed") AS closed,
+    //       json_agg(
+    //         json_build_object(
+    //           'id', "id",
+    //           'startTime',
+    //             CASE 
+    //               WHEN coalesce(trim("startTime"), '') <> '' 
+    //               THEN to_char("date", 'YYYY-MM-DD') || 'T' || "startTime"
+    //               ELSE NULL
+    //             END,
+    //           'endTime',
+    //             CASE 
+    //               WHEN coalesce(trim("endTime"), '') <> '' 
+    //               THEN to_char("date", 'YYYY-MM-DD') || 'T' || "endTime"
+    //               ELSE NULL
+    //             END,
+    //           'closed', "closed"
+    //         ) ORDER BY "startTime"
+    //       ) AS times
+    //     FROM "temporaryBusinessHours"
+    //     WHERE "idUserFk" = ${idUserFk}
+    //     ${idWorkspaceFk ? Prisma.sql`AND "idWorkspaceFk" = ${idWorkspaceFk}` : Prisma.empty}
+    //     GROUP BY "idUserFk", DATE("date")
+    //     ORDER BY DATE("date") DESC
+    //     LIMIT ${take} OFFSET ${skip}
+    //   `;
+
+    //             countResult = await prisma.$queryRaw`
+    //     SELECT COUNT(*) AS count FROM (
+    //       SELECT "idUserFk", DATE("date") AS "day"
+    //       FROM "temporaryBusinessHours"
+    //       WHERE "idUserFk" = ${idUserFk}
+    //       ${idWorkspaceFk ? Prisma.sql`AND "idWorkspaceFk" = ${idWorkspaceFk}` : Prisma.empty}
+    //       GROUP BY "idUserFk", DATE("date")
+    //     ) AS sub
+    //   `;
+    //         } else {
+    //             groups = await prisma.$queryRaw`
+    //     SELECT
+    //       MIN("id") AS "id",
+    //       "idUserFk",
+    //       "idWorkspaceFk",
+    //       DATE("date") AS "day",
+    //       bool_or("closed") AS closed,
+    //       json_agg(
+    //         json_build_object(
+    //           'id', "id",
+    //           'startTime',
+    //             CASE 
+    //               WHEN coalesce(trim("startTime"), '') <> '' 
+    //               THEN to_char("date", 'YYYY-MM-DD') || 'T' || "startTime"
+    //               ELSE NULL
+    //             END,
+    //           'endTime',
+    //             CASE 
+    //               WHEN coalesce(trim("endTime"), '') <> '' 
+    //               THEN to_char("date", 'YYYY-MM-DD') || 'T' || "endTime"
+    //               ELSE NULL
+    //             END,
+    //           'closed', "closed"
+    //         ) ORDER BY "startTime"
+    //       ) AS times
+    //     FROM "temporaryBusinessHours"
+    //     GROUP BY "idUserFk", DATE("date"), "idWorkspaceFk"
+    //     ORDER BY DATE("date") DESC
+    //     LIMIT ${take} OFFSET ${skip}
+    //   `;
+
+    //             countResult = await prisma.$queryRaw`
+    //     SELECT COUNT(*) AS count FROM (
+    //       SELECT "idUserFk", DATE("date") AS "day", "idWorkspaceFk"
+    //       FROM "temporaryBusinessHours"
+    //       GROUP BY "idUserFk", DATE("date"), "idWorkspaceFk"
+    //     ) AS sub
+    //   `;
+    //         }
+
+    //         const totalGroups = parseInt(countResult[0].count, 10);
+
+    //         return {
+    //             rows: groups,
+    //             pagination: {
+    //                 totalItems: totalGroups,
+    //                 totalPages: Math.ceil(totalGroups / pagination.itemsPerPage),
+    //             },
+    //         };
+    //     } catch (error: any) {
+    //         throw new CustomError('TemporaryBusinessHour.getTemporaryBusinessHoursGrouped', error);
+    //     }
+    // }
+
+
+    async getTemporaryBusinessHours2(pagination: Pagination): Promise<any> {
+        try {
+            const skip = (pagination.page - 1) * pagination.itemsPerPage;
+            const take = pagination.itemsPerPage;
+            const idUserFk = pagination.filters?.idUserFk?.value;
+            const idWorkspaceFk = pagination.filters?.idWorkspaceFk?.value;
+
+            let groups: any[] = [];
+            let countResult: any;
+
+            if (idUserFk) {
+                groups = await prisma.$queryRaw`
+      SELECT
+        MIN("id") AS "id",
+        "idUserFk",
+        DATE("date") AS "day",
+        bool_or("closed") AS closed,
+        json_agg(
+          json_build_object(
+            'id', "id",
+            'startTime',
+              CASE 
+                WHEN coalesce(trim("startTime"), '') <> '' 
+                THEN to_char("startTime"::time, 'HH24:MI')
+                ELSE NULL
+              END,
+            'endTime',
+              CASE 
+                WHEN coalesce(trim("endTime"), '') <> '' 
+                THEN to_char("endTime"::time, 'HH24:MI')
+                ELSE NULL
+              END,
+            'closed', "closed"
+          ) ORDER BY ("startTime")::time
+        ) AS times
+      FROM "temporaryBusinessHours"
+      WHERE "idUserFk" = ${idUserFk}
+      ${idWorkspaceFk ? Prisma.sql`AND "idWorkspaceFk" = ${idWorkspaceFk}` : Prisma.empty}
+      GROUP BY "idUserFk", DATE("date")
+      ORDER BY DATE("date") DESC
+      LIMIT ${take} OFFSET ${skip}
+    `;
+
+                countResult = await prisma.$queryRaw`
+      SELECT COUNT(*) AS count FROM (
+        SELECT "idUserFk", DATE("date") AS "day"
+        FROM "temporaryBusinessHours"
+        WHERE "idUserFk" = ${idUserFk}
+        ${idWorkspaceFk ? Prisma.sql`AND "idWorkspaceFk" = ${idWorkspaceFk}` : Prisma.empty}
+        GROUP BY "idUserFk", DATE("date")
+      ) AS sub
+    `;
+            } else {
+                groups = await prisma.$queryRaw`
+      SELECT
+        MIN("id") AS "id",
+        "idUserFk",
+        "idWorkspaceFk",
+        DATE("date") AS "day",
+        bool_or("closed") AS closed,
+        json_agg(
+          json_build_object(
+            'id', "id",
+            'startTime',
+              CASE 
+                WHEN coalesce(trim("startTime"), '') <> '' 
+                THEN to_char("startTime"::time, 'HH24:MI')
+                ELSE NULL
+              END,
+            'endTime',
+              CASE 
+                WHEN coalesce(trim("endTime"), '') <> '' 
+                THEN to_char("endTime"::time, 'HH24:MI')
+                ELSE NULL
+              END,
+            'closed', "closed"
+          ) ORDER BY ("startTime")::time
+        ) AS times
+      FROM "temporaryBusinessHours"
+      GROUP BY "idUserFk", DATE("date"), "idWorkspaceFk"
+      ORDER BY DATE("date") DESC
+      LIMIT ${take} OFFSET ${skip}
+    `;
+
+                countResult = await prisma.$queryRaw`
+      SELECT COUNT(*) AS count FROM (
+        SELECT "idUserFk", DATE("date") AS "day", "idWorkspaceFk"
+        FROM "temporaryBusinessHours"
+        GROUP BY "idUserFk", DATE("date"), "idWorkspaceFk"
+      ) AS sub
+    `;
+            }
+
+            const totalGroups = parseInt(countResult[0].count, 10);
+
+            return {
+                rows: groups,
+                pagination: {
+                    totalItems: totalGroups,
+                    totalPages: Math.ceil(totalGroups / pagination.itemsPerPage),
+                },
+            };
+        } catch (error: any) {
+            throw new CustomError('TemporaryBusinessHour.getTemporaryBusinessHoursGrouped', error);
+        }
+    }
+
 
     async deleteTemporaryBusinessHourByWorkerAndDate(idWorker: string, date: Date): Promise<any> {
         try {
@@ -269,7 +497,7 @@ export class TemporaryBusinessHourService {
 
 
 
-    async checkOverlappingTemporaryBusinessHour(startTime: Date, endTime: Date, idUserFk: string, date: Date): Promise<boolean> {
+    async checkOverlappingTemporaryBusinessHour(startTime: Date, endTime: Date, idUserFk: string, idWorkspaceFk: string, date: Date, id: any = undefined): Promise<boolean> {
         try {
             // Obtener el inicio y fin del día para la fecha proporcionada
             const startDate = moment(date).startOf('day').toDate();
@@ -278,32 +506,32 @@ export class TemporaryBusinessHourService {
             // console.log("entro a overlapping start", startTime);
             // console.log("entro a overlapping end", endTime);
 
+            const whereClause: any = {
+                idUserFk,
+                idWorkspaceFk,
+                date,
+                AND: [
+                    {
+                        OR: [
+                            {
+                                startTime: { lte: endTime },
+                                endTime: { gte: startTime },
+                            },
+                        ],
+                    },
+                    {
+                        closed: false,
+                    },
+                ],
+            };
 
+            if (id !== undefined) {
+                whereClause.id = { not: id };
+            }
 
             // Buscar si hay horarios temporales superpuestos para el trabajador en la misma fecha
             const overlappingHours = await prisma.temporaryBusinessHour.findFirst({
-                where: {
-                    idUserFk: idUserFk,
-                    date,
-                    AND: [
-                        {
-                            OR: [
-                                {
-                                    // Caso 1: El nuevo horario empieza dentro de un horario existente
-                                    startTime: {
-                                        lte: endTime,  // Empieza antes o durante el nuevo horario
-                                    },
-                                    endTime: {
-                                        gte: startTime,  // Termina después o durante el nuevo horario
-                                    },
-                                },
-                            ]
-                        },
-                        {
-                            closed: false, // Solo horarios que no estén marcados como cerrados
-                        },
-                    ],
-                },
+                where: whereClause,
             });
 
             // Si se encuentra un horario que se superpone, devolver true
@@ -319,64 +547,312 @@ export class TemporaryBusinessHourService {
      * Devuelve los horarios temporales de los trabajadores en un rango de fechas.
      * Intenta obtener los horarios temporales desde Redis, si no los encuentra, los obtiene de la base de datos.
      * @param userIds 
-     * @param idCompany 
+     * @param idWorkspace 
      * @returns 
      */
-    getTemporaryHoursFromRedis = async (userIds: string[], idCompany: string): Promise<TemporaryHoursMapType> => {
+    // getTemporaryHoursFromRedis = async (
+    //     userIds: string[],
+    //     idWorkspace: string
+    // ): Promise<TemporaryHoursMapType> => {
+    //     const temporaryHoursMap: TemporaryHoursMapType = {};
+    //     const temporaryHoursStrategy = new TemporaryHoursStrategy();
+
+    //     for (const userId of userIds) {
+    //         // 1) Redis
+    //         let temporaryHours = await temporaryHoursStrategy.getTemporaryHours(idWorkspace, userId);
+
+    //         if (temporaryHours) {
+    //             // console.log(`Horarios temporales del usuario ${userId} obtenidos de Redis`);
+    //             temporaryHoursMap[userId] = temporaryHours;
+    //             continue;
+    //         }
+
+    //         // 2) DB
+    //         const records = await prisma.temporaryBusinessHour.findMany({
+    //             where: {
+    //                 idWorkspaceFk: idWorkspace,
+    //                 idUserFk: userId,
+    //                 deletedDate: null,
+    //             },
+    //         });
+    //         // console.log("id workspace y userId", idWorkspace, userId);
+    //         // console.log("mira records", records);
+
+    //         // ⚡ Inicializar vacío siempre
+    //         const userTemporaryHours: { [date: string]: string[][] | null } = {};
+
+    //         for (const record of records) {
+    //             const dateStr = moment(record.date).format("YYYY-MM-DD");
+
+    //             if (record?.closed) {
+    //                 userTemporaryHours[dateStr] = null;
+    //                 continue;
+    //             }
+
+    //             if (!record.startTime || !record.endTime) continue;
+
+    //             const startTime = record.startTime as unknown as string;
+    //             const endTime = record.endTime as unknown as string;
+
+    //             if (!userTemporaryHours[dateStr]) {
+    //                 userTemporaryHours[dateStr] = [];
+    //             }
+
+    //             (userTemporaryHours[dateStr] as string[][]).push([startTime, endTime]);
+    //         }
+
+    //         // ⚡ Si no había nada en DB → guardar al menos {}
+    //         temporaryHoursMap[userId] = userTemporaryHours;
+
+    //         // Guardar en Redis aunque esté vacío
+    //         await temporaryHoursStrategy.saveTemporaryHours(
+    //             idWorkspace,
+    //             userId,
+    //             userTemporaryHours,
+    //             TIME_SECONDS.HOUR
+    //         );
+    //     }
+
+    //     return temporaryHoursMap;
+    // };
+
+
+    getTemporaryHoursFromRedis = async (
+        userIds: string[],
+        idWorkspace: string,
+        range?: HoursRangeInput
+    ): Promise<TemporaryHoursMapType> => {
         const temporaryHoursMap: TemporaryHoursMapType = {};
         const temporaryHoursStrategy = new TemporaryHoursStrategy();
 
+        const { start, end } = normalizeRange(range);
+        const wantedDays = listDaysInclusive(start, end);
+        const startDate = moment(start, "YYYY-MM-DD").toDate();
+        const endDate = moment(end, "YYYY-MM-DD").toDate();
+
         for (const userId of userIds) {
-            // Intentar obtener los horarios temporales desde Redis
-            let temporaryHours = await temporaryHoursStrategy.getTemporaryHours(idCompany, userId);
+            // 1) Leer cache maestra
+            const cached =
+                (await temporaryHoursStrategy.getTemporaryHours(idWorkspace, userId)) || {};
+            const covered = new Set(Object.keys(cached));
+            const missingDays = wantedDays.filter((d) => !covered.has(d));
 
-            if (temporaryHours) {
-                console.log(`Horarios temporales del usuario ${userId} obtenidos de Redis ${JSON.stringify(temporaryHours)}`);
-                temporaryHoursMap[userId] = temporaryHours;
-                continue;
-            }
+            // ⭐  Muta en lugar de copiar, para menos GC
+            const merged: { [date: string]: string[][] | null } = { ...cached };
 
-            // Obtenemos los registros de horarios temporales de la base de datos
-            const temporaryHoursRecords = await prisma.temporaryBusinessHour.findMany({
-                where: {
-                    idCompanyFk: idCompany,
-                    idUserFk: userId,
-                    deletedDate: null,
-                },
-            });
+            if (missingDays.length > 0) {
+                // 2) DB SOLO lo que falta
+                let records: any[] = [];
 
-            // Inicializamos el mapa de horarios temporales para el usuario
-            const userTemporaryHours: { [date: string]: string[][] | null } = {};
-
-            for (const record of temporaryHoursRecords) {
-                const dateStr = moment(record.date).format('YYYY-MM-DD'); // Fecha en formato 'YYYY-MM-DD'
-
-                if (record.closed) {
-                    // Registrar que el trabajador está cerrado en esta fecha
-                    userTemporaryHours[dateStr] = null;
-                    continue; // Pasar al siguiente registro
+                // ⭐ cambio: según nº de días faltantes decides BETWEEN vs IN
+                const THRESHOLD_IN = 6;
+                if (missingDays.length <= THRESHOLD_IN) {
+                    records = await prisma.temporaryBusinessHour.findMany({
+                        where: {
+                            idWorkspaceFk: idWorkspace,
+                            idUserFk: userId,
+                            deletedDate: null,
+                            date: { in: missingDays.map((d) => new Date(d)) },
+                        },
+                    });
+                } else {
+                    records = await prisma.temporaryBusinessHour.findMany({
+                        where: {
+                            idWorkspaceFk: idWorkspace,
+                            idUserFk: userId,
+                            deletedDate: null,
+                            date: { gte: startDate, lte: endDate },
+                        },
+                    });
                 }
 
-                // Si startTime o endTime son nulos, omitimos este registro
-                if (!record.startTime || !record.endTime) continue;
+                // 3) Construir patch
+                const patch: { [date: string]: string[][] | null } = {};
+                for (const record of records) {
+                    const dateStr = moment(record.date).format("YYYY-MM-DD");
+                    if (!isWithin(dateStr, start, end)) continue;
 
-                // Convertir los tiempos a cadenas en formato 'HH:mm'
-                const startTime = moment(record.startTime).format('HH:mm');
-                const endTime = moment(record.endTime).format('HH:mm');
+                    if (record?.closed) {
+                        patch[dateStr] = null;
+                        continue;
+                    }
+                    if (!record.startTime || !record.endTime) continue;
 
-                // Asegurar que existe una entrada para la fecha
-                if (!userTemporaryHours[dateStr]) {
-                    userTemporaryHours[dateStr] = [];
+                    const startTime = record.startTime as unknown as string;
+                    const endTime = record.endTime as unknown as string;
+
+                    if (!patch[dateStr]) patch[dateStr] = [];
+                    (patch[dateStr] as string[][]).push([startTime, endTime]);
                 }
 
-                // Añadir el rango de tiempo a la fecha correspondiente
-                (userTemporaryHours[dateStr] as string[][]).push([startTime, endTime]);
+                // 4) MERGE solo si hay cambios
+                if (Object.keys(patch).length > 0) {   // ⭐ evitar save innecesario
+                    for (const [k, v] of Object.entries(patch)) {
+                        merged[k] = v; // muta directamente
+                    }
+
+                    await temporaryHoursStrategy.saveTemporaryHours(
+                        idWorkspace,
+                        userId,
+                        merged,
+                        TIME_SECONDS.HOUR
+                    );
+                }
             }
 
-            // Guardamos los horarios temporales del usuario en el mapa principal
-            temporaryHoursMap[userId] = userTemporaryHours;
+            // 5) Devolver SOLO el rango
+            const filtered: { [date: string]: string[][] | null } = {};
+            for (const d of wantedDays) {
+                if (d in merged) filtered[d] = merged[d];
+            }
+
+            temporaryHoursMap[userId] = filtered;
         }
 
         return temporaryHoursMap;
+    };
+
+
+
+
+    /**
+     * Elimina registros de TemporaryBusinessHour y, antes de ello,
+     * limpia la información en Redis para cada par (idWorkspace, idUser).
+     */
+    // public async deleteTemporaryBusinessHourFromRedis(idList: string[]): Promise<any> {
+    //     try {
+    //         const temporaryHoursStrategy = new TemporaryHoursStrategy();
+
+    //         // Aseguramos que sea un array
+    //         const listAux = Array.isArray(idList) ? idList : [idList];
+
+    //         // 1) Buscar en la BD los idUserFk, idWorkspaceFk de esos IDs
+    //         const records = await prisma.temporaryBusinessHour.findMany({
+    //             where: {
+    //                 id: { in: listAux },
+    //             },
+    //             select: {
+    //                 idUserFk: true,
+    //                 idWorkspaceFk: true,
+    //             },
+    //         });
+
+    //         // 2) Construir un set de pares únicos (idUserFk, idWorkspaceFk)
+    //         const uniquePairs = new Set<string>();
+    //         for (const r of records) {
+    //             // Creamos una "clave" para no duplicar pares
+    //             const key = `${r.idUserFk}__${r.idWorkspaceFk}`;
+    //             uniquePairs.add(key);
+    //         }
+
+    //         // 3) Por cada par, llamamos a la estrategia que borra en Redis
+    //         for (const key of uniquePairs) {
+    //             const [idUser, idWorkspace] = key.split('__');
+    //             await temporaryHoursStrategy.deleteTemporaryHours(idWorkspace, idUser);
+    //         }
+
+    //         // 4) Finalmente, borramos los registros en la BD
+    //         return await prisma.temporaryBusinessHour.deleteMany({
+    //             where: {
+    //                 id: { in: listAux },
+    //             },
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError('TemporaryBusinessHour.deleteTemporaryBusinessHour', error);
+    //     }
+    // }
+
+
+    /**
+     * Elimina de Redis y de la BD todos los registros que tengan el mismo día y usuario
+     * que alguno de los IDs indicados en `idList`.
+     */
+    public async deleteTemporaryBusinessHourFromRedis(idList: string[], idWorkspace: string): Promise<any> {
+        try {
+            const temporaryHoursStrategy = new TemporaryHoursStrategy();
+            const listAux = Array.isArray(idList) ? idList : [idList];
+
+            // 1) Buscar en la BD los (idUserFk, idWorkspaceFk, date) de cada ID
+            const baseRecords = await prisma.temporaryBusinessHour.findMany({
+                where: {
+                    id: { in: listAux },
+                    idWorkspaceFk: idWorkspace,
+                },
+                select: {
+                    idUserFk: true,
+                    idWorkspaceFk: true,
+                    date: true, // Ojo: si es un DateTime con hora distinta de 00:00
+                },
+            });
+
+            // 2) Construir un array de condiciones "OR" con rango de fechas
+            //    para que coincida con todos los registros del mismo día
+            const orConditions = [];
+            for (const r of baseRecords) {
+                // Tomamos la "medianoche" de la fecha, ignorando la hora
+                // Ojo a la zona horaria: si quieres UTC puro, usa .utc()
+                const dayStart = moment(r.date).startOf('day').toDate();
+                const dayEnd = moment(dayStart).add(1, 'day').toDate();
+
+                orConditions.push({
+                    idUserFk: r.idUserFk,
+                    idWorkspace: r.idWorkspaceFk,
+                    dateRangeStart: dayStart,
+                    dateRangeEnd: dayEnd,
+                });
+            }
+
+            // 3) Buscar TODOS los registros que coincidan en ese día (rango)
+            let allRecordsToDelete = [];
+            if (orConditions.length > 0) {
+                // Construimos un OR de rangos
+                allRecordsToDelete = await prisma.temporaryBusinessHour.findMany({
+                    where: {
+                        OR: orConditions.map((c) => ({
+                            idUserFk: c.idUserFk,
+                            idWorkspaceFk: c.idWorkspaceFk,
+                            date: {
+                                gte: c.dateRangeStart,
+                                lt: c.dateRangeEnd,
+                            },
+                        })),
+                    },
+                    select: {
+                        id: true,
+                        idUserFk: true,
+                        idWorkspaceFk: true,
+                    },
+                });
+            }
+
+            // IDs definitivos a eliminar
+            const allIds = allRecordsToDelete.map((r) => r.id);
+
+            // 4) Armar set de (idUserFk, idWorkspaceFk) para Redis
+            const redisPairs = new Set<string>();
+            for (const r of allRecordsToDelete) {
+                redisPairs.add(`${r.idUserFk}__${r.idWorkspaceFk}`);
+            }
+
+            // 5) Eliminar en Redis
+            for (const pair of redisPairs) {
+                const [idUser, idWorkspace] = pair.split('__');
+                await temporaryHoursStrategy.deleteTemporaryHours(idWorkspace, idUser);
+            }
+
+            // 6) Borrar en la BD
+            if (allIds.length > 0) {
+                return await prisma.temporaryBusinessHour.deleteMany({
+                    where: {
+                        id: { in: allIds },
+                    },
+                });
+            } else {
+                return { count: 0 };
+            }
+        } catch (error: any) {
+            throw new CustomError('TemporaryBusinessHour.deleteTemporaryBusinessHourFromRedis', error);
+        }
     }
+
 }

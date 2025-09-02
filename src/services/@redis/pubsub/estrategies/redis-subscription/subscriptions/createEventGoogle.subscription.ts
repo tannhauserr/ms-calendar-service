@@ -57,7 +57,7 @@ export const createEventGoogleSubscription = () => {
 
                 // Finalmente, actualiza tu evento en la base de datos con el ID del evento de Google
                 const eventService = new EventService();
-                await eventService.updateEvent({ id: idRowEventDB, idGoogleEvent: googleEvent.id });
+                // await eventService.updateEvent({ id: idRowEventDB, idGoogleEvent: googleEvent.id });
 
 
             } else {

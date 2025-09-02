@@ -26,7 +26,7 @@ export const conditionalLimiter = (req, res, next) => {
     // Lista de rutas excluidas
     const whitelist = ['/uploads'];
 
-    console.log(req.path)
+    // console.log(req.path)
     // Verificar si la ruta actual está en la lista blanca
     if (whitelist.includes(req.path)) {
         next();

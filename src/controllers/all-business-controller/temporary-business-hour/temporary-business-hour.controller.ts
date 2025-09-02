@@ -37,7 +37,7 @@ export class TemporaryBusinessHourController {
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workBusinessHourService.getTemporaryBusinessHours(pagination);
+            const result = await this.workBusinessHourService.getTemporaryBusinessHours2(pagination);
             res.status(200).json({ message: "Registros encontrados", ok: true, item: result });
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -114,11 +114,11 @@ export class TemporaryBusinessHourController {
 
     public delete = async (req: any, res: any, next: any) => {
         try {
-            const { idList } = req.body;
+            const { idList, idWorkspace } = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workBusinessHourService.deleteTemporaryBusinessHour(idList);
+            const result = await this.workBusinessHourService.deleteTemporaryBusinessHourFromRedis(idList, idWorkspace);
             res.status(200).json(Response.build("Registro eliminado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -156,14 +156,16 @@ export class TemporaryBusinessHourController {
 
     getTemporaryHoursFromRedis = async (req: any, res: any, next: any) => {
         try {
-            const { idUserList, idCompany} = req.body;
+            const { idUserList, idWorkspace } = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workBusinessHourService.getTemporaryHoursFromRedis(idUserList, idCompany);
+            const result = await this.workBusinessHourService.getTemporaryHoursFromRedis(idUserList, idWorkspace);
             res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
         }
     }
+
+
 }

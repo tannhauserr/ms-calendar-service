@@ -38,7 +38,7 @@ export class CalendarService {
     //     }
     // }
 
-    // async getCalendarById(id: number): Promise<Calendar | null> {
+    // async getCalendarById(id: string): Promise<Calendar | null> {
     //     try {
     //         return await prisma.calendar.findUnique({
     //             where: { id: id, deletedDate: null },
@@ -50,7 +50,7 @@ export class CalendarService {
 
     // async updateCalendar(item: Partial<Calendar>): Promise<Calendar> {
     //     try {
-    //         const id = item.id as number;
+    //         const id = item.id as string;
     //         delete item.id;
 
     //         return await prisma.calendar.update({
@@ -65,7 +65,7 @@ export class CalendarService {
     //     }
     // }
 
-    // // async deleteCalendar(id: number): Promise<Calendar> {
+    // // async deleteCalendar(id: string): Promise<Calendar> {
     // //     try {
     // //         return await prisma.calendar.delete({
     // //             where: { id: id },
@@ -75,7 +75,7 @@ export class CalendarService {
     // //     }
     // // }
 
-    // async deleteCalendar(id: number): Promise<Calendar> {
+    // async deleteCalendar(id: string): Promise<Calendar> {
     //     try {
     //         return await prisma.calendar.update({
     //             data: {
@@ -153,7 +153,7 @@ export class CalendarService {
     //     }
     // }
 
-    // async updateSyncToken(id: number, syncToken: string): Promise<void> {
+    // async updateSyncToken(id: string, syncToken: string): Promise<void> {
     //     try {
     //         await prisma.calendar.update({
     //             where: { id: id },

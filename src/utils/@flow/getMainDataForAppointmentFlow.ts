@@ -1,21 +1,21 @@
 import { TIME_SECONDS } from "../../constant/time";
 import { avatarWorkerDefault } from "../../models/image/avatar-worker";
-import { IRedisSavedBasicInformationToCreateReservationByIdEstablishmentStrategy } from "../../services/@redis/cache/interfaces/interfaces";
+import { IRedisSavedBasicInformationToCreateReservationByIdWorkspaceStrategy } from "../../services/@redis/cache/interfaces/interfaces";
 import { RedisStrategyFactory } from "../../services/@redis/cache/strategies/redisStrategyFactory";
 import { convertToWebPAndResizeBuffer } from "../convertToWebPAndResizeBuffer";
 import * as RPC from "../../services/@rabbitmq/rpc/functions";
 import * as InformationReservation from "../../models/rabbitmq/getCateroiesAndServicesResponse";
 
 
-export const getMainDataForAppointmentFlow = async (codeEstablishment: string): Promise<InformationReservation.GetCategoriesAndServicesResponse> => {
-    const FACTORY = RedisStrategyFactory.getStrategy("savedBasicInformationToCreateReservationByIdEstablishment") as IRedisSavedBasicInformationToCreateReservationByIdEstablishmentStrategy;
+export const getMainDataForAppointmentFlow = async (codeWorkspace: string): Promise<InformationReservation.GetCategoriesAndServicesResponse> => {
+    const FACTORY = RedisStrategyFactory.getStrategy("savedBasicInformationToCreateReservationByIdWorkspace") as IRedisSavedBasicInformationToCreateReservationByIdWorkspaceStrategy;
 
     let object: InformationReservation.GetCategoriesAndServicesResponse | null = null;
 
-    // FACTORY.deleteSavedBasicInformationToCreateReservationByIdEstablishment(codeEstablishment);
+    // FACTORY.deleteSavedBasicInformationToCreateReservationByIdWorkspace(codeWorkspace);
     try {
         // Intentamos obtener los datos almacenados en Redis
-        object = await FACTORY.getSavedBasicInformationToCreateReservationByIdEstablishment(codeEstablishment);
+        object = await FACTORY.getSavedBasicInformationToCreateReservationByIdWorkspace(codeWorkspace);
     } catch (error) {
         console.error("Error al obtener datos de Redis:", error);
         // Podemos decidir si continuamos o lanzamos el error
@@ -23,11 +23,11 @@ export const getMainDataForAppointmentFlow = async (codeEstablishment: string): 
     }
 
     if (!object) {
-        console.log("No se encontraron datos en Redis para el establecimiento:", codeEstablishment);
+        console.log("No se encontraron datos en Redis para el establecimiento:", codeWorkspace);
 
         try {
             // Obtener categorías, servicios y usuarios a través de RPC
-            object = await RPC.getCategoriesServicesUserForFlow(codeEstablishment);
+            object = await RPC.getCategoriesServicesUserForFlow(codeWorkspace);
         } catch (error) {
             console.error("Error al obtener datos a través de RPC:", error);
             throw new Error("No se pudo obtener la información necesaria para el flujo");
@@ -85,7 +85,7 @@ export const getMainDataForAppointmentFlow = async (codeEstablishment: string): 
 
 
             try {
-                await FACTORY.setSavedBasicInformationToCreateReservationByIdEstablishment(codeEstablishment, object, TIME_SECONDS.HOUR * 2);
+                await FACTORY.setSavedBasicInformationToCreateReservationByIdWorkspace(codeWorkspace, object, TIME_SECONDS.HOUR * 2);
             } catch (error) {
                 console.error("Error al guardar datos en Redis:", error);
                 // Podemos continuar sin lanzar el error, ya que los datos se han obtenido correctamente
@@ -94,7 +94,7 @@ export const getMainDataForAppointmentFlow = async (codeEstablishment: string): 
             throw new Error("No se recibieron datos válidos desde RPC");
         }
     } else {
-        console.log("Datos obtenidos de Redis para el establecimiento:", codeEstablishment);
+        console.log("Datos obtenidos de Redis para el establecimiento:", codeWorkspace);
     }
 
     // console.log("Datos para el init:", object);

@@ -3,16 +3,20 @@ import { EventService } from '../../services/@database/event/event.service';
 import { Response } from '../../models/messages/response';
 import { NextFunction } from 'express';
 import { JWTService } from "../../services/jwt/jwt.service";
+import { EventStatusType } from '@prisma/client';
 
 
 export class EventMiddleware {
 
     static async checkEventConflict(req: any, res: any, next: NextFunction) {
         try {
-            const { force, startDate, endDate, idUserPlatformFk, idCalendarFk, id, eventStatusType } = req.body;
-
+            // const { force, startDate, endDate, idUserPlatformFk, idCalendarFk, id, eventStatusType } = req.body;
+            const { force, event } = req.body;
+            const { startDate, endDate, idUserPlatformFk, idCalendarFk, id, eventStatusType } = event;
             // Si `force` es true, omitir la comprobación de conflictos y pasar al siguiente middleware
-            if (force || eventStatusType === 'CANCELLED') {
+            const eventsForce: EventStatusType[] = ['CANCELLED', 'CANCELLED_BY_CLIENT', 'CANCELLED_BY_CLIENT_REMOVED'];
+            // if (force || eventStatusType === 'CANCELLED') {
+            if (force || eventsForce.includes(eventStatusType)) {
                 return next();
             }
 
@@ -30,6 +34,8 @@ export class EventMiddleware {
                 new Date(startDate),
                 new Date(endDate),
             );
+
+            console.log("conflictingEvents", conflictingEvents);
 
 
 
@@ -58,7 +64,7 @@ export class EventMiddleware {
 
 
 
-    static async validateEventStatusChange(req: any, res: any, next: NextFunction) {
+    static async validateEventStatusChange_DESFASADO(req: any, res: any, next: NextFunction) {
         try {
             const { id, eventStatusType } = req.body;
 
@@ -106,7 +112,15 @@ export class EventMiddleware {
     }
 
 
-    static async preventPastEvent(req: any, res: any, next: NextFunction) {
+    /**
+     * 27/07/2025 
+     * TODO: Ahora si se puede actualizar o crear un evento con fecha pasada
+     * @param req 
+     * @param res 
+     * @param next 
+     * @returns 
+     */
+    static async preventPastEvent_DESFASADO(req: any, res: any, next: NextFunction) {
         try {
             const { id, startDate } = req.body;
 

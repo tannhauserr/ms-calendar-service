@@ -28,7 +28,7 @@ router.get('/worker-business-hours-:id', JWTService.verifyCookieToken, controlle
 router.get('/worker-business-hours/by-weekday-:weekDayType', JWTService.verifyCookieToken, controller.getByWeekDay);
 
 // Obtener horarios de trabajo por trabajador
-router.get('/worker-business-hours/by-worker-:idWorker', JWTService.verifyCookieToken, controller.getByWorker);
+router.get('/worker-business-hours/by-worker-:idWorker-and-workspace-:idWorkspace', JWTService.verifyCookieToken, controller.getByWorkerAndWorkspace);
 
 // Actualizar un horario de trabajo
 router.post('/worker-business-hours/update-:id', [

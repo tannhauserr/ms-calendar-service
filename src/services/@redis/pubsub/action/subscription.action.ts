@@ -6,7 +6,7 @@ export interface ActionPayloads {
     addUserToCalendar: { idUser: string; emailGoogle: string, idCalendarGoogle?: string };
     removeUserFromCalendar: { idUser: string; emailGoogle: string, idCalendarGoogle?: string };
     createEventGoogle: {
-        idRowEventDB: number;
+        idRowEventDB: string;
         idUserPlatformFk: string;
         idGoogleCalendar: string;
         title: string;
@@ -16,7 +16,7 @@ export interface ActionPayloads {
         eventColor: string;
     };
     updateEventGoogle: {
-        idRowEventDB: number;
+        idRowEventDB: string;
         idUserPlatformFk: string;
         idGoogleCalendar: string;
         idGoogleEvent: string;
