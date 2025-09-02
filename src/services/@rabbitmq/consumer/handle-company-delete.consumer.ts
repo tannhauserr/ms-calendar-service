@@ -3,8 +3,9 @@ import { CONSOLE_COLOR } from '../../../constant/console-color';
 import { PrismaClient } from '@prisma/client';
 import { RabbitMQFacade } from '../facade/rabbitmq.facade';
 import { ActionPayloads } from '../actions/rabbitmq.action';
+import prisma from '../../../lib/prisma';
 
-const prisma = new PrismaClient();
+
 
 export const handleCompanyDeleteConsumer = async (): Promise<void> => {
     const queue = RabbitMQKeys.handleCompanyDeleteQueue();

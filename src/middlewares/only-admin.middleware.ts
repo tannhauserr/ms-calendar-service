@@ -1,6 +1,86 @@
+import { NextFunction } from "express";
 import { JWTService } from "../services/jwt/jwt.service";
+import { checkUserRoleRpc } from "../services/@rabbitmq/rpc/functions";
+import { RedisStrategyFactory } from '../services/@redis/cache/strategies/redisStrategyFactory';
+import { UserCompanyRoleStrategy } from "../services/@redis/cache/strategies/userCompanyRole/userCompanyRoleStrategy";
+import { TIME_SECONDS } from "../constant/time";
 
 export class OnlyAdminMiddleware {
+
+
+
+    /**
+     * Middleware que utiliza el RPC para validar el rol del usuario.
+     * Extrae de la petición el token (que ya debe haber sido verificado en un middleware previo),
+     * y de este se obtiene role, idUser e idCompanySelected.
+     *
+     * Llama al servicio RPC para verificar que el usuario tiene el rol adecuado.
+     * Si la verificación falla, retorna error 400; si hay error en el proceso, retorna 500.
+     *
+     * @param req Express Request (debe tener en req.token el token JWT)
+     * @param res Express Response
+     * @param next Función next de Express
+     */
+    static accessAuthorized = async (req, res, next: NextFunction) => {
+        try {
+            const token = req.token;
+            const decode = await JWTService.instance.verify(token);
+            const { role, idUser, idCompanySelected } = decode;
+
+
+            const roleSystemAllowed = ['ROLE_SUPER_ADMIN', 'ROLE_DEVELOPER', "ROLE_SUPPORT"];
+            // Obtenemos la estrategia de Redis para gestionar el rol del usuario
+            const FACTORY = RedisStrategyFactory.getStrategy('userCompanyRole') as UserCompanyRoleStrategy;
+
+            // Consultamos en Redis si existe el registro del usuario
+            const cachedUserRole = await FACTORY.getUserCompanyRole(idUser);
+            // console.log("cacheUserRole", cachedUserRole);
+            if (cachedUserRole) {
+                // Si existe, validamos que coincida con los valores actuales
+                if (cachedUserRole.roleType !== role || cachedUserRole.idCompany !== idCompanySelected) {
+
+                    if (roleSystemAllowed.includes(role)) {
+                        next();
+                        return;
+                    } else {
+                        // LOG: Se podría registrar un log con idUser, role e idCompanySelected que intentó acceder
+                        res.status(400).json({ message: "No tienes permisos para realizar esta acción (datos en cache no coinciden)" });
+                        return;
+                    }
+
+                } else if (cachedUserRole.isReal) {
+                    // Si es un registro válido, continuamos
+                    next();
+                    return;
+                }
+            } else {
+                // Si no está en Redis, lo guardamos para futuras consultas
+
+            }
+
+            // Llamamos al RPC para validar el rol del usuario en la base de datos
+            const { isValid, message } = await checkUserRoleRpc(idUser, role, idCompanySelected);
+            FACTORY.setUserCompanyRole(idUser, idCompanySelected, role, isValid, TIME_SECONDS.MINUTE * 20);
+
+            if (!isValid) {
+                // LOG: Se podría registrar un log con idUser, role e idCompanySelected que intentó acceder
+                res.status(400).json({ message: message || "No tienes permisos para realizar esta acción" });
+                return;
+            }
+
+            // Si la verificación es exitosa, se procede al siguiente middleware o controlador
+            next();
+        } catch (err) {
+            console.error("[accessAuthorized] Error:", err);
+            res.status(500).json({ message: "Hubo un error al procesar el token o verificar el rol" });
+        }
+    };
+
+
+
+
+
+
 
     /**
      * Coge el token guardado en request gracias al middleware JWTService.verifyCookieToken 
@@ -14,9 +94,11 @@ export class OnlyAdminMiddleware {
         try {
             const token = req.token;
             const decode = await JWTService.instance.verify(token);
-            if (decode.role !== 'ROLE_ADMIN') {
-                res.status(400).json({ message: "No tienes permisos para realizar esta acción" });
-                return;
+            if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
+                if (decode.role !== 'ROLE_ADMIN') {
+                    res.status(400).json({ message: "No tienes permisos para realizar esta acción" });
+                    return;
+                }
             }
             next();
         }
@@ -30,9 +112,12 @@ export class OnlyAdminMiddleware {
         try {
             const token = req.token;
             const decode = await JWTService.instance.verify(token);
-            if (decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
-                res.status(400).json({ message: "No tienes permisos para realizar esta acción" });
-                return;
+            if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
+
+                if (decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
+                    res.status(400).json({ message: "No tienes permisos para realizar esta acción" });
+                    return;
+                }
             }
             next();
         }
@@ -58,15 +143,17 @@ export class OnlyAdminMiddleware {
             console.log('idUser:', decode.idUser, 'Type:', typeof decode.idUser);
             console.log(decode.idUser, typeof decode.idUser, object.myId, typeof object.myId);
 
+            if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
 
-            if (decode.role !== 'ROLE_ADMIN' && object?.myId !== decode.idUser) {
-                // LOG: Mandar petición log de que no tiene permisos para realizar esta acción
-                res.status(400).json({ message: "No tienes permisos para realizar esta acción" });
-                return;
-            } else if (decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
-                // LOG: Mandar petición log de que no tiene permisos para realizar esta acción
-                res.status(400).json({ message: "No tienes permisos para realizar esta acción" });
-                return;
+                if (decode.role !== 'ROLE_ADMIN' && object?.myId !== decode.idUser) {
+                    // LOG: Mandar petición log de que no tiene permisos para realizar esta acción
+                    res.status(400).json({ message: "No tienes permisos para realizar esta acción" });
+                    return;
+                } else if (decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
+                    // LOG: Mandar petición log de que no tiene permisos para realizar esta acción
+                    res.status(400).json({ message: "No tienes permisos para realizar esta acción" });
+                    return;
+                }
             }
 
             next();
@@ -93,10 +180,11 @@ export class OnlyAdminMiddleware {
             console.log('idUser:', decode.idUser, 'Type:', typeof decode.idUser);
             console.log(decode.idUser, typeof decode.idUser, object.myId, typeof object.myId);
 
-
-            if (decode.role !== 'ROLE_ADMIN' && object?.myId !== decode.idUser) {
-                res.status(400).json({ message: "No tienes permisos para realizar esta acción 222" });
-                return;
+            if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
+                if (decode.role !== 'ROLE_ADMIN' && object?.myId !== decode.idUser) {
+                    res.status(400).json({ message: "No tienes permisos para realizar esta acción 222" });
+                    return;
+                }
             }
             next();
         }
@@ -105,6 +193,52 @@ export class OnlyAdminMiddleware {
             res.status(500).json({ message: "Hubo un error al enviar el token" });
         }
     }
+
+
+    static allowRoles = (permittedRoles: string[], mustMatchUser = false) => {
+        return async (req, res, next) => {
+            try {
+                const token = req.token;
+                const decode = await JWTService.instance.verify(token);
+
+                // Si developer o support tienen permiso global
+                if (decode.role === 'ROLE_DEVELOPER' || decode.role === 'ROLE_SUPER_ADMIN' || decode.role === 'ROLE_SUPPORT') {
+                    return next();
+                }
+
+                // Si no está dentro de los roles permitidos, 403
+                if (!permittedRoles.includes(decode.role)) {
+                    return res.status(403).json({
+                        message: "No tienes permisos para esta acción"
+                    });
+                }
+
+                // Si este middleware requiere que el usuario sea dueño de su recurso...
+                if (mustMatchUser) {
+                    // Verificar que exista myId
+                    if (!req.body?.myId) {
+                        return res.status(400).json({
+                            message: "El campo 'myId' es obligatorio"
+                        });
+                    }
+                    // Comparar
+                    if (req.body.myId !== decode.idUser) {
+                        return res.status(403).json({
+                            message: "No puedes operar sobre un ID que no sea el tuyo"
+                        });
+                    }
+                }
+
+                // Si todo bien...
+                next();
+            } catch (err) {
+                console.error(err);
+                return res.status(500).json({
+                    message: "Hubo un error al validar el token"
+                });
+            }
+        };
+    };
 
 
 }

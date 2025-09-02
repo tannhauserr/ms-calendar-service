@@ -1,13 +1,19 @@
 import express from 'express';
 import { JWTService } from '../services/jwt/jwt.service';
 import { WorkerAbsenceController } from '../controllers/all-business-controller/worker-absence/worker-absence.controller';
-import { BusinessHourMiddleware } from '../middlewares/business-hour/business-hour.middleware';
 import { WorkerAbsenceMiddleware } from '../middlewares/worker-absence/worker-absence.middleware';
 import { OnlyAdminMiddleware } from '../middlewares/only-admin.middleware';
 
 const router = express.Router();
 const controller = new WorkerAbsenceController();
 
+// Obtener todas las ausencias de trabajadores
+router.post('/worker-absences',
+    JWTService.verifyCookieToken,
+    OnlyAdminMiddleware.allowRoles(['ROLE_ADMIN', 'ROLE_MANAGER']),
+    OnlyAdminMiddleware.accessAuthorized,
+    controller.get
+);
 // Añadir una nueva ausencia de trabajador
 router.post('/worker-absences/add',
     [
@@ -28,11 +34,11 @@ router.get('/worker-absences-:id',
 );
 
 // Obtener ausencias por establecimiento
-router.post('/worker-absences/by-establishment',
+router.post('/worker-absences/by-workspace',
     JWTService.verifyCookieToken,
     OnlyAdminMiddleware.accessOnlyAdminOrManager,
 
-    controller.getByEstablishment
+    controller.getByWorkspace
 );
 
 // Obtener ausencias por trabajador

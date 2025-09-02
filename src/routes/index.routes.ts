@@ -19,13 +19,17 @@ router.use("/api", require('./calendar.routes'));
 router.use("/api", require('./user-color.routes'));
 
 // Event routes
-router.use("/api", require('./event.routes'));
+router.use("/api", require('./event/event.routes'));
 
 // Category routes
-router.use("/api", require('./category.routes'));
+router.use("/api", require('./category/category.routes'));
 
-// CategoryEstablishment routes
-router.use("/api", require('./category-establishment.routes'));
+// CategoryWorkspace routes
+// router.use("/api", require('./category-workspace.routes'));
+router.use("/api", require('./recurrence-rule.routes'));
+
+// CategoryService routes
+router.use("/api", require('./category-service.routes'));
 
 // Service routes
 router.use("/api", require('./service.routes'));
@@ -47,5 +51,12 @@ router.use("/api", require('./temporary-business-hour.routes'));
 
 // WorkerAbsence routes
 router.use("/api", require('./worker-absence.routes'));
+
+
+// public
+
+router.use("/api/public", require('./category/public-category.routes'));
+
+router.use("/api/public", require('./event/public-event.routes'));
 
 export default router;

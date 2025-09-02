@@ -160,7 +160,15 @@ async function getGenericSpecial(
     // console.log("mira include", includeRelations)
 
     if (notCancelled) {
-        where = { ...where, deletedDate: null, eventStatusType: { not: EventStatusType.CANCELLED } };
+        // where = { ...where, deletedDate: null, eventStatusType: { not: EventStatusType.CANCELLED } };
+        where = {
+            ...where, deletedDate: null, eventStatusType: {
+                notIn: [
+                    EventStatusType.CANCELLED,
+                    EventStatusType.CANCELLED_BY_CLIENT_REMOVED
+                ]
+            }
+        };
     } else {
         where = { ...where, deletedDate: null };
     }

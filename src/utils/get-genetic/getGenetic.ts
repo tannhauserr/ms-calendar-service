@@ -11,13 +11,15 @@ type ModelType =
   | 'calendar'
   | 'service'
   | 'category'
-  | 'categoryEstablishment'
+  | 'categoryWorkspace'
   | 'userService'
   | 'event'
   | 'userColor'
   | 'businessHour'
   | 'workerBusinessHour'
   | 'temporaryBusinessHour'
+  | 'workerAbsence'
+  | 'recurrenceRule'
 
   ;
 
@@ -39,7 +41,7 @@ type ModelType =
     const take = +itemsPerPage;
   
   
-    console.log("Get genetic, filtos", filters)
+    // console.log("Get genetic, filtos", filters)
   
   
   
@@ -92,7 +94,7 @@ type ModelType =
       if (endDate) where.createdDate.lte = endDate;
     }
   
-    console.log("mira where", JSON.stringify(where, null, 2))
+    // console.log("mira where", JSON.stringify(where, null, 2))
     // console.log("mira include", includeRelations)
   
     where = { ...where, deletedDate: null };

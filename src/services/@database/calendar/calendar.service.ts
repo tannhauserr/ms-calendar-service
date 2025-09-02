@@ -10,12 +10,12 @@ export class CalendarService {
      * @param data - Datos del calendario a crear.
      * @returns Calendario creado.
      */
-    async createCalendar(data: { idCompanyFk: string; idEstablishmentFk?: string }) {
+    async createCalendar(data: { idCompanyFk: string; idWorkspaceFk?: string }) {
         try {
             return await prisma.calendar.create({
                 data: {
                     idCompanyFk: data.idCompanyFk,
-                    idEstablishmentFk: data.idEstablishmentFk || null,
+                    idWorkspaceFk: data.idWorkspaceFk || null,
                     createdDate: new Date(),
                     updatedDate: new Date(),
                 },
@@ -43,10 +43,10 @@ export class CalendarService {
     /**
      * Busca calendarios por compañía y establecimiento.
      * @param idCompanyFk - ID de la compañía.
-     * @param idEstablishmentFk - ID del establecimiento (opcional).
+     * @param idWorkspaceFk - ID del establecimiento (opcional).
      * @returns Lista de calendarios.
      */
-    async getCalendarsByCompanyAndEstablishment(idCompanyFk: string, idEstablishmentFk?: string) {
+    async getCalendarsByCompanyAndWorkspace(idCompanyFk: string, idWorkspaceFk?: string) {
         try {
             return await prisma.calendar.findMany({
                 select: {
@@ -55,12 +55,12 @@ export class CalendarService {
                 },
                 where: {
                     idCompanyFk,
-                    idEstablishmentFk: idEstablishmentFk,
+                    idWorkspaceFk: idWorkspaceFk,
                 },
                 orderBy: { createdDate: "desc" },
             });
         } catch (error: any) {
-            throw new CustomError("CalendarService.getCalendarsByCompanyAndEstablishment", error);
+            throw new CustomError("CalendarService.getCalendarsByCompanyAndWorkspace", error);
         }
     }
 
@@ -70,7 +70,7 @@ export class CalendarService {
      * @param data - Datos a actualizar.
      * @returns Calendario actualizado.
      */
-    async updateCalendar(id: string, data: Partial<{ idCompanyFk: string; idEstablishmentFk: string }>) {
+    async updateCalendar(id: string, data: Partial<{ idCompanyFk: string; idWorkspaceFk: string }>) {
         try {
             return await prisma.calendar.update({
                 where: { id },
@@ -107,14 +107,14 @@ export class CalendarService {
   * Comprueba si existe un calendario por compañía y establecimiento.
   * Si no existe, lo crea y lo devuelve junto con los eventos en el rango de fechas especificado.
   * @param idCompanyFk - ID de la compañía.
-  * @param idEstablishmentFk - ID del establecimiento (opcional).
+  * @param idWorkspaceFk - ID del establecimiento (opcional).
   * @param startDate - Fecha inicial del rango (opcional).
   * @param endDate - Fecha final del rango (opcional).
   * @returns Calendario existente o recién creado con eventos en el rango.
   */
     async findOrCreateCalendar(
         idCompanyFk: string,
-        idEstablishmentFk: string,
+        idWorkspaceFk: string,
         startDate?: Date,
         endDate?: Date
     ) {
@@ -127,11 +127,17 @@ export class CalendarService {
                 ? new Date(endDate.setHours(23, 59, 59, 999)) // 23:59:59
                 : null;
 
+                console.log("idWorkspaceFk", idWorkspaceFk);
+                console.log("idWorkspaceFk", idWorkspaceFk);
+                console.log("idWorkspaceFk", idWorkspaceFk);
+                console.log("idWorkspaceFk", idWorkspaceFk);
+                console.log("idWorkspaceFk", idWorkspaceFk);
+
             // Buscar calendario existente
             const calendar = await prisma.calendar.findFirst({
                 where: {
                     idCompanyFk,
-                    idEstablishmentFk: idEstablishmentFk || null,
+                    idWorkspaceFk: idWorkspaceFk || null,
                 },
                 // select: {
                 //     id: true,
@@ -158,7 +164,7 @@ export class CalendarService {
             const newCalendar = await prisma.calendar.create({
                 data: {
                     idCompanyFk,
-                    idEstablishmentFk: idEstablishmentFk || null,
+                    idWorkspaceFk: idWorkspaceFk || null,
                     createdDate: new Date(),
                     updatedDate: new Date(),
                 },

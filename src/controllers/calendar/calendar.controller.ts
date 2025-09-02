@@ -41,11 +41,11 @@ export class CalendarController {
      */
     public create = async (req: any, res: Response, next: NextFunction) => {
         try {
-            const { idCompanyFk, idEstablishmentFk } = req.body;
+            const { idCompanyFk, idWorkspaceFk } = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const calendar = await this.calendarService.createCalendar({ idCompanyFk, idEstablishmentFk });
+            const calendar = await this.calendarService.createCalendar({ idCompanyFk, idWorkspaceFk });
             res.status(201).json(CustomResponse.build("Calendario creado", 201, true, calendar));
         } catch (err: any) {
             next(err);
@@ -120,11 +120,11 @@ export class CalendarController {
      */
     public findOrCreate = async (req: any, res: Response, next: NextFunction) => {
         try {
-            const { idCompanyFk, idEstablishmentFk } = req.body;
+            const { idCompanyFk, idWorkspaceFk } = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const calendar = await this.calendarService.findOrCreateCalendar(idCompanyFk, idEstablishmentFk);
+            const calendar = await this.calendarService.findOrCreateCalendar(idCompanyFk, idWorkspaceFk);
             res.status(200).json(CustomResponse.build("Calendario encontrado o creado", 200, true, calendar));
         } catch (err: any) {
             next(err);
@@ -134,18 +134,18 @@ export class CalendarController {
     public findOrCreateWithData = async (req: any, res: Response, next: NextFunction) => {
 
         try {
-            const { idCompanyFk, idEstablishmentFk } = req.body;
+            const { idCompanyFk, idWorkspaceFk } = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
             const calendar = await this.calendarService.findOrCreateCalendar(
                 idCompanyFk,
-                idEstablishmentFk);
+                idWorkspaceFk);
 
 
            const item = {
                 calendar,
-                establishmentData : req.establishmentData 
+                workspaceData : req.workspaceData 
             }
 
 
@@ -158,11 +158,11 @@ export class CalendarController {
     /**
  * Obtener calendarios por compañía y establecimiento.
  */
-    public getByCompanyAndEstablishment = async (req: any, res: Response, next: NextFunction) => {
+    public getByCompanyAndWorkspace = async (req: any, res: Response, next: NextFunction) => {
         try {
-            const { idCompanyFk, idEstablishmentFk } = req.body;
+            const { idCompanyFk, idWorkspaceFk } = req.body;
 
-            console.log(idCompanyFk, idEstablishmentFk);
+            console.log(idCompanyFk, idWorkspaceFk);
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -172,15 +172,15 @@ export class CalendarController {
                 );
             }
 
-            if (!idEstablishmentFk) {
+            if (!idWorkspaceFk) {
                 return res.status(400).json(
-                    CustomResponse.build("El parámetro 'idEstablishmentFk' es requerido", 400, false)
+                    CustomResponse.build("El parámetro 'idWorkspaceFk' es requerido", 400, false)
                 );
             }
 
-            const calendars = await this.calendarService.getCalendarsByCompanyAndEstablishment(
+            const calendars = await this.calendarService.getCalendarsByCompanyAndWorkspace(
                 String(idCompanyFk),
-                String(idEstablishmentFk)
+                String(idWorkspaceFk)
             );
 
             res.status(200).json(

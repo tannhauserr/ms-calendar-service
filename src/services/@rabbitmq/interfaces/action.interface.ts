@@ -22,3 +22,4 @@ export interface HandleUserAction {
 export interface HandleDeleteCompanyAction {
     idCompany: string;
 }
+

@@ -6,8 +6,8 @@ import {
 
 export const initializeConsumerRabbitMQ = () => {
 
-    calendarConsumer();
-    handleUserConsumer();
-    handleCompanyDeleteConsumer();
+    // calendarConsumer();
+    // handleUserConsumer();
+    // handleCompanyDeleteConsumer();
 
 }

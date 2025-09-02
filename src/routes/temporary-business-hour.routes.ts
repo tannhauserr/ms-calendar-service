@@ -53,7 +53,7 @@ router.post('/temporary-business-hours/delete', [
     OnlyAdminMiddleware.accessOnlyAdminOrManager,
     // TODO: No se agrega ya que las fechas vienen de otra manera
     // BusinessHourMiddleware.convertToISOTime_FirstPart,
-    BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
+    // BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
     BusinessHourMiddleware.preventOverlapping_ThirdPart,
 ], controller.delete);
 

@@ -2,8 +2,9 @@ import moment from "moment";
 import { TemporaryBusinessHourService } from "../../services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service";
 import { PrismaClient } from "@prisma/client";
 import { Response } from "../../models/messages/response";
+import prisma from "../../lib/prisma";
 
-const prisma = new PrismaClient();
+
 
 export class WorkerAbsenceMiddleware {
 

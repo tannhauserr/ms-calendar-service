@@ -7,12 +7,12 @@ export class UserCalendarService {
     constructor() { }
 
     // async addUserCalendar(item: any): Promise<{
-    //     id: number;
+    //     id: string;
     //     idUserFk: string;
     //     idCalendarFk: number;
     //     createdDate: Date;
     //     updatedDate: Date;
-    //     calendar: { id: number; name: string; idGoogleCalendar: string }
+    //     calendar: { id: string; name: string; idGoogleCalendar: string }
     // }> {
     //     try {
 
@@ -197,7 +197,7 @@ export class UserCalendarService {
 
     // async updateUserCalendar(item: UserService): Promise<UserCalendar> {
     //     try {
-    //         const id = item.id as number;
+    //         const id = item.id as string;
     //         delete item.id;
 
     //         return await prisma.userCalendar.update({
