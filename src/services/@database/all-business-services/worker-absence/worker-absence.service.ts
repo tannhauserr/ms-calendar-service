@@ -3,6 +3,8 @@ import prisma from "../../../../lib/prisma";
 import CustomError from "../../../../models/custom-error/CustomError";
 import { TIME_SECONDS } from "../../../../constant/time";
 import moment from "moment";
+import { Pagination } from "../../../../models/pagination";
+import { getGeneric } from "../../../../utils/get-genetic/getGenetic";
 
 export class WorkerAbsenceService {
     constructor() { }
@@ -10,36 +12,130 @@ export class WorkerAbsenceService {
     /**
      * Crear una nueva ausencia
      */
+    // async addWorkerAbsence(item: Prisma.WorkerAbsenceCreateInput): Promise<WorkerAbsence> {
+    //     try {
+    //         return await prisma.workerAbsence.create({
+    //             data: {
+    //                 ...item,
+    //                 createdDate: new Date(),
+    //                 updatedDate: new Date(),
+    //             },
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError("WorkerAbsenceService.addWorkerAbsence", error);
+    //     }
+    // }
+
+    async getWorkerAbsences(pagination: Pagination): Promise<any> {
+
+        try {
+            const select: Prisma.WorkerAbsenceSelect = {
+                id: true,
+                // idCompanyFk: true,
+                idWorkspaceFk: true,
+                idUserFk: true,
+                title: true,
+                startDate: true,
+                endDate: true,
+                description: true,
+                eventPurposeType: true,
+            };
+
+            const result = await getGeneric(pagination, "workerAbsence", select);
+
+            return result;
+
+        } catch (error: any) {
+            throw new CustomError("WorkerAbsenceService.getWorkerAbsences", error);
+        }
+    }
+
     async addWorkerAbsence(item: Prisma.WorkerAbsenceCreateInput): Promise<WorkerAbsence> {
         try {
-            return await prisma.workerAbsence.create({
-                data: {
-                    ...item,
-                    createdDate: new Date(),
-                    updatedDate: new Date(),
-                },
+            const result = await prisma.$transaction(async (tx) => {
+                // Buscar el calendario usando idCompanyFk e idWorkspaceFk
+                if (!item.idWorkspaceFk) {
+                    throw new Error("El idWorkspaceFk es requerido para obtener el calendario");
+                }
+                const calendar = await tx.calendar.findFirst({
+                    where: {
+                        idCompanyFk: item.idCompanyFk,
+                        idWorkspaceFk: item.idWorkspaceFk,
+                        deletedDate: null,
+                    },
+                });
+
+                if (!calendar) {
+                    /**
+                     * El calendario se ha de crear cada vez que se genere un nuevo establecimiento
+                     * y no se puede eliminar, por lo que no debería pasar esto.
+                     * 
+                     * Solo se elimina si el usuario decide eliminar el establecimiento.
+                     * 
+                     */
+                    // Crear un LOG urgente si esto pasa
+                    throw new Error("No se encontró un calendario para el establecimiento y compañía indicados");
+                }
+
+                const startDate = moment(item.startDate).startOf("day").toDate();
+                const endDate = moment(item.endDate).endOf("day").toDate();
+
+                // Crear el evento asociado, usando el id del calendario obtenido
+                const eventData: Prisma.EventCreateInput = {
+                    title: item.title,
+                    description: item.description,
+                    startDate: startDate,
+                    endDate: endDate,
+                    idUserPlatformFk: item.idUserFk,
+                    calendar: { connect: { id: calendar.id } },
+                    eventPurposeType: item.eventPurposeType,
+                    allDay: true
+                    // Otros campos que sean necesarios en tu lógica
+                };
+                const createdEvent = await tx.event.create({ data: eventData });
+
+                // Crear la ausencia conectando el evento creado
+                const createdAbsence = await tx.workerAbsence.create({
+                    data: {
+                        ...item,
+                        event: { connect: { id: createdEvent.id } },
+                        startDate: startDate,
+                        endDate: endDate,
+                        createdDate: new Date(),
+                        updatedDate: new Date(),
+                    },
+                });
+
+                return createdAbsence;
             });
+
+            return result;
         } catch (error: any) {
             throw new CustomError("WorkerAbsenceService.addWorkerAbsence", error);
         }
     }
 
+
+
     /**
      * Obtener una ausencia por su ID
      */
-    async getWorkerAbsenceById(id: number): Promise<WorkerAbsence | null> {
+    async getWorkerAbsenceById(id: string): Promise<WorkerAbsence | null> {
         try {
             return await prisma.workerAbsence.findUnique({
                 where: { id },
                 select: {
                     id: true,
+                    title: true,
                     idUserFk: true,
                     idCompanyFk: true,
-                    idEstablishmentFk: true,
+                    idWorkspaceFk: true,
+                    eventPurposeType: true,
                     startDate: true,
                     endDate: true,
                     // type: true,
                     description: true,
+                    idEventFk: true,
                     createdDate: true,
                     updatedDate: true,
                     deletedDate: true,
@@ -67,54 +163,126 @@ export class WorkerAbsenceService {
     /**
      * Obtener ausencias por establecimiento
      */
-    async getWorkerAbsencesByEstablishment(idEstablishmentFk: string): Promise<WorkerAbsence[]> {
+    async getWorkerAbsencesByWorkspace(idWorkspaceFk: string): Promise<WorkerAbsence[]> {
         try {
             return await prisma.workerAbsence.findMany({
                 where: {
-                    idEstablishmentFk,
+                    idWorkspaceFk,
                     deletedDate: null
                 },
                 orderBy: { startDate: "asc" },
             });
         } catch (error: any) {
-            throw new CustomError("WorkerAbsenceService.getWorkerAbsencesByEstablishment", error);
+            throw new CustomError("WorkerAbsenceService.getWorkerAbsencesByWorkspace", error);
         }
     }
 
     /**
      * Actualizar una ausencia existente
      */
+    // async updateWorkerAbsence(item: WorkerAbsence): Promise<WorkerAbsence> {
+    //     try {
+    //         const id = item.id as string;
+    //         delete item.id;
+
+    //         return await prisma.workerAbsence.update({
+    //             where: { id },
+    //             data: {
+    //                 ...item,
+    //                 updatedDate: new Date(),
+    //             },
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError("WorkerAbsenceService.updateWorkerAbsence", error);
+    //     }
+    // }
+
     async updateWorkerAbsence(item: WorkerAbsence): Promise<WorkerAbsence> {
         try {
-            const id = item.id as number;
-            delete item.id;
+            const result = await prisma.$transaction(async (tx) => {
+                const absenceId = item.id as string;
 
-            return await prisma.workerAbsence.update({
-                where: { id },
-                data: {
-                    ...item,
-                    updatedDate: new Date(),
-                },
+                const startDate = moment(item.startDate).startOf("day").toDate();
+                const endDate = moment(item.endDate).endOf("day").toDate();
+
+                // Actualizar la ausencia
+                const updatedAbsence = await tx.workerAbsence.update({
+                    where: { id: absenceId },
+                    data: {
+                        ...item,
+                        startDate: startDate,
+                        endDate: endDate,
+                        updatedDate: new Date(),
+                    },
+                });
+
+
+
+                // Actualizar el evento asociado a la ausencia
+                await tx.event.update({
+                    where: { id: updatedAbsence.idEventFk },
+                    data: {
+
+                        description: item.description,
+                        startDate: startDate,
+                        endDate: endDate,
+                        // Actualiza otros campos necesarios
+                    },
+                });
+
+                return updatedAbsence;
             });
+
+            return result;
         } catch (error: any) {
             throw new CustomError("WorkerAbsenceService.updateWorkerAbsence", error);
         }
     }
 
+
     /**
      * Eliminar una ausencia (soft delete)
      */
-    async deleteWorkerAbsence(idList: number[]): Promise<Prisma.BatchPayload> {
+    // async deleteWorkerAbsence(idList: string[]): Promise<Prisma.BatchPayload> {
+    //     try {
+    //         return await prisma.workerAbsence.deleteMany({
+    //             where: {
+    //                 id: { in: idList }
+    //             },
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError("WorkerAbsenceService.deleteWorkerAbsence", error);
+    //     }
+    // }
+
+    async deleteWorkerAbsence(idList: string[]): Promise<Prisma.BatchPayload> {
         try {
-            return await prisma.workerAbsence.deleteMany({
-                where: {
-                    id: { in: idList }
-                },
+            const result = await prisma.$transaction(async (tx) => {
+                // Obtener las ausencias para extraer los IDs de los eventos asociados
+                const absences = await tx.workerAbsence.findMany({
+                    where: { id: { in: idList } },
+                });
+                const eventIds = absences.map(a => a.idEventFk).filter(e => e != null);
+
+                // Primero eliminar las ausencias para remover la referencia a los eventos
+                const deleteAbsenceResult = await tx.workerAbsence.deleteMany({
+                    where: { id: { in: idList } },
+                });
+
+                // Luego eliminar los eventos asociados
+                await tx.event.deleteMany({
+                    where: { id: { in: eventIds } },
+                });
+
+                return deleteAbsenceResult;
             });
+
+            return result;
         } catch (error: any) {
             throw new CustomError("WorkerAbsenceService.deleteWorkerAbsence", error);
         }
     }
+
 
 
     /**
@@ -158,7 +326,10 @@ export class WorkerAbsenceService {
         try {
             return await prisma.workerAbsence.findMany({
                 where: { idCompanyFk, deletedDate: null },
-                orderBy: { startDate: "asc" },
+                orderBy: {
+                    startDate: "asc"
+
+                },
             });
         } catch (error: any) {
             throw new CustomError("WorkerAbsenceService.getCompanyAbsences", error);
@@ -209,7 +380,7 @@ export class WorkerAbsenceService {
     //             id: record.id,
     //             idUserFk: record.idUserFk,
     //             idCompanyFk: record.idCompanyFk,
-    //             idEstablishmentFk: record.idEstablishmentFk,
+    //             idWorkspaceFk: record.idWorkspaceFk,
     //             startDate: moment(record.startDate).format("YYYY-MM-DD"),
     //             endDate: moment(record.endDate).format("YYYY-MM-DD"),
     //             type: record.type,

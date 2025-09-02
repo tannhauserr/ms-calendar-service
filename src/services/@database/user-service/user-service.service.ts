@@ -58,7 +58,7 @@ export class UserServiceService {
         }
     }
 
-    async getUserServiceById(id: number): Promise<UserService | null> {
+    async getUserServiceById(id: string): Promise<UserService | null> {
         try {
             return await prisma.userService.findUnique({
                 where: { id: id },
@@ -73,7 +73,7 @@ export class UserServiceService {
 
     async updateUserService(item: UserService): Promise<UserService> {
         try {
-            const id = item.id as number;
+            const id = item.id as string;
             delete item.id;
 
             return await prisma.userService.update({
@@ -88,7 +88,7 @@ export class UserServiceService {
         }
     }
 
-    async deleteUserService(ids: number[]): Promise<Prisma.BatchPayload> {
+    async deleteUserService(ids: string[]): Promise<Prisma.BatchPayload> {
         try {
             return await prisma.userService.deleteMany({
                 where: {

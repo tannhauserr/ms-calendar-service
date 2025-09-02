@@ -143,7 +143,7 @@ export class UserColorService {
 
     // async updateUserColor(item: UserService): Promise<any> {
     //     try {
-    //         const id = item.id as number;
+    //         const id = item.id as string;
     //         delete item.id;
 
     //         const updatedUserColor = await prisma.userColor.update({
@@ -177,7 +177,7 @@ export class UserColorService {
     //     }
     // }
 
-    // async deleteUserColor(id: number): Promise<any> {
+    // async deleteUserColor(id: string): Promise<any> {
     //     try {
     //         let deletedUserColor = await prisma.userColor.delete({
     //             select: {

@@ -1,4 +1,5 @@
 const path = require('path');
+const nodeExternals = require('webpack-node-externals');
 
 module.exports = {
   entry: './src/index.ts',  // Punto de entrada de tu aplicación
@@ -12,6 +13,7 @@ module.exports = {
   resolve: {
     extensions: ['.ts', '.js'],  // Extensiones a resolver
   },
+  externals: [nodeExternals()], // ⬅️ Aquí está la clave
   module: {
     rules: [
       {

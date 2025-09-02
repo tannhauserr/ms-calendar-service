@@ -15,20 +15,20 @@ import { TIME_MILLISECONDS, TIME_SECONDS } from '../../../../../constant/time';
  * 
  * @returns Promesa que resuelve con el `idClientFk` del nuevo cliente.
  */
-export async function getCategoriesServicesUserForFlow(idEstablishment: string): Promise<any | null> {
+export async function getCategoriesServicesUserForFlow(idWorkspace: string): Promise<any | null> {
     const rabbitRpc = RabbitRpcService.instance;
 
     try {
         const correlationId = uuidv4();
         const correlationId2 = uuidv4();
 
-        console.log("mandando cosas", idEstablishment);
+        console.log("mandando cosas", idWorkspace);
 
         // Devuelve categorias y servicios de un establecimiento
         const promiseMsCalendar: any = rabbitRpc.sendRpc(
             RabbitMQKeys.handleRpcGetCategoryAndServicesForFlowQueue(),
             SubscriberActions.requestGetCategoryServiceUserForFlow,
-            { idEstablishment } as ActionPayloads['requestGetCategoryServiceUserForFlow'],
+            { idWorkspace } as ActionPayloads['requestGetCategoryServiceUserForFlow'],
             correlationId,
             true,
             TIME_MILLISECONDS.SECOND * 8
@@ -38,7 +38,7 @@ export async function getCategoriesServicesUserForFlow(idEstablishment: string):
         const promiseMsLogin: any = rabbitRpc.sendRpc(
             RabbitMQKeys.handleRpcGetUserForFlowQueue(),
             SubscriberActions.requestGetCategoryServiceUserForFlow,
-            { idEstablishment } as ActionPayloads['requestGetCategoryServiceUserForFlow'],
+            { idWorkspace } as ActionPayloads['requestGetCategoryServiceUserForFlow'],
             correlationId2,
             true,
             TIME_MILLISECONDS.SECOND * 8
@@ -49,12 +49,12 @@ export async function getCategoriesServicesUserForFlow(idEstablishment: string):
 
         // console.log('getCategoriesAndServices (flows)', dataMsCalendar);
         // console.log('getUsers (flows)', dataMsLogin);
-        const { users = [], establishment = { name: '', timeZome: '', address: '' } } = dataMsLogin;
+        const { users = [], workspace = { name: '', timeZome: '', address: '' } } = dataMsLogin;
 
         return {
             categories: dataMsCalendar,
             users,
-            establishment
+            workspace
         };
     } catch (error) {
         console.error('Error during RPC calls:', error);

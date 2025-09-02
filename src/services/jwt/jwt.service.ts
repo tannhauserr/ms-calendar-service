@@ -102,9 +102,17 @@ export class JWTService {
             throw new CustomError('JWTService.verify', new Error("Clave privada no disponible."));
         }
 
+
+
         try {
             return await this._verifyTokenWithKey(token, this._privateKey);
         } catch (err: any) {
+            /*
+             * Motivos de error:
+             * 1. Clave JWT incorrecta
+             * 2. Puedes que hayas actualizado la clave, pero el MS de Login siga usando la antigua. Reiniciar ese MS
+             */
+            console.log("que es el error", err)
             if (err.name === 'TokenExpiredError') {
                 // Manejar específicamente un token expirado
                 throw new CustomError('JWTService.verify', new Error(Message.Failure.TOKEN_EXPIRED));
@@ -199,6 +207,10 @@ export class JWTService {
     static verifyCookieToken(req, res, next) {
         // console.log("llego")
 
+        // console.log("verificar token en cookies")
+        // console.log("req.cookies", req.cookies)
+        // console.log("req.cookies", req.cookies['booking.rbc.token'])
+        
         // Obtener el token de las cookies
         const cookieToken = req.cookies['booking.rbc.token'];
 

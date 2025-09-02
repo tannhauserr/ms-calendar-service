@@ -1,2127 +1,470 @@
 
     =====================================================
-    Date: 2024-12-27T14:31:44.046Z
-    Service: EventService.getEvents
-    Error Message: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+    Date: 2025-08-03T17:19:39.697Z
+    Service: TemporaryBusinessHour.addTemporaryBusinessHour
+    Error Message: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-  101   
-  102   
-  103 try {
-→ 104   const items = await prisma[modelName as string].findMany({
-          where: {
-            startDate: {
-              contains: "2024-12-18T23:00:00.000Z",
-              ~~~~~~~~
-        ?     equals?: DateTime | DateTimeFieldRefInput,
-        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     lt?: DateTime | DateTimeFieldRefInput,
-        ?     lte?: DateTime | DateTimeFieldRefInput,
-        ?     gt?: DateTime | DateTimeFieldRefInput,
-        ?     gte?: DateTime | DateTimeFieldRefInput,
-        ?     not?: DateTime | NestedDateTimeFilter
-            },
-            idCalendarFk: {
-              contains: "calendar-1-uuid"
-            },
-            createdDate: {
-              gte: "2024-12-18T23:00:00.000Z",
-              lte: "2025-01-14T23:00:00.000Z"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {},
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            startDate: true,
-            endDate: true,
-            idClientFk: true,
-            idUserPlatformFk: true,
-            eventStatusType: true,
-            eventPurposeType: true,
-            eventSourceType: true,
-            service: {
-              select: {
-                id: true,
-                name: true,
-                description: true
-              }
-            }
-          }
-        })
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-Unknown argument `contains`. Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
-
-  101   
-  102   
-  103 try {
-→ 104   const items = await prisma[modelName as string].findMany({
-          where: {
-            startDate: {
-              contains: "2024-12-18T23:00:00.000Z",
-              ~~~~~~~~
-        ?     equals?: DateTime | DateTimeFieldRefInput,
-        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     lt?: DateTime | DateTimeFieldRefInput,
-        ?     lte?: DateTime | DateTimeFieldRefInput,
-        ?     gt?: DateTime | DateTimeFieldRefInput,
-        ?     gte?: DateTime | DateTimeFieldRefInput,
-        ?     not?: DateTime | NestedDateTimeFilter
-            },
-            idCalendarFk: {
-              contains: "calendar-1-uuid"
-            },
-            createdDate: {
-              gte: "2024-12-18T23:00:00.000Z",
-              lte: "2025-01-14T23:00:00.000Z"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {},
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            startDate: true,
-            endDate: true,
-            idClientFk: true,
-            idUserPlatformFk: true,
-            eventStatusType: true,
-            eventPurposeType: true,
-            eventSourceType: true,
-            service: {
-              select: {
-                id: true,
-                name: true,
-                description: true
-              }
-            }
-          }
-        })
-
-Unknown argument `contains`. Available options are marked with ?.
-    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:129:13)
-    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:223:28)
-    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at TemporaryBusinessHourService.addTemporaryBusinessHour (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:20)
+    at TemporaryBusinessHourController.add (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:27:28)
     =====================================================
     
     =====================================================
-    Date: 2024-12-27T14:33:29.581Z
-    Service: EventService.getEvents
-    Error Message: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+    Date: 2025-08-03T17:19:39.714Z
+    Service: TemporaryBusinessHour.updateTemporaryBusinessHour
+    Error Message: 
+Invalid `prisma.temporaryBusinessHour.update()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:186:55
 
-  101   
-  102   
-  103 try {
-→ 104   const items = await prisma[modelName as string].findMany({
-          where: {
-            startDate: {
-              contains: "2024-12-19T23:00:00.000Z",
-              ~~~~~~~~
-        ?     equals?: DateTime | DateTimeFieldRefInput,
-        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     lt?: DateTime | DateTimeFieldRefInput,
-        ?     lte?: DateTime | DateTimeFieldRefInput,
-        ?     gt?: DateTime | DateTimeFieldRefInput,
-        ?     gte?: DateTime | DateTimeFieldRefInput,
-        ?     not?: DateTime | NestedDateTimeFilter
-            },
-            idCalendarFk: {
-              contains: "calendar-1-uuid"
-            },
-            createdDate: {
-              gte: "2024-12-19T23:00:00.000Z",
-              lte: "2025-01-22T23:00:00.000Z"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {},
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            startDate: true,
-            endDate: true,
-            idClientFk: true,
-            idUserPlatformFk: true,
-            eventStatusType: true,
-            eventPurposeType: true,
-            eventSourceType: true,
-            service: {
-              select: {
-                id: true,
-                name: true,
-                description: true
-              }
-            }
-          }
-        })
+  183 const id = String(item.id);
+  184 delete item.id;
+  185 
+→ 186 return await prisma.temporaryBusinessHour.update(
+The provided value for the column is too long for the column's type. Column: (not available)
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.temporaryBusinessHour.update()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:186:55
 
-Unknown argument `contains`. Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
-
-  101   
-  102   
-  103 try {
-→ 104   const items = await prisma[modelName as string].findMany({
-          where: {
-            startDate: {
-              contains: "2024-12-19T23:00:00.000Z",
-              ~~~~~~~~
-        ?     equals?: DateTime | DateTimeFieldRefInput,
-        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     lt?: DateTime | DateTimeFieldRefInput,
-        ?     lte?: DateTime | DateTimeFieldRefInput,
-        ?     gt?: DateTime | DateTimeFieldRefInput,
-        ?     gte?: DateTime | DateTimeFieldRefInput,
-        ?     not?: DateTime | NestedDateTimeFilter
-            },
-            idCalendarFk: {
-              contains: "calendar-1-uuid"
-            },
-            createdDate: {
-              gte: "2024-12-19T23:00:00.000Z",
-              lte: "2025-01-22T23:00:00.000Z"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {},
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            startDate: true,
-            endDate: true,
-            idClientFk: true,
-            idUserPlatformFk: true,
-            eventStatusType: true,
-            eventPurposeType: true,
-            eventSourceType: true,
-            service: {
-              select: {
-                id: true,
-                name: true,
-                description: true
-              }
-            }
-          }
-        })
-
-Unknown argument `contains`. Available options are marked with ?.
-    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:129:13)
-    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:223:28)
-    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+  183 const id = String(item.id);
+  184 delete item.id;
+  185 
+→ 186 return await prisma.temporaryBusinessHour.update(
+The provided value for the column is too long for the column's type. Column: (not available)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at TemporaryBusinessHourService.updateTemporaryBusinessHour (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:186:20)
+    at TemporaryBusinessHourController.update (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:108:28)
     =====================================================
     
     =====================================================
-    Date: 2024-12-27T14:35:51.247Z
-    Service: EventService.getEvents
-    Error Message: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+    Date: 2025-08-03T17:19:39.713Z
+    Service: TemporaryBusinessHour.addTemporaryBusinessHour
+    Error Message: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-  101   
-  102   
-  103 try {
-→ 104   const items = await prisma[modelName as string].findMany({
-          where: {
-            startDate: {
-              contains: "2024-12-18T23:00:00.000Z",
-              ~~~~~~~~
-        ?     equals?: DateTime | DateTimeFieldRefInput,
-        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     lt?: DateTime | DateTimeFieldRefInput,
-        ?     lte?: DateTime | DateTimeFieldRefInput,
-        ?     gt?: DateTime | DateTimeFieldRefInput,
-        ?     gte?: DateTime | DateTimeFieldRefInput,
-        ?     not?: DateTime | NestedDateTimeFilter
-            },
-            idCalendarFk: {
-              contains: "calendar-1-uuid"
-            },
-            createdDate: {
-              gte: "2024-12-18T23:00:00.000Z",
-              lte: "2025-01-22T23:00:00.000Z"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {},
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            startDate: true,
-            endDate: true,
-            idClientFk: true,
-            idUserPlatformFk: true,
-            eventStatusType: true,
-            eventPurposeType: true,
-            eventSourceType: true,
-            service: {
-              select: {
-                id: true,
-                name: true,
-                description: true
-              }
-            }
-          }
-        })
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-Unknown argument `contains`. Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
-
-  101   
-  102   
-  103 try {
-→ 104   const items = await prisma[modelName as string].findMany({
-          where: {
-            startDate: {
-              contains: "2024-12-18T23:00:00.000Z",
-              ~~~~~~~~
-        ?     equals?: DateTime | DateTimeFieldRefInput,
-        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     lt?: DateTime | DateTimeFieldRefInput,
-        ?     lte?: DateTime | DateTimeFieldRefInput,
-        ?     gt?: DateTime | DateTimeFieldRefInput,
-        ?     gte?: DateTime | DateTimeFieldRefInput,
-        ?     not?: DateTime | NestedDateTimeFilter
-            },
-            idCalendarFk: {
-              contains: "calendar-1-uuid"
-            },
-            createdDate: {
-              gte: "2024-12-18T23:00:00.000Z",
-              lte: "2025-01-22T23:00:00.000Z"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {},
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            startDate: true,
-            endDate: true,
-            idClientFk: true,
-            idUserPlatformFk: true,
-            eventStatusType: true,
-            eventPurposeType: true,
-            eventSourceType: true,
-            service: {
-              select: {
-                id: true,
-                name: true,
-                description: true
-              }
-            }
-          }
-        })
-
-Unknown argument `contains`. Available options are marked with ?.
-    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:129:13)
-    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:223:28)
-    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at TemporaryBusinessHourService.addTemporaryBusinessHour (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:20)
+    at TemporaryBusinessHourController.add (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:27:28)
     =====================================================
     
     =====================================================
-    Date: 2024-12-27T14:39:16.565Z
-    Service: EventService.getEvents
-    Error Message: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+    Date: 2025-08-03T17:59:12.921Z
+    Service: TemporaryBusinessHour.addTemporaryBusinessHour
+    Error Message: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-  101   
-  102   
-  103 try {
-→ 104   const items = await prisma[modelName as string].findMany({
-          where: {
-            startDate: {
-              contains: "2024-12-17T23:00:00.000Z",
-              ~~~~~~~~
-        ?     equals?: DateTime | DateTimeFieldRefInput,
-        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     lt?: DateTime | DateTimeFieldRefInput,
-        ?     lte?: DateTime | DateTimeFieldRefInput,
-        ?     gt?: DateTime | DateTimeFieldRefInput,
-        ?     gte?: DateTime | DateTimeFieldRefInput,
-        ?     not?: DateTime | NestedDateTimeFilter
-            },
-            idCalendarFk: {
-              contains: "calendar-1-uuid"
-            },
-            createdDate: {
-              gte: "2024-12-17T23:00:00.000Z",
-              lte: "2025-01-24T23:00:00.000Z"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {},
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            startDate: true,
-            endDate: true,
-            idClientFk: true,
-            idUserPlatformFk: true,
-            eventStatusType: true,
-            eventPurposeType: true,
-            eventSourceType: true,
-            service: {
-              select: {
-                id: true,
-                name: true,
-                description: true
-              }
-            }
-          }
-        })
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-Unknown argument `contains`. Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
-
-  101   
-  102   
-  103 try {
-→ 104   const items = await prisma[modelName as string].findMany({
-          where: {
-            startDate: {
-              contains: "2024-12-17T23:00:00.000Z",
-              ~~~~~~~~
-        ?     equals?: DateTime | DateTimeFieldRefInput,
-        ?     in?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     notIn?: DateTime[] | ListDateTimeFieldRefInput,
-        ?     lt?: DateTime | DateTimeFieldRefInput,
-        ?     lte?: DateTime | DateTimeFieldRefInput,
-        ?     gt?: DateTime | DateTimeFieldRefInput,
-        ?     gte?: DateTime | DateTimeFieldRefInput,
-        ?     not?: DateTime | NestedDateTimeFilter
-            },
-            idCalendarFk: {
-              contains: "calendar-1-uuid"
-            },
-            createdDate: {
-              gte: "2024-12-17T23:00:00.000Z",
-              lte: "2025-01-24T23:00:00.000Z"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {},
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            startDate: true,
-            endDate: true,
-            idClientFk: true,
-            idUserPlatformFk: true,
-            eventStatusType: true,
-            eventPurposeType: true,
-            eventSourceType: true,
-            service: {
-              select: {
-                id: true,
-                name: true,
-                description: true
-              }
-            }
-          }
-        })
-
-Unknown argument `contains`. Available options are marked with ?.
-    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:129:13)
-    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:223:28)
-    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at TemporaryBusinessHourService.addTemporaryBusinessHour (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:20)
+    at TemporaryBusinessHourController.add (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:27:28)
     =====================================================
     
     =====================================================
-    Date: 2024-12-27T14:51:23.620Z
-    Service: EventService.getEvents
-    Error Message: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
+    Date: 2025-08-03T17:59:13.064Z
+    Service: TemporaryBusinessHour.addTemporaryBusinessHour
+    Error Message: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-  101   
-  102   
-  103 try {
-→ 104   const items = await prisma[modelName as string].findMany({
-          where: {
-            idCalendarFk: {
-              contains: "calendar-1-uuid"
-            },
-            createdDate: {
-              gte: "2024-12-10",
-                   ~~~~~~~~~~~~
-              lte: "2025-01-23"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {},
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            startDate: true,
-            endDate: true,
-            idClientFk: true,
-            idUserPlatformFk: true,
-            eventStatusType: true,
-            eventPurposeType: true,
-            eventSourceType: true,
-            service: {
-              select: {
-                id: true,
-                name: true,
-                description: true
-              }
-            }
-          }
-        })
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-Invalid value for argument `gte`: premature end of input. Expected ISO-8601 DateTime.
-    Stack Trace: Error: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:104:55
-
-  101   
-  102   
-  103 try {
-→ 104   const items = await prisma[modelName as string].findMany({
-          where: {
-            idCalendarFk: {
-              contains: "calendar-1-uuid"
-            },
-            createdDate: {
-              gte: "2024-12-10",
-                   ~~~~~~~~~~~~
-              lte: "2025-01-23"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {},
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            startDate: true,
-            endDate: true,
-            idClientFk: true,
-            idUserPlatformFk: true,
-            eventStatusType: true,
-            eventPurposeType: true,
-            eventSourceType: true,
-            service: {
-              select: {
-                id: true,
-                name: true,
-                description: true
-              }
-            }
-          }
-        })
-
-Invalid value for argument `gte`: premature end of input. Expected ISO-8601 DateTime.
-    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:129:13)
-    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:223:28)
-    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at TemporaryBusinessHourService.addTemporaryBusinessHour (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:20)
+    at TemporaryBusinessHourController.add (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:27:28)
     =====================================================
     
     =====================================================
-    Date: 2024-12-27T17:41:22.377Z
-    Service: EventService.getEvents
-    Error Message: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+    Date: 2025-08-03T18:03:01.254Z
+    Service: TemporaryBusinessHour.addTemporaryBusinessHour
+    Error Message: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              nameMember: "asc",
-              ~~~~~~~~~~
-          ?   id?: SortOrder,
-          ?   title?: SortOrder,
-          ?   description?: SortOrder | SortOrderInput,
-          ?   startDate?: SortOrder,
-          ?   endDate?: SortOrder,
-          ?   idCalendarFk?: SortOrder,
-          ?   idServiceFk?: SortOrder | SortOrderInput,
-          ?   idClientFk?: SortOrder | SortOrderInput,
-          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
-          ?   commentClient?: SortOrder | SortOrderInput,
-          ?   idGoogleEvent?: SortOrder | SortOrderInput,
-          ?   eventPurposeType?: SortOrder,
-          ?   eventSourceType?: SortOrder,
-          ?   eventStatusType?: SortOrder,
-          ?   createdDate?: SortOrder,
-          ?   updatedDate?: SortOrder,
-          ?   deletedDate?: SortOrder | SortOrderInput,
-          ?   service?: ServiceOrderByWithRelationInput,
-          ?   calendar?: CalendarOrderByWithRelationInput
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idClientFk: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              }
-            }
-          })
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-Unknown argument `nameMember`. Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
-
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              nameMember: "asc",
-              ~~~~~~~~~~
-          ?   id?: SortOrder,
-          ?   title?: SortOrder,
-          ?   description?: SortOrder | SortOrderInput,
-          ?   startDate?: SortOrder,
-          ?   endDate?: SortOrder,
-          ?   idCalendarFk?: SortOrder,
-          ?   idServiceFk?: SortOrder | SortOrderInput,
-          ?   idClientFk?: SortOrder | SortOrderInput,
-          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
-          ?   commentClient?: SortOrder | SortOrderInput,
-          ?   idGoogleEvent?: SortOrder | SortOrderInput,
-          ?   eventPurposeType?: SortOrder,
-          ?   eventSourceType?: SortOrder,
-          ?   eventStatusType?: SortOrder,
-          ?   createdDate?: SortOrder,
-          ?   updatedDate?: SortOrder,
-          ?   deletedDate?: SortOrder | SortOrderInput,
-          ?   service?: ServiceOrderByWithRelationInput,
-          ?   calendar?: CalendarOrderByWithRelationInput
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idClientFk: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              }
-            }
-          })
-
-Unknown argument `nameMember`. Available options are marked with ?.
-    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
-    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:229:32)
-    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at TemporaryBusinessHourService.addTemporaryBusinessHour (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:20)
+    at TemporaryBusinessHourController.add (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:27:28)
     =====================================================
     
     =====================================================
-    Date: 2024-12-27T17:43:21.165Z
-    Service: EventService.getEvents
-    Error Message: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+    Date: 2025-08-04T16:04:25.178Z
+    Service: TemporaryBusinessHour.getTemporaryBusinessHoursGrouped
+    Error Message: 
+Invalid `prisma.$queryRaw()` invocation:
 
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              nameClient: "asc",
-              ~~~~~~~~~~
-          ?   id?: SortOrder,
-          ?   title?: SortOrder,
-          ?   description?: SortOrder | SortOrderInput,
-          ?   startDate?: SortOrder,
-          ?   endDate?: SortOrder,
-          ?   idCalendarFk?: SortOrder,
-          ?   idServiceFk?: SortOrder | SortOrderInput,
-          ?   idClientFk?: SortOrder | SortOrderInput,
-          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
-          ?   commentClient?: SortOrder | SortOrderInput,
-          ?   idGoogleEvent?: SortOrder | SortOrderInput,
-          ?   eventPurposeType?: SortOrder,
-          ?   eventSourceType?: SortOrder,
-          ?   eventStatusType?: SortOrder,
-          ?   createdDate?: SortOrder,
-          ?   updatedDate?: SortOrder,
-          ?   deletedDate?: SortOrder | SortOrderInput,
-          ?   service?: ServiceOrderByWithRelationInput,
-          ?   calendar?: CalendarOrderByWithRelationInput
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idClientFk: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              }
-            }
-          })
 
-Unknown argument `nameClient`. Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+Raw query failed. Code: `42883`. Message: `ERROR: function to_char(character varying, unknown) does not exist
+HINT: No function matches the given name and argument types. You might need to add explicit type casts.`
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.$queryRaw()` invocation:
 
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              nameClient: "asc",
-              ~~~~~~~~~~
-          ?   id?: SortOrder,
-          ?   title?: SortOrder,
-          ?   description?: SortOrder | SortOrderInput,
-          ?   startDate?: SortOrder,
-          ?   endDate?: SortOrder,
-          ?   idCalendarFk?: SortOrder,
-          ?   idServiceFk?: SortOrder | SortOrderInput,
-          ?   idClientFk?: SortOrder | SortOrderInput,
-          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
-          ?   commentClient?: SortOrder | SortOrderInput,
-          ?   idGoogleEvent?: SortOrder | SortOrderInput,
-          ?   eventPurposeType?: SortOrder,
-          ?   eventSourceType?: SortOrder,
-          ?   eventStatusType?: SortOrder,
-          ?   createdDate?: SortOrder,
-          ?   updatedDate?: SortOrder,
-          ?   deletedDate?: SortOrder | SortOrderInput,
-          ?   service?: ServiceOrderByWithRelationInput,
-          ?   calendar?: CalendarOrderByWithRelationInput
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idClientFk: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              }
-            }
-          })
 
-Unknown argument `nameClient`. Available options are marked with ?.
-    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
-    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:229:32)
-    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+Raw query failed. Code: `42883`. Message: `ERROR: function to_char(character varying, unknown) does not exist
+HINT: No function matches the given name and argument types. You might need to add explicit type casts.`
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at TemporaryBusinessHourService.getTemporaryBusinessHours2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:355:26)
+    at TemporaryBusinessHourController.get (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:40:28)
     =====================================================
     
     =====================================================
-    Date: 2024-12-27T17:43:29.658Z
-    Service: EventService.getEvents
-    Error Message: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+    Date: 2025-08-06T16:58:01.253Z
+    Service: TemporaryBusinessHour.addTemporaryBusinessHour
+    Error Message: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              nameClient: "asc",
-              ~~~~~~~~~~
-          ?   id?: SortOrder,
-          ?   title?: SortOrder,
-          ?   description?: SortOrder | SortOrderInput,
-          ?   startDate?: SortOrder,
-          ?   endDate?: SortOrder,
-          ?   idCalendarFk?: SortOrder,
-          ?   idServiceFk?: SortOrder | SortOrderInput,
-          ?   idClientFk?: SortOrder | SortOrderInput,
-          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
-          ?   commentClient?: SortOrder | SortOrderInput,
-          ?   idGoogleEvent?: SortOrder | SortOrderInput,
-          ?   eventPurposeType?: SortOrder,
-          ?   eventSourceType?: SortOrder,
-          ?   eventStatusType?: SortOrder,
-          ?   createdDate?: SortOrder,
-          ?   updatedDate?: SortOrder,
-          ?   deletedDate?: SortOrder | SortOrderInput,
-          ?   service?: ServiceOrderByWithRelationInput,
-          ?   calendar?: CalendarOrderByWithRelationInput
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idClientFk: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              }
-            }
-          })
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-Unknown argument `nameClient`. Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
-
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              nameClient: "asc",
-              ~~~~~~~~~~
-          ?   id?: SortOrder,
-          ?   title?: SortOrder,
-          ?   description?: SortOrder | SortOrderInput,
-          ?   startDate?: SortOrder,
-          ?   endDate?: SortOrder,
-          ?   idCalendarFk?: SortOrder,
-          ?   idServiceFk?: SortOrder | SortOrderInput,
-          ?   idClientFk?: SortOrder | SortOrderInput,
-          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
-          ?   commentClient?: SortOrder | SortOrderInput,
-          ?   idGoogleEvent?: SortOrder | SortOrderInput,
-          ?   eventPurposeType?: SortOrder,
-          ?   eventSourceType?: SortOrder,
-          ?   eventStatusType?: SortOrder,
-          ?   createdDate?: SortOrder,
-          ?   updatedDate?: SortOrder,
-          ?   deletedDate?: SortOrder | SortOrderInput,
-          ?   service?: ServiceOrderByWithRelationInput,
-          ?   calendar?: CalendarOrderByWithRelationInput
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idClientFk: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              }
-            }
-          })
-
-Unknown argument `nameClient`. Available options are marked with ?.
-    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
-    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:229:32)
-    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at TemporaryBusinessHourService.addTemporaryBusinessHour (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:20)
+    at TemporaryBusinessHourController.add (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:27:28)
     =====================================================
     
     =====================================================
-    Date: 2024-12-28T14:46:31.797Z
-    Service: EventService.getEvents
-    Error Message: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+    Date: 2025-08-06T17:29:23.947Z
+    Service: TemporaryBusinessHour.addTemporaryBusinessHour
+    Error Message: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              nameClient: "asc",
-              ~~~~~~~~~~
-          ?   id?: SortOrder,
-          ?   title?: SortOrder,
-          ?   description?: SortOrder | SortOrderInput,
-          ?   startDate?: SortOrder,
-          ?   endDate?: SortOrder,
-          ?   idCalendarFk?: SortOrder,
-          ?   idServiceFk?: SortOrder | SortOrderInput,
-          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
-          ?   commentClient?: SortOrder | SortOrderInput,
-          ?   idGoogleEvent?: SortOrder | SortOrderInput,
-          ?   eventPurposeType?: SortOrder,
-          ?   eventSourceType?: SortOrder,
-          ?   isEditableByClient?: SortOrder,
-          ?   numberUpdates?: SortOrder | SortOrderInput,
-          ?   eventStatusType?: SortOrder,
-          ?   createdDate?: SortOrder,
-          ?   updatedDate?: SortOrder,
-          ?   deletedDate?: SortOrder | SortOrderInput,
-          ?   service?: ServiceOrderByWithRelationInput,
-          ?   calendar?: CalendarOrderByWithRelationInput,
-          ?   eventParticipant?: EventParticipantOrderByRelationAggregateInput
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              },
-              eventParticipant: {
-                select: {
-                  id: true,
-                  idClientFk: true
-                }
-              }
-            }
-          })
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-Unknown argument `nameClient`. Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
-
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              nameClient: "asc",
-              ~~~~~~~~~~
-          ?   id?: SortOrder,
-          ?   title?: SortOrder,
-          ?   description?: SortOrder | SortOrderInput,
-          ?   startDate?: SortOrder,
-          ?   endDate?: SortOrder,
-          ?   idCalendarFk?: SortOrder,
-          ?   idServiceFk?: SortOrder | SortOrderInput,
-          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
-          ?   commentClient?: SortOrder | SortOrderInput,
-          ?   idGoogleEvent?: SortOrder | SortOrderInput,
-          ?   eventPurposeType?: SortOrder,
-          ?   eventSourceType?: SortOrder,
-          ?   isEditableByClient?: SortOrder,
-          ?   numberUpdates?: SortOrder | SortOrderInput,
-          ?   eventStatusType?: SortOrder,
-          ?   createdDate?: SortOrder,
-          ?   updatedDate?: SortOrder,
-          ?   deletedDate?: SortOrder | SortOrderInput,
-          ?   service?: ServiceOrderByWithRelationInput,
-          ?   calendar?: CalendarOrderByWithRelationInput,
-          ?   eventParticipant?: EventParticipantOrderByRelationAggregateInput
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              },
-              eventParticipant: {
-                select: {
-                  id: true,
-                  idClientFk: true
-                }
-              }
-            }
-          })
-
-Unknown argument `nameClient`. Available options are marked with ?.
-    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
-    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:323:32)
-    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at TemporaryBusinessHourService.addTemporaryBusinessHour (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:20)
+    at TemporaryBusinessHourController.add (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:27:28)
     =====================================================
     
     =====================================================
-    Date: 2024-12-28T14:47:26.698Z
-    Service: EventService.getEvents
-    Error Message: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+    Date: 2025-08-06T19:23:52.818Z
+    Service: TemporaryBusinessHour.addTemporaryBusinessHour
+    Error Message: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              nameService: "asc",
-              ~~~~~~~~~~~
-          ?   id?: SortOrder,
-          ?   title?: SortOrder,
-          ?   description?: SortOrder | SortOrderInput,
-          ?   startDate?: SortOrder,
-          ?   endDate?: SortOrder,
-          ?   idCalendarFk?: SortOrder,
-          ?   idServiceFk?: SortOrder | SortOrderInput,
-          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
-          ?   commentClient?: SortOrder | SortOrderInput,
-          ?   idGoogleEvent?: SortOrder | SortOrderInput,
-          ?   eventPurposeType?: SortOrder,
-          ?   eventSourceType?: SortOrder,
-          ?   isEditableByClient?: SortOrder,
-          ?   numberUpdates?: SortOrder | SortOrderInput,
-          ?   eventStatusType?: SortOrder,
-          ?   createdDate?: SortOrder,
-          ?   updatedDate?: SortOrder,
-          ?   deletedDate?: SortOrder | SortOrderInput,
-          ?   service?: ServiceOrderByWithRelationInput,
-          ?   calendar?: CalendarOrderByWithRelationInput,
-          ?   eventParticipant?: EventParticipantOrderByRelationAggregateInput
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              },
-              eventParticipant: {
-                select: {
-                  id: true,
-                  idClientFk: true
-                }
-              }
-            }
-          })
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-Unknown argument `nameService`. Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
-
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              nameService: "asc",
-              ~~~~~~~~~~~
-          ?   id?: SortOrder,
-          ?   title?: SortOrder,
-          ?   description?: SortOrder | SortOrderInput,
-          ?   startDate?: SortOrder,
-          ?   endDate?: SortOrder,
-          ?   idCalendarFk?: SortOrder,
-          ?   idServiceFk?: SortOrder | SortOrderInput,
-          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
-          ?   commentClient?: SortOrder | SortOrderInput,
-          ?   idGoogleEvent?: SortOrder | SortOrderInput,
-          ?   eventPurposeType?: SortOrder,
-          ?   eventSourceType?: SortOrder,
-          ?   isEditableByClient?: SortOrder,
-          ?   numberUpdates?: SortOrder | SortOrderInput,
-          ?   eventStatusType?: SortOrder,
-          ?   createdDate?: SortOrder,
-          ?   updatedDate?: SortOrder,
-          ?   deletedDate?: SortOrder | SortOrderInput,
-          ?   service?: ServiceOrderByWithRelationInput,
-          ?   calendar?: CalendarOrderByWithRelationInput,
-          ?   eventParticipant?: EventParticipantOrderByRelationAggregateInput
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              },
-              eventParticipant: {
-                select: {
-                  id: true,
-                  idClientFk: true
-                }
-              }
-            }
-          })
-
-Unknown argument `nameService`. Available options are marked with ?.
-    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
-    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:323:32)
-    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at TemporaryBusinessHourService.addTemporaryBusinessHour (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:20)
+    at TemporaryBusinessHourController.add (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:27:28)
     =====================================================
     
     =====================================================
-    Date: 2024-12-28T17:49:58.230Z
-    Service: EventService.getEvents
-    Error Message: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+    Date: 2025-08-06T19:24:31.673Z
+    Service: TemporaryBusinessHour.addTemporaryBusinessHour
+    Error Message: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idEstablishmentFk: {
-              ~~~~~~~~~~~~~~~~~
-                contains: "13fbe22z-1i14-453a-8e74-ac0f81515jo8"
-              },
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null,
-          ?   AND?: EventWhereInput | EventWhereInput[],
-          ?   OR?: EventWhereInput[],
-          ?   NOT?: EventWhereInput | EventWhereInput[],
-          ?   id?: IntFilter | Int,
-          ?   title?: StringFilter | String,
-          ?   description?: StringNullableFilter | String | Null,
-          ?   startDate?: DateTimeFilter | DateTime,
-          ?   endDate?: DateTimeFilter | DateTime,
-          ?   idServiceFk?: IntNullableFilter | Int | Null,
-          ?   idUserPlatformFk?: StringNullableFilter | String | Null,
-          ?   commentClient?: StringNullableFilter | String | Null,
-          ?   idGoogleEvent?: StringNullableFilter | String | Null,
-          ?   eventPurposeType?: EnumeventPurposeTypeFilter | eventPurposeType,
-          ?   eventSourceType?: EnumEventSourceTypeFilter | EventSourceType,
-          ?   isEditableByClient?: BoolFilter | Boolean,
-          ?   numberUpdates?: IntNullableFilter | Int | Null,
-          ?   eventStatusType?: EnumEventStatusTypeFilter | EventStatusType,
-          ?   createdDate?: DateTimeFilter | DateTime,
-          ?   updatedDate?: DateTimeFilter | DateTime,
-          ?   service?: ServiceNullableRelationFilter | ServiceWhereInput | Null,
-          ?   calendar?: CalendarNullableRelationFilter | CalendarWhereInput | Null,
-          ?   eventParticipant?: EventParticipantListRelationFilter
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              title: "desc"
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              },
-              eventParticipant: {
-                select: {
-                  id: true,
-                  idClientFk: true
-                }
-              }
-            }
-          })
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.temporaryBusinessHour.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:55
 
-Unknown argument `idEstablishmentFk`. Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
-
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idEstablishmentFk: {
-              ~~~~~~~~~~~~~~~~~
-                contains: "13fbe22z-1i14-453a-8e74-ac0f81515jo8"
-              },
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null,
-          ?   AND?: EventWhereInput | EventWhereInput[],
-          ?   OR?: EventWhereInput[],
-          ?   NOT?: EventWhereInput | EventWhereInput[],
-          ?   id?: IntFilter | Int,
-          ?   title?: StringFilter | String,
-          ?   description?: StringNullableFilter | String | Null,
-          ?   startDate?: DateTimeFilter | DateTime,
-          ?   endDate?: DateTimeFilter | DateTime,
-          ?   idServiceFk?: IntNullableFilter | Int | Null,
-          ?   idUserPlatformFk?: StringNullableFilter | String | Null,
-          ?   commentClient?: StringNullableFilter | String | Null,
-          ?   idGoogleEvent?: StringNullableFilter | String | Null,
-          ?   eventPurposeType?: EnumeventPurposeTypeFilter | eventPurposeType,
-          ?   eventSourceType?: EnumEventSourceTypeFilter | EventSourceType,
-          ?   isEditableByClient?: BoolFilter | Boolean,
-          ?   numberUpdates?: IntNullableFilter | Int | Null,
-          ?   eventStatusType?: EnumEventStatusTypeFilter | EventStatusType,
-          ?   createdDate?: DateTimeFilter | DateTime,
-          ?   updatedDate?: DateTimeFilter | DateTime,
-          ?   service?: ServiceNullableRelationFilter | ServiceWhereInput | Null,
-          ?   calendar?: CalendarNullableRelationFilter | CalendarWhereInput | Null,
-          ?   eventParticipant?: EventParticipantListRelationFilter
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              title: "desc"
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              },
-              eventParticipant: {
-                select: {
-                  id: true,
-                  idClientFk: true
-                }
-              }
-            }
-          })
-
-Unknown argument `idEstablishmentFk`. Available options are marked with ?.
-    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
-    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:323:32)
-    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+  17 
+  18 console.log("que voy a agregar?", dataWithoutId);
+  19 
+→ 20 return await prisma.temporaryBusinessHour.create(
+The provided value for the column is too long for the column's type. Column: (not available)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at TemporaryBusinessHourService.addTemporaryBusinessHour (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:20:20)
+    at TemporaryBusinessHourController.add (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:27:28)
     =====================================================
     
     =====================================================
-    Date: 2024-12-28T17:49:58.254Z
-    Service: EventService.getEvents
-    Error Message: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+    Date: 2025-08-07T15:52:53.640Z
+    Service: WorkerAbsenceService.addWorkerAbsence
+    Error Message: 
+Invalid `tx.workerAbsence.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/worker-absence/worker-absence.service.ts:97:63
 
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idEstablishmentFk: {
-              ~~~~~~~~~~~~~~~~~
-                contains: "13fbe22z-1i14-453a-8e74-ac0f81515jo8"
-              },
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null,
-          ?   AND?: EventWhereInput | EventWhereInput[],
-          ?   OR?: EventWhereInput[],
-          ?   NOT?: EventWhereInput | EventWhereInput[],
-          ?   id?: IntFilter | Int,
-          ?   title?: StringFilter | String,
-          ?   description?: StringNullableFilter | String | Null,
-          ?   startDate?: DateTimeFilter | DateTime,
-          ?   endDate?: DateTimeFilter | DateTime,
-          ?   idServiceFk?: IntNullableFilter | Int | Null,
-          ?   idUserPlatformFk?: StringNullableFilter | String | Null,
-          ?   commentClient?: StringNullableFilter | String | Null,
-          ?   idGoogleEvent?: StringNullableFilter | String | Null,
-          ?   eventPurposeType?: EnumeventPurposeTypeFilter | eventPurposeType,
-          ?   eventSourceType?: EnumEventSourceTypeFilter | EventSourceType,
-          ?   isEditableByClient?: BoolFilter | Boolean,
-          ?   numberUpdates?: IntNullableFilter | Int | Null,
-          ?   eventStatusType?: EnumEventStatusTypeFilter | EventStatusType,
-          ?   createdDate?: DateTimeFilter | DateTime,
-          ?   updatedDate?: DateTimeFilter | DateTime,
-          ?   service?: ServiceNullableRelationFilter | ServiceWhereInput | Null,
-          ?   calendar?: CalendarNullableRelationFilter | CalendarWhereInput | Null,
-          ?   eventParticipant?: EventParticipantListRelationFilter
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              title: "desc"
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              },
-              eventParticipant: {
-                select: {
-                  id: true,
-                  idClientFk: true
-                }
-              }
-            }
-          })
+  94 const createdEvent = await tx.event.create({ data: eventData });
+  95 
+  96 // Crear la ausencia conectando el evento creado
+→ 97 const createdAbsence = await tx.workerAbsence.create({
+       data: {
+         idUserFk: "01afbe2a-1a14-453a-maria-ac0f81515a01",
+         startDate: new Date("2025-08-09T22:00:00.000Z"),
+         endDate: new Date("2025-08-13T21:59:59.999Z"),
+         eventPurposeType: "VACATION",
+         description: "",
+         idWorkspaceFk: "13fbe22z-1i14-453a-8e74-ac0f81515jo8",
+         idCompanyFk: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407",
+         title: "Ausencias y/o Vacaciones para undefined undefined",
+         allDay: true,
+         ~~~~~~
+         event: {
+           connect: {
+             id: "a75a9e46-45a3-4f5b-b5a4-abf6243839fd"
+           }
+         },
+         createdDate: new Date("2025-08-07T13:52:53.573Z"),
+         updatedDate: new Date("2025-08-07T13:52:53.573Z"),
+     ?   id?: String,
+     ?   deletedDate?: DateTime | Null
+       }
+     })
 
-Unknown argument `idEstablishmentFk`. Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:130:57
+Unknown argument `allDay`. Available options are marked with ?.
+    Stack Trace: PrismaClientValidationError: 
+Invalid `tx.workerAbsence.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/worker-absence/worker-absence.service.ts:97:63
 
-  127 
-  128 
-  129 try {
-→ 130     const items = await prisma[modelName as string].findMany({
-            where: {
-              idEstablishmentFk: {
-              ~~~~~~~~~~~~~~~~~
-                contains: "13fbe22z-1i14-453a-8e74-ac0f81515jo8"
-              },
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null,
-          ?   AND?: EventWhereInput | EventWhereInput[],
-          ?   OR?: EventWhereInput[],
-          ?   NOT?: EventWhereInput | EventWhereInput[],
-          ?   id?: IntFilter | Int,
-          ?   title?: StringFilter | String,
-          ?   description?: StringNullableFilter | String | Null,
-          ?   startDate?: DateTimeFilter | DateTime,
-          ?   endDate?: DateTimeFilter | DateTime,
-          ?   idServiceFk?: IntNullableFilter | Int | Null,
-          ?   idUserPlatformFk?: StringNullableFilter | String | Null,
-          ?   commentClient?: StringNullableFilter | String | Null,
-          ?   idGoogleEvent?: StringNullableFilter | String | Null,
-          ?   eventPurposeType?: EnumeventPurposeTypeFilter | eventPurposeType,
-          ?   eventSourceType?: EnumEventSourceTypeFilter | EventSourceType,
-          ?   isEditableByClient?: BoolFilter | Boolean,
-          ?   numberUpdates?: IntNullableFilter | Int | Null,
-          ?   eventStatusType?: EnumEventStatusTypeFilter | EventStatusType,
-          ?   createdDate?: DateTimeFilter | DateTime,
-          ?   updatedDate?: DateTimeFilter | DateTime,
-          ?   service?: ServiceNullableRelationFilter | ServiceWhereInput | Null,
-          ?   calendar?: CalendarNullableRelationFilter | CalendarWhereInput | Null,
-          ?   eventParticipant?: EventParticipantListRelationFilter
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              title: "desc"
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              },
-              eventParticipant: {
-                select: {
-                  id: true,
-                  idClientFk: true
-                }
-              }
-            }
-          })
+  94 const createdEvent = await tx.event.create({ data: eventData });
+  95 
+  96 // Crear la ausencia conectando el evento creado
+→ 97 const createdAbsence = await tx.workerAbsence.create({
+       data: {
+         idUserFk: "01afbe2a-1a14-453a-maria-ac0f81515a01",
+         startDate: new Date("2025-08-09T22:00:00.000Z"),
+         endDate: new Date("2025-08-13T21:59:59.999Z"),
+         eventPurposeType: "VACATION",
+         description: "",
+         idWorkspaceFk: "13fbe22z-1i14-453a-8e74-ac0f81515jo8",
+         idCompanyFk: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407",
+         title: "Ausencias y/o Vacaciones para undefined undefined",
+         allDay: true,
+         ~~~~~~
+         event: {
+           connect: {
+             id: "a75a9e46-45a3-4f5b-b5a4-abf6243839fd"
+           }
+         },
+         createdDate: new Date("2025-08-07T13:52:53.573Z"),
+         updatedDate: new Date("2025-08-07T13:52:53.573Z"),
+     ?   id?: String,
+     ?   deletedDate?: DateTime | Null
+       }
+     })
 
-Unknown argument `idEstablishmentFk`. Available options are marked with ?.
-    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:157:15)
-    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:323:32)
-    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+Unknown argument `allDay`. Available options are marked with ?.
+    at wn (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:29:1363)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6958)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/worker-absence/worker-absence.service.ts:97:40
+    at Proxy._transactionWithCallback (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:8000)
+    at WorkerAbsenceService.addWorkerAbsence (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/worker-absence/worker-absence.service.ts:55:28)
+    at WorkerAbsenceController.add (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/worker-absence/worker-absence.controller.ts:33:28)
     =====================================================
     
     =====================================================
-    Date: 2024-12-29T23:36:32.524Z
-    Service: ServiceService.getServices
-    Error Message: Error in getGeneric for model service: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
+    Date: 2025-08-07T15:53:17.099Z
+    Service: WorkerAbsenceService.addWorkerAbsence
+    Error Message: 
+Invalid `tx.workerAbsence.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/worker-absence/worker-absence.service.ts:97:63
 
-   99   
-  100   
-  101 try {
-→ 102   const items = await prisma[modelName as string].findMany({
-          where: {
-            idCompanyFk: {
-              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {
-            type: "asc",
-            ~~~~
-        ?   id?: SortOrder,
-        ?   idCompanyFk?: SortOrder,
-        ?   name?: SortOrder,
-        ?   description?: SortOrder,
-        ?   duration?: SortOrder,
-        ?   price?: SortOrder,
-        ?   idCategoryFk?: SortOrder | SortOrderInput,
-        ?   createdDate?: SortOrder,
-        ?   updatedDate?: SortOrder,
-        ?   deletedDate?: SortOrder | SortOrderInput,
-        ?   category?: CategoryOrderByWithRelationInput,
-        ?   userServices?: UserServiceOrderByRelationAggregateInput,
-        ?   events?: EventOrderByRelationAggregateInput
-          },
-          select: {
-            id: true,
-            duration: true,
-            price: true,
-            name: true,
-            description: true,
-            category: {
-              select: {
-                id: true,
-                name: true,
-                color: true
-              }
-            }
-          }
-        })
+  94 const createdEvent = await tx.event.create({ data: eventData });
+  95 
+  96 // Crear la ausencia conectando el evento creado
+→ 97 const createdAbsence = await tx.workerAbsence.create({
+       data: {
+         idUserFk: "01afbe2a-1a14-453a-maria-ac0f81515a01",
+         startDate: new Date("2025-08-09T22:00:00.000Z"),
+         endDate: new Date("2025-08-14T21:59:59.999Z"),
+         eventPurposeType: "VACATION",
+         description: "",
+         idWorkspaceFk: "13fbe22z-1i14-453a-8e74-ac0f81515jo8",
+         idCompanyFk: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407",
+         title: "Ausencias y/o Vacaciones para undefined undefined",
+         allDay: true,
+         ~~~~~~
+         event: {
+           connect: {
+             id: "2296cbf1-4e98-4755-88ce-a70b836380d6"
+           }
+         },
+         createdDate: new Date("2025-08-07T13:53:17.056Z"),
+         updatedDate: new Date("2025-08-07T13:53:17.056Z"),
+     ?   id?: String,
+     ?   deletedDate?: DateTime | Null
+       }
+     })
 
-Unknown argument `type`. Did you mean `name`? Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model service: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
+Unknown argument `allDay`. Available options are marked with ?.
+    Stack Trace: PrismaClientValidationError: 
+Invalid `tx.workerAbsence.create()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/worker-absence/worker-absence.service.ts:97:63
 
-   99   
-  100   
-  101 try {
-→ 102   const items = await prisma[modelName as string].findMany({
-          where: {
-            idCompanyFk: {
-              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {
-            type: "asc",
-            ~~~~
-        ?   id?: SortOrder,
-        ?   idCompanyFk?: SortOrder,
-        ?   name?: SortOrder,
-        ?   description?: SortOrder,
-        ?   duration?: SortOrder,
-        ?   price?: SortOrder,
-        ?   idCategoryFk?: SortOrder | SortOrderInput,
-        ?   createdDate?: SortOrder,
-        ?   updatedDate?: SortOrder,
-        ?   deletedDate?: SortOrder | SortOrderInput,
-        ?   category?: CategoryOrderByWithRelationInput,
-        ?   userServices?: UserServiceOrderByRelationAggregateInput,
-        ?   events?: EventOrderByRelationAggregateInput
-          },
-          select: {
-            id: true,
-            duration: true,
-            price: true,
-            name: true,
-            description: true,
-            category: {
-              select: {
-                id: true,
-                name: true,
-                color: true
-              }
-            }
-          }
-        })
+  94 const createdEvent = await tx.event.create({ data: eventData });
+  95 
+  96 // Crear la ausencia conectando el evento creado
+→ 97 const createdAbsence = await tx.workerAbsence.create({
+       data: {
+         idUserFk: "01afbe2a-1a14-453a-maria-ac0f81515a01",
+         startDate: new Date("2025-08-09T22:00:00.000Z"),
+         endDate: new Date("2025-08-14T21:59:59.999Z"),
+         eventPurposeType: "VACATION",
+         description: "",
+         idWorkspaceFk: "13fbe22z-1i14-453a-8e74-ac0f81515jo8",
+         idCompanyFk: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407",
+         title: "Ausencias y/o Vacaciones para undefined undefined",
+         allDay: true,
+         ~~~~~~
+         event: {
+           connect: {
+             id: "2296cbf1-4e98-4755-88ce-a70b836380d6"
+           }
+         },
+         createdDate: new Date("2025-08-07T13:53:17.056Z"),
+         updatedDate: new Date("2025-08-07T13:53:17.056Z"),
+     ?   id?: String,
+     ?   deletedDate?: DateTime | Null
+       }
+     })
 
-Unknown argument `type`. Did you mean `name`? Available options are marked with ?.
-    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:127:13)
-    at ServiceService.getServices (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/service/service.service.ts:101:28)
-    at ServiceController.get (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/service/service.controller.ts:35:28)
-    =====================================================
-    
-    =====================================================
-    Date: 2024-12-29T23:36:37.444Z
-    Service: ServiceService.getServices
-    Error Message: Error in getGeneric for model service: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
-
-   99   
-  100   
-  101 try {
-→ 102   const items = await prisma[modelName as string].findMany({
-          where: {
-            idCompanyFk: {
-              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {
-            type: "asc",
-            ~~~~
-        ?   id?: SortOrder,
-        ?   idCompanyFk?: SortOrder,
-        ?   name?: SortOrder,
-        ?   description?: SortOrder,
-        ?   duration?: SortOrder,
-        ?   price?: SortOrder,
-        ?   idCategoryFk?: SortOrder | SortOrderInput,
-        ?   createdDate?: SortOrder,
-        ?   updatedDate?: SortOrder,
-        ?   deletedDate?: SortOrder | SortOrderInput,
-        ?   category?: CategoryOrderByWithRelationInput,
-        ?   userServices?: UserServiceOrderByRelationAggregateInput,
-        ?   events?: EventOrderByRelationAggregateInput
-          },
-          select: {
-            id: true,
-            duration: true,
-            price: true,
-            name: true,
-            description: true,
-            category: {
-              select: {
-                id: true,
-                name: true,
-                color: true
-              }
-            }
-          }
-        })
-
-Unknown argument `type`. Did you mean `name`? Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model service: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
-
-   99   
-  100   
-  101 try {
-→ 102   const items = await prisma[modelName as string].findMany({
-          where: {
-            idCompanyFk: {
-              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {
-            type: "asc",
-            ~~~~
-        ?   id?: SortOrder,
-        ?   idCompanyFk?: SortOrder,
-        ?   name?: SortOrder,
-        ?   description?: SortOrder,
-        ?   duration?: SortOrder,
-        ?   price?: SortOrder,
-        ?   idCategoryFk?: SortOrder | SortOrderInput,
-        ?   createdDate?: SortOrder,
-        ?   updatedDate?: SortOrder,
-        ?   deletedDate?: SortOrder | SortOrderInput,
-        ?   category?: CategoryOrderByWithRelationInput,
-        ?   userServices?: UserServiceOrderByRelationAggregateInput,
-        ?   events?: EventOrderByRelationAggregateInput
-          },
-          select: {
-            id: true,
-            duration: true,
-            price: true,
-            name: true,
-            description: true,
-            category: {
-              select: {
-                id: true,
-                name: true,
-                color: true
-              }
-            }
-          }
-        })
-
-Unknown argument `type`. Did you mean `name`? Available options are marked with ?.
-    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:127:13)
-    at ServiceService.getServices (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/service/service.service.ts:101:28)
-    at ServiceController.get (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/service/service.controller.ts:35:28)
-    =====================================================
-    
-    =====================================================
-    Date: 2024-12-30T00:03:40.321Z
-    Service: ServiceService.getServices
-    Error Message: Error in getGeneric for model service: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
-
-   99   
-  100   
-  101 try {
-→ 102   const items = await prisma[modelName as string].findMany({
-          where: {
-            idCompanyFk: {
-              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {
-            categoryName: "asc",
-            ~~~~~~~~~~~~
-        ?   id?: SortOrder,
-        ?   idCompanyFk?: SortOrder,
-        ?   name?: SortOrder,
-        ?   description?: SortOrder,
-        ?   duration?: SortOrder,
-        ?   price?: SortOrder,
-        ?   idCategoryFk?: SortOrder | SortOrderInput,
-        ?   createdDate?: SortOrder,
-        ?   updatedDate?: SortOrder,
-        ?   deletedDate?: SortOrder | SortOrderInput,
-        ?   category?: CategoryOrderByWithRelationInput,
-        ?   userServices?: UserServiceOrderByRelationAggregateInput,
-        ?   events?: EventOrderByRelationAggregateInput
-          },
-          select: {
-            id: true,
-            duration: true,
-            price: true,
-            name: true,
-            description: true,
-            category: {
-              select: {
-                id: true,
-                name: true,
-                color: true
-              }
-            }
-          }
-        })
-
-Unknown argument `categoryName`. Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model service: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
-
-   99   
-  100   
-  101 try {
-→ 102   const items = await prisma[modelName as string].findMany({
-          where: {
-            idCompanyFk: {
-              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {
-            categoryName: "asc",
-            ~~~~~~~~~~~~
-        ?   id?: SortOrder,
-        ?   idCompanyFk?: SortOrder,
-        ?   name?: SortOrder,
-        ?   description?: SortOrder,
-        ?   duration?: SortOrder,
-        ?   price?: SortOrder,
-        ?   idCategoryFk?: SortOrder | SortOrderInput,
-        ?   createdDate?: SortOrder,
-        ?   updatedDate?: SortOrder,
-        ?   deletedDate?: SortOrder | SortOrderInput,
-        ?   category?: CategoryOrderByWithRelationInput,
-        ?   userServices?: UserServiceOrderByRelationAggregateInput,
-        ?   events?: EventOrderByRelationAggregateInput
-          },
-          select: {
-            id: true,
-            duration: true,
-            price: true,
-            name: true,
-            description: true,
-            category: {
-              select: {
-                id: true,
-                name: true,
-                color: true
-              }
-            }
-          }
-        })
-
-Unknown argument `categoryName`. Available options are marked with ?.
-    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:127:13)
-    at ServiceService.getServices (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/service/service.service.ts:101:28)
-    at ServiceController.get (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/service/service.controller.ts:35:28)
-    =====================================================
-    
-    =====================================================
-    Date: 2024-12-30T00:03:44.064Z
-    Service: ServiceService.getServices
-    Error Message: Error in getGeneric for model service: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
-
-   99   
-  100   
-  101 try {
-→ 102   const items = await prisma[modelName as string].findMany({
-          where: {
-            idCompanyFk: {
-              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {
-            categoryName: "asc",
-            ~~~~~~~~~~~~
-        ?   id?: SortOrder,
-        ?   idCompanyFk?: SortOrder,
-        ?   name?: SortOrder,
-        ?   description?: SortOrder,
-        ?   duration?: SortOrder,
-        ?   price?: SortOrder,
-        ?   idCategoryFk?: SortOrder | SortOrderInput,
-        ?   createdDate?: SortOrder,
-        ?   updatedDate?: SortOrder,
-        ?   deletedDate?: SortOrder | SortOrderInput,
-        ?   category?: CategoryOrderByWithRelationInput,
-        ?   userServices?: UserServiceOrderByRelationAggregateInput,
-        ?   events?: EventOrderByRelationAggregateInput
-          },
-          select: {
-            id: true,
-            duration: true,
-            price: true,
-            name: true,
-            description: true,
-            category: {
-              select: {
-                id: true,
-                name: true,
-                color: true
-              }
-            }
-          }
-        })
-
-Unknown argument `categoryName`. Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model service: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:102:55
-
-   99   
-  100   
-  101 try {
-→ 102   const items = await prisma[modelName as string].findMany({
-          where: {
-            idCompanyFk: {
-              contains: "e56d5de9-1155-43ad-b1cc-b4d30d2f5407"
-            },
-            deletedDate: null
-          },
-          skip: 0,
-          take: 10,
-          orderBy: {
-            categoryName: "asc",
-            ~~~~~~~~~~~~
-        ?   id?: SortOrder,
-        ?   idCompanyFk?: SortOrder,
-        ?   name?: SortOrder,
-        ?   description?: SortOrder,
-        ?   duration?: SortOrder,
-        ?   price?: SortOrder,
-        ?   idCategoryFk?: SortOrder | SortOrderInput,
-        ?   createdDate?: SortOrder,
-        ?   updatedDate?: SortOrder,
-        ?   deletedDate?: SortOrder | SortOrderInput,
-        ?   category?: CategoryOrderByWithRelationInput,
-        ?   userServices?: UserServiceOrderByRelationAggregateInput,
-        ?   events?: EventOrderByRelationAggregateInput
-          },
-          select: {
-            id: true,
-            duration: true,
-            price: true,
-            name: true,
-            description: true,
-            category: {
-              select: {
-                id: true,
-                name: true,
-                color: true
-              }
-            }
-          }
-        })
-
-Unknown argument `categoryName`. Available options are marked with ?.
-    at getGeneric (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/getGenetic.ts:127:13)
-    at ServiceService.getServices (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/service/service.service.ts:101:28)
-    at ServiceController.get (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/service/service.controller.ts:35:28)
-    =====================================================
-    
-    =====================================================
-    Date: 2024-12-30T11:59:37.551Z
-    Service: EventService.getEvents
-    Error Message: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:137:57
-
-  134 
-  135 
-  136 try {
-→ 137     const items = await prisma[modelName as string].findMany({
-            where: {
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              eventDate: "asc",
-              ~~~~~~~~~
-          ?   id?: SortOrder,
-          ?   title?: SortOrder,
-          ?   description?: SortOrder | SortOrderInput,
-          ?   startDate?: SortOrder,
-          ?   endDate?: SortOrder,
-          ?   idCalendarFk?: SortOrder,
-          ?   idServiceFk?: SortOrder | SortOrderInput,
-          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
-          ?   commentClient?: SortOrder | SortOrderInput,
-          ?   idGoogleEvent?: SortOrder | SortOrderInput,
-          ?   eventPurposeType?: SortOrder,
-          ?   eventSourceType?: SortOrder,
-          ?   isEditableByClient?: SortOrder,
-          ?   numberUpdates?: SortOrder | SortOrderInput,
-          ?   eventStatusType?: SortOrder,
-          ?   createdDate?: SortOrder,
-          ?   updatedDate?: SortOrder,
-          ?   deletedDate?: SortOrder | SortOrderInput,
-          ?   service?: ServiceOrderByWithRelationInput,
-          ?   calendar?: CalendarOrderByWithRelationInput,
-          ?   eventParticipant?: EventParticipantOrderByRelationAggregateInput
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              },
-              eventParticipant: {
-                select: {
-                  id: true,
-                  idClientFk: true
-                }
-              }
-            }
-          })
-
-Unknown argument `eventDate`. Did you mean `endDate`? Available options are marked with ?.
-    Stack Trace: Error: Error in getGeneric for model event: 
-Invalid `string].findMany()` invocation in
-/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:137:57
-
-  134 
-  135 
-  136 try {
-→ 137     const items = await prisma[modelName as string].findMany({
-            where: {
-              idCalendarFk: {
-                contains: "calendar-1-uuid"
-              },
-              deletedDate: null
-            },
-            skip: 0,
-            take: 10,
-            orderBy: {
-              eventDate: "asc",
-              ~~~~~~~~~
-          ?   id?: SortOrder,
-          ?   title?: SortOrder,
-          ?   description?: SortOrder | SortOrderInput,
-          ?   startDate?: SortOrder,
-          ?   endDate?: SortOrder,
-          ?   idCalendarFk?: SortOrder,
-          ?   idServiceFk?: SortOrder | SortOrderInput,
-          ?   idUserPlatformFk?: SortOrder | SortOrderInput,
-          ?   commentClient?: SortOrder | SortOrderInput,
-          ?   idGoogleEvent?: SortOrder | SortOrderInput,
-          ?   eventPurposeType?: SortOrder,
-          ?   eventSourceType?: SortOrder,
-          ?   isEditableByClient?: SortOrder,
-          ?   numberUpdates?: SortOrder | SortOrderInput,
-          ?   eventStatusType?: SortOrder,
-          ?   createdDate?: SortOrder,
-          ?   updatedDate?: SortOrder,
-          ?   deletedDate?: SortOrder | SortOrderInput,
-          ?   service?: ServiceOrderByWithRelationInput,
-          ?   calendar?: CalendarOrderByWithRelationInput,
-          ?   eventParticipant?: EventParticipantOrderByRelationAggregateInput
-            },
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              startDate: true,
-              endDate: true,
-              idUserPlatformFk: true,
-              eventStatusType: true,
-              eventPurposeType: true,
-              eventSourceType: true,
-              service: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true
-                }
-              },
-              eventParticipant: {
-                select: {
-                  id: true,
-                  idClientFk: true
-                }
-              }
-            }
-          })
-
-Unknown argument `eventDate`. Did you mean `endDate`? Available options are marked with ?.
-    at getGenericSpecialEvent2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/utils/get-genetic/calendar-event/getGenericSpecialEvent2.ts:164:15)
-    at EventService.getEvents (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/event.service.ts:325:32)
-    at EventController.getList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/event.controller.ts:228:28)
+Unknown argument `allDay`. Available options are marked with ?.
+    at wn (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:29:1363)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6958)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/worker-absence/worker-absence.service.ts:97:40
+    at Proxy._transactionWithCallback (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:8000)
+    at WorkerAbsenceService.addWorkerAbsence (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/worker-absence/worker-absence.service.ts:55:28)
+    at WorkerAbsenceController.add (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/worker-absence/worker-absence.controller.ts:33:28)
     =====================================================
     

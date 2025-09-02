@@ -2,7 +2,7 @@
 export interface GetCategoriesAndServicesResponse {
     categories: Category[];
     users: TransformedUser[];
-    establishment: {
+    workspace: {
         id: string;
         code: string;
         idCompanyFk: string;
@@ -21,7 +21,7 @@ export interface Category {
 
 // Interfaz para Servicio
 // export interface Service {
-//     id: number;
+//     id: string;
 //     name: string;
 //     duration: number;
 //     price: number;

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
+import prisma from './prisma';
 
-const prisma = new PrismaClient();
+
 
 const adjustDatesToUTC = (data: any) => {
     for (const key in data) {

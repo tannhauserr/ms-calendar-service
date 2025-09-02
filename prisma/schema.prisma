@@ -1,253 +1,3 @@
-// generator client {
-//   provider      = "prisma-client-js"
-//   binaryTargets = ["native", "rhel-openssl-1.1.x"]
-// }
-
-// datasource db {
-//   provider = "postgresql"
-//   url      = "postgresql://test_booking_rbc_user:Zx9%26Qv5%2AN3w%21Lk4%23Ts@77.37.122.79:5432/test_booking_rbc"
-// }
-
-// model User {
-//   id          String   @id @default(uuid())
-//   email       String   @unique
-//   emailGoogle String?
-//   name        String   @default("")
-//   lastName    String?  @default("")
-//   image       String?
-//   roleType    RoleType
-
-//   createdDate DateTime  @default(now())
-//   updatedDate DateTime  @default(now()) @updatedAt
-//   deletedDate DateTime?
-
-//   calendar              Calendar[]
-//   userCalendar          UserCalendar[]
-//   userColor             UserColor?
-//   workerBusinessHour    WorkerBusinessHour[]
-//   userService           UserService[]
-//   temporaryBusinessHour TemporaryBusinessHour[]
-
-//   @@map("users")
-// }
-
-// model Calendar {
-//   id               Int            @id @default(autoincrement())
-//   name             String         @default("Main Calendar")
-//   idGoogleCalendar String? // ID del calendario en Google Calendar
-//   idUserFk         String? // Foreign key para el usuario de la plataforma
-//   ownerEmailGoogle String? // Email del propietario del calendario en Google Calendar
-//   channelConfig    Json?          @default("{}")
-//   syncToken        String?        @default("")
-//   createdDate      DateTime       @default(now())
-//   updatedDate      DateTime       @updatedAt
-//   deletedDate      DateTime?
-//   events           Event[]
-//   userCalendars    UserCalendar[]
-
-//   user User? @relation(fields: [idUserFk], references: [id])
-
-//   @@map("calendars")
-// }
-
-// model UserCalendar {
-//   id           Int      @id @default(autoincrement())
-//   idUserFk     String
-//   emailGoogle  String? // Email del usuario en Google Calendar
-//   idCalendarFk Int
-//   createdDate  DateTime @default(now())
-//   updatedDate  DateTime @updatedAt
-
-//   user     User     @relation(fields: [idUserFk], references: [id])
-//   calendar Calendar @relation(fields: [idCalendarFk], references: [id])
-
-//   @@unique([idUserFk, idCalendarFk])
-//   @@map("userCalendars")
-// }
-
-// model UserColor {
-//   id                   Int     @id @default(autoincrement())
-//   idUserFk             String // Foreign key para el usuario de la plataforma
-//   idEventColorGoogleFk Int? // Foreign key para el color de Google seleccionado por el usuario
-//   colorHex             String? // Código hexadecimal del color (opcional, si no está vinculado a Google)
-
-//   createdDate DateTime @default(now())
-//   updatedDate DateTime @updatedAt
-
-//   user             User              @relation(fields: [idUserFk], references: [id])
-//   eventColorGoogle EventColorGoogle? @relation(fields: [idEventColorGoogleFk], references: [id])
-
-//   @@unique([idUserFk])
-//   @@map("userColors")
-// }
-
-// model BusinessHour {
-//   id          Int         @id @default(autoincrement())
-//   weekDayType WeekDayType // Día de la semana (ej: Lunes, Martes, etc.)
-//   startTime   DateTime?   @db.Time
-//   endTime     DateTime?   @db.Time
-//   closed      Boolean     @default(false)
-//   createdDate DateTime    @default(now())
-//   updatedDate DateTime    @updatedAt
-
-//   @@map("businessHours")
-// }
-
-// model WorkerBusinessHour {
-//   id          Int         @id @default(autoincrement())
-//   idUserFk    String // Foreign key para la tabla User
-//   weekDayType WeekDayType
-//   startTime   DateTime?   @db.Time
-//   endTime     DateTime?   @db.Time
-//   closed      Boolean     @default(false)
-//   createdDate DateTime    @default(now())
-//   updatedDate DateTime    @updatedAt
-
-//   user User @relation(fields: [idUserFk], references: [id])
-
-//   @@map("workerBusinessHours")
-// }
-
-// model TemporaryBusinessHour {
-//   id          Int       @id @default(autoincrement())
-//   idUserFk    String?
-//   date        DateTime
-//   startTime   DateTime? @db.Time
-//   endTime     DateTime? @db.Time
-//   closed      Boolean   @default(false)
-//   createdDate DateTime  @default(now()) @db.Timestamptz(3)
-//   updatedDate DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
-
-//   user User? @relation(fields: [idUserFk], references: [id]) // Relación con el usuario
-
-//   @@map("temporaryBusinessHours")
-// }
-
-// model EventColorGoogle {
-//   id            Int      @id @default(autoincrement())
-//   idColorGoogle String // Identificador del color en Google Calendar
-//   colorHex      String // Código hexadecimal del color correspondiente
-//   createdDate   DateTime @default(now())
-//   updatedDate   DateTime @updatedAt
-
-//   userColors UserColor[] // Relación inversa a los colores de usuario vinculados a este color
-
-//   @@unique([idColorGoogle])
-//   @@map("eventColorGoogle")
-// }
-
-// model Event {
-//   id               Int             @id @default(autoincrement())
-//   title            String
-//   description      String?
-//   startDate        DateTime
-//   endDate          DateTime
-//   idServiceFk      Int?
-//   idUserBotFk      Int? // Foreign key para el usuario que usa el bot
-//   idUserPlatformFk String? // Foreign key para el usuario de la plataforma
-//   idGoogleEvent    String? // ID del evento en Google Calendar
-//   eventSourceType  EventSourceType @default(PLATFORM)
-//   idCalendarFk     Int // Foreign key para la tabla Calendar
-//   eventPurposeType        eventPurposeType       @default(APPOINTMENT)
-//   eventStatusType      EventStatusType @default(PENDING)
-
-//   createdDate DateTime  @default(now())
-//   updatedDate DateTime  @updatedAt
-//   deletedDate DateTime?
-
-//   calendar Calendar @relation(fields: [idCalendarFk], references: [id])
-//   service  Service? @relation(fields: [idServiceFk], references: [id])
-
-//   @@index([idUserBotFk])
-//   @@index([idUserPlatformFk])
-//   @@map("events")
-// }
-
-// model Service {
-//   id           Int    @id @default(autoincrement())
-//   name         String @db.VarChar(100)
-//   description  String @db.VarChar(512)
-//   duration     Int    @default(60)
-//   price        Float  @default(0)
-//   idCategoryFk Int?
-
-//   createdDate DateTime  @default(now())
-//   updatedDate DateTime  @updatedAt
-//   deletedDate DateTime?
-
-//   category     Category?      @relation(fields: [idCategoryFk], references: [id])
-//   userServices UserService[]
-//   event        Event[]
-
-//   @@index([idCategoryFk])
-//   @@map("services")
-// }
-
-// model Category {
-//   id          Int       @id @default(autoincrement())
-//   name        String    @db.VarChar(100)
-//   description String?   @db.VarChar(512)
-//   createdDate DateTime  @default(now())
-//   updatedDate DateTime  @updatedAt
-//   deletedDate DateTime?
-
-//   services Service[] // Relación uno a muchos con Service
-
-//   @@map("categories")
-// }
-
-// model UserService {
-//   id          Int       @id @default(autoincrement())
-//   idUserFk    String // Foreign key para la tabla User
-//   idServiceFk Int // Foreign key para la tabla Service
-//   createdDate DateTime  @default(now())
-//   updatedDate DateTime  @updatedAt
-//   deletedDate DateTime?
-
-//   user    User      @relation(fields: [idUserFk], references: [id])
-//   service Service[] // Relación con Service
-
-//   @@index([idUserFk])
-//   @@index([idServiceFk])
-//   @@map("userServices")
-// }
-
-// enum EventSourceType {
-//   PLATFORM
-//   BOT
-//   GOOGLE
-// }
-
-// enum eventPurposeType {
-//   APPOINTMENT // Citas regulares
-//   VACATION // Vacaciones
-//   HOLIDAY // Días festivos
-//   LEAVE // Bajas por enfermedad u otros permisos
-//   OTHER // Otros tipos de eventos
-// }
-
-// enum EventStatusType {
-//   PENDING
-//   CONFIRMED
-//   CANCELLED
-// }
-
-// enum RoleType {
-//   ROLE_DEVELOPER
-//   ROLE_ADMIN
-//   ROLE_USER
-// }
-
-// enum WeekDayType {
-//   MONDAY
-//   TUESDAY
-//   WEDNESDAY
-//   THURSDAY
-//   FRIDAY
-//   SATURDAY
-//   SUNDAY
-// }
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "rhel-openssl-1.1.x"]
@@ -255,218 +5,293 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = "postgresql://test_booking_rbc_user:Zx9%26Qv5%2AN3w%21Lk4%23Ts@77.37.122.79:5432/test_booking_rbc"
-}
-
-// model UserCalendar {
-//   id           Int       @id @default(autoincrement())
-//   idUserFk     String // Foreign key a User
-//   emailGoogle  String? // Email del usuario en Google Calendar
-//   idCalendarFk Int // Foreign key a Calendar
-//   createdDate  DateTime  @default(now())
-//   updatedDate  DateTime  @updatedAt
-//   deletedDate  DateTime?
-
-//   // Relaciones
-//   // user     User     @relation(fields: [idUserFk], references: [id], onDelete: Cascade)
-//   calendar Calendar @relation(fields: [idCalendarFk], references: [id], onDelete: Cascade)
-
-//   @@unique([idUserFk, idCalendarFk])
-//   @@map("userCalendars")
-// }
-
-model UserColor {
-  id       Int     @id @default(autoincrement())
-  idUserFk String // Foreign key a User
-  colorHex String? // Código hexadecimal del color
-
-  createdDate DateTime  @default(now())
-  updatedDate DateTime  @updatedAt
-  deletedDate DateTime?
-
-  @@unique([idUserFk])
-  @@map("userColors")
-}
-
-model BusinessHour {
-  id                Int         @id @default(autoincrement())
-  idCompanyFk       String // Foreign key a Company
-  idEstablishmentFk String
-  weekDayType       WeekDayType // Día de la semana
-  startTime         DateTime?   @db.Time
-  endTime           DateTime?   @db.Time
-  closed            Boolean     @default(false)
-  createdDate       DateTime    @default(now())
-  updatedDate       DateTime    @updatedAt
-  deletedDate       DateTime?
-
-  // Relaciones
-  @@index([idCompanyFk])
-  @@map("businessHours")
-}
-
-model WorkerBusinessHour {
-  id          Int         @id @default(autoincrement())
-  idUserFk    String // Foreign key a User
-  idCompanyFk String // Foreign key a Company
-  weekDayType WeekDayType
-  startTime   DateTime?   @db.Time
-  endTime     DateTime?   @db.Time
-  closed      Boolean     @default(false)
-  createdDate DateTime    @default(now())
-  updatedDate DateTime    @updatedAt
-  deletedDate DateTime?
-
-  // Relaciones
-  // user User @relation(fields: [idUserFk], references: [id], onDelete: Cascade)
-
-  @@index([idCompanyFk])
-  @@map("workerBusinessHours")
-}
-
-model TemporaryBusinessHour {
-  id          Int       @id @default(autoincrement())
-  idCompanyFk String // Foreign key a Company
-  idUserFk    String? // Opcional, si aplica a un usuario específico
-  date        DateTime
-  startTime   DateTime? @db.Time
-  endTime     DateTime? @db.Time
-  closed      Boolean   @default(false)
-  createdDate DateTime  @default(now()) @db.Timestamptz(3)
-  updatedDate DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
-  deletedDate DateTime?
-
-  // Relaciones
-  // user User? @relation(fields: [idUserFk], references: [id], onDelete: Cascade)
-
-  @@index([idCompanyFk])
-  @@map("temporaryBusinessHours")
-}
-
-model WorkerAbsence {
-  id                Int       @id @default(autoincrement())
-  idUserFk          String? // Opcional, si aplica a un trabajador específico
-  idCompanyFk       String // Foreign key a la compañía
-  idEstablishmentFk String? // Opcional, si aplica a un establecimiento
-  startDate         DateTime // Fecha de inicio del periodo de ausencia
-  endDate           DateTime // Fecha de fin del periodo de ausencia
-  description       String? // Descripción opcional de la ausencia
-  createdDate       DateTime  @default(now()) @db.Timestamptz(3)
-  updatedDate       DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
-  deletedDate       DateTime?
-
-  // Relaciones
-  @@index([idCompanyFk])
-  @@map("workerAbsences")
+  url      = env("DATABASE_URL")
 }
 
 model Calendar {
-  id                String    @id @default(uuid())
-  idCompanyFk       String
-  idEstablishmentFk String
-  createdDate       DateTime  @default(now())
-  updatedDate       DateTime  @updatedAt
-  deletedDate       DateTime?
+  id            String    @id @default(uuid())
+  idCompanyFk   String
+  idWorkspaceFk String
+  createdDate   DateTime  @default(now())
+  updatedDate   DateTime  @updatedAt
+  deletedDate   DateTime?
 
-  event Event[]
+  event          Event[]
+  RecurrenceRule RecurrenceRule[]
 
-  @@unique([idCompanyFk, idEstablishmentFk])
+  @@unique([idCompanyFk, idWorkspaceFk])
   @@index([idCompanyFk])
-  @@index([idEstablishmentFk])
+  @@index([idWorkspaceFk])
   @@map("calendars")
 }
 
 model Event {
-  id                 Int              @id @default(autoincrement())
-  title              String
-  description        String?
-  startDate          DateTime
-  endDate            DateTime
+  id                 String          @id @default(uuid())
+  title              String          @db.VarChar(256)
+  description        String?         @db.VarChar(512)
+  startDate          DateTime        @db.Timestamptz(6)
+  endDate            DateTime        @db.Timestamptz(6)
   idCalendarFk       String
-  // idCompanyFk       String // Foreign key a Company
-  // idEstablishmentFk String?
-  idServiceFk        Int?
-  // idClientFk         String? // Si aplica
-  idUserPlatformFk   String? // Si aplica
-  commentClient      String?          @db.VarChar(300)
-  idGoogleEvent      String? // ID en Google Calendar
-  eventPurposeType   eventPurposeType @default(APPOINTMENT)
-  eventSourceType    EventSourceType  @default(PLATFORM)
-  isEditableByClient Boolean          @default(true)
-  numberUpdates      Int?             @default(0)
-  eventStatusType    EventStatusType  @default(PENDING)
+  idServiceFk        String?
+  idUserPlatformFk   String?
+  commentClient      String?         @db.VarChar(300)
+  eventSourceType    EventSourceType @default(PLATFORM)
+  isEditableByClient Boolean         @default(true)
+  numberUpdates      Int?            @default(0)
+  eventStatusType    EventStatusType @default(PENDING)
+  timeZone           String          @default("Europe/Madrid") @db.VarChar(50)
+  allDay             Boolean         @default(false)
+
+  // Estos campos se utilizan para almacenar información del servicio
+  // en el momento de la creación del evento, permitiendo que el evento sea independiente
+  // de cambios futuros en el servicio.
+  serviceNameSnapshot     String? @db.VarChar(100)
+  servicePriceSnapshot    Float?
+  serviceDiscountSnapshot Float?
+  serviceDurationSnapshot Int?    @default(60) // duración en minutos
+
   createdDate        DateTime         @default(now())
   updatedDate        DateTime         @updatedAt
   deletedDate        DateTime?
+  eventPurposeType   EventPurposeType @default(APPOINTMENT)
+  idRecurrenceRuleFk String? // opcional: si es un evento recurrente, se relaciona con una regla de recurrencia
+  // idClientWorkspaceFk String?
+  // idClientFk              String?
+  calendar           Calendar         @relation(fields: [idCalendarFk], references: [id])
+  service            Service?         @relation(fields: [idServiceFk], references: [id])
+  recurrenceRule     RecurrenceRule?  @relation("recurrenceRules", fields: [idRecurrenceRuleFk], references: [id])
 
-  // Relaciones
-  // calendar Calendar @relation(fields: [idCalendarFk], references: [id], onDelete: Cascade)
-  service  Service?  @relation(fields: [idServiceFk], references: [id])
-  // Calendar   Calendar? @relation(fields: [calendarId], references: [id])
-  // calendarId Int?
-  calendar Calendar? @relation(fields: [idCalendarFk], references: [id])
+  WorkerAbsence         WorkerAbsence[]
+  ExternalCalendarEvent ExternalCalendarEvent?
+  eventParticipant      EventParticipant[]
 
-  eventParticipant EventParticipant[]
-
+  // Para búsquedas por usuario + rango temporal (solapes)
+  @@index([idUserPlatformFk, startDate, endDate], map: "idx_events_user_start_end")
+  // Si también filtras a veces por fin de evento
+  @@index([idUserPlatformFk, endDate], map: "idx_events_user_end")
+  // (Opcional) Escaneos por tiempo: BRIN es baratísimo si la tabla es grande
+  @@index([startDate], type: Brin, map: "idx_events_start_brin")
   @@index([idCalendarFk])
-  // @@index([idClientFk])
+  @@index([idServiceFk])
   @@index([idUserPlatformFk])
   @@map("events")
 }
 
 model EventParticipant {
-  id              Int             @id @default(autoincrement())
-  idEventFk       Int // Foreign key a Event
-  idClientFk      String // Foreign key a User
-  eventStatusType EventStatusType @default(PENDING)
-  createdDate DateTime  @default(now())
-  updatedDate DateTime  @default(now()) @updatedAt
+  id                  String          @id @default(uuid())
+  idEventFk           String
+  idClientWorkspaceFk String?
+  idClientFk          String?
+  eventStatusType     EventStatusType @default(PENDING)
+
+  createdDate DateTime  @default(now()) @db.Timestamptz(3)
+  updatedDate DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
   deletedDate DateTime?
 
-  // Relaciones
-  event Event @relation(fields: [idEventFk], references: [id])
+  event Event @relation(fields: [idEventFk], references: [id], onDelete: Cascade)
 
-  @@unique([idEventFk, idClientFk])
   @@index([idEventFk])
-  @@index([idClientFk])
   @@map("eventParticipants")
 }
 
-model Service {
-  id           Int    @id @default(autoincrement())
-  idCompanyFk  String // Foreign key a Company
-  name         String @db.VarChar(100)
-  description  String @db.VarChar(512)
-  duration     Int    @default(60)
-  price        Float  @default(0)
-  idCategoryFk Int? // Puede estar sin categoría
+model RecurrenceRule {
+  id                   String               @id @default(uuid())
+  idCalendarFk         String
+  dtstart              DateTime             @db.Timestamptz(6) // fecha y hora de inicio de la serie
+  until                DateTime?            @db.Timestamptz(6) // opcional: fecha tope de la recurrencia
+  rrule                String               @db.VarChar(512) // texto RFC5545 completo
+  tzid                 String               @db.VarChar(100) // p.ej. "Europe/Madrid"
+  rdates               Json?                @db.Json
+  recurrenceStatusType RecurrenceStatusType @default(ACTIVE) // opcional: estado de la recurrencia (p.ej. "active", "paused", "cancelled")
+  idUserFk             String? // opcional: usuario que creó la regla de recurrencia
 
-  createdDate DateTime  @default(now())
-  updatedDate DateTime  @updatedAt
+  createdDate DateTime  @default(now()) @db.Timestamptz(3)
+  updatedDate DateTime  @updatedAt @db.Timestamptz(3)
   deletedDate DateTime?
 
   // Relaciones
+  calendar Calendar @relation(fields: [idCalendarFk], references: [id])
+  events   Event[]  @relation("recurrenceRules")
 
-  category     Category?     @relation(fields: [idCategoryFk], references: [id])
-  userServices UserService[]
-  events       Event[]
+  @@index([idCalendarFk])
+  @@map("recurrenceRules")
+}
 
-  @@index([idCategoryFk])
+// Mapping table for external calendar IDs (Google and Microsoft/Teams share same Outlook ID)
+model ExternalCalendarEvent {
+  id               String   @id @default(uuid())
+  idEventFk        String   @unique
+  googleEventId    String?  @db.VarChar(512)
+  microsoftEventId String?  @db.VarChar(512)
+  createdDate      DateTime @default(now()) @db.Timestamptz(3)
+  updatedDate      DateTime @updatedAt @db.Timestamptz(3)
+
+  event Event @relation(fields: [idEventFk], references: [id], onDelete: Cascade)
+
+  @@index([idEventFk])
+  @@map("externalCalendarEvents")
+}
+
+model BusinessHour {
+  id            String      @id @default(uuid())
+  idCompanyFk   String
+  idWorkspaceFk String      @default("")
+  weekDayType   WeekDayType
+  // startTime         DateTime?   @db.Time(6)
+  // endTime           DateTime?   @db.Time(6)
+  startTime     String?     @db.VarChar(5) // formato "HH:mm"
+  endTime       String?     @db.VarChar(5) // formato "HH:mm
+  closed        Boolean     @default(false)
+  createdDate   DateTime    @default(now())
+  updatedDate   DateTime    @updatedAt
+  deletedDate   DateTime?
+
+  @@index([idCompanyFk])
+  @@index([idWorkspaceFk])
+  @@map("businessHours")
+}
+
+model WorkerBusinessHour {
+  id            String      @id @default(uuid())
+  idUserFk      String
+  idCompanyFk   String
+  idWorkspaceFk String      @default("")
+  weekDayType   WeekDayType
+  // startTime         DateTime?   @db.Time(6)
+  // endTime           DateTime?   @db.Time(6)
+  startTime     String?     @db.VarChar(5) // formato "HH:mm"
+  endTime       String?     @db.VarChar(5) // formato "HH:mm
+  closed        Boolean     @default(false)
+  createdDate   DateTime    @default(now())
+  updatedDate   DateTime    @updatedAt
+  deletedDate   DateTime?
+
+  @@index([idWorkspaceFk])
+  @@index([idUserFk, idWorkspaceFk])
+  @@map("workerBusinessHours")
+}
+
+model TemporaryBusinessHour {
+  id            String    @id @default(uuid())
+  idCompanyFk   String
+  idWorkspaceFk String    @default("")
+  idUserFk      String?
+  date          DateTime
+  // startTime         DateTime? @db.Time(6)
+  // endTime           DateTime? @db.Time(6)
+  startTime     String?   @db.VarChar(5) // formato "HH:mm"
+  endTime       String?   @db.VarChar(5) // formato "HH:mm
+  closed        Boolean   @default(false)
+  createdDate   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedDate   DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
+  deletedDate   DateTime?
+
+  @@index([idWorkspaceFk])
+  @@index([idUserFk, idWorkspaceFk])
+  @@map("temporaryBusinessHours")
+}
+
+model WorkerAbsence {
+  id               String           @id @default(uuid())
+  idUserFk         String?
+  idCompanyFk      String
+  idWorkspaceFk    String           @default("")
+  description      String?          @db.VarChar(256)
+  createdDate      DateTime         @default(now()) @db.Timestamptz(3)
+  updatedDate      DateTime         @default(now()) @updatedAt @db.Timestamptz(3)
+  deletedDate      DateTime?
+  idEventFk        String
+  endDate          DateTime
+  eventPurposeType EventPurposeType @default(SICK_LEAVE)
+  startDate        DateTime
+  title            String?          @db.VarChar(100)
+  event            Event            @relation(fields: [idEventFk], references: [id], onDelete: Cascade)
+
+  @@index([idWorkspaceFk])
+  @@index([idUserFk, idWorkspaceFk])
+  @@map("workerAbsences")
+}
+
+// ——————————————————————————————————————————————
+// Categorías **por** establecimiento
+model Category {
+  id                   String               @id @default(uuid())
+  idCompanyFk          String
+  idWorkspaceFk        String
+  name                 String               @db.VarChar(100)
+  description          String?              @db.VarChar(512)
+  color                String               @default("#4d5fd6") @db.VarChar(10)
+  position             Int?                 @default(0)
+  moderationStatusType ModerationStatusType @default(PENDING)
+  createdDate          DateTime             @default(now())
+  updatedDate          DateTime             @default(now()) @updatedAt
+  deletedDate          DateTime?
+
+  categoryServices CategoryService[]
+
+  @@unique([idWorkspaceFk, name])
+  @@index([idWorkspaceFk])
+  @@map("categories")
+}
+
+// ——————————————————————————————————————————————
+// Servicios **por** establecimiento
+model Service {
+  id                   String               @id @default(uuid())
+  idCompanyFk          String
+  idWorkspaceFk        String
+  image                String?              @db.VarChar(512)
+  name                 String               @db.VarChar(100)
+  description          String               @db.VarChar(512)
+  duration             Int                  @default(60)
+  price                Float                @default(0)
+  discount             Float                @default(0)
+  color                String               @default("#4d5fd6") @db.VarChar(10)
+  isVisible            Boolean              @default(true)
+  serviceType          ServiceType?         @default(AT_BUSINESS)
+  maxParticipants      Int?                 @default(1)
+  moderationStatusType ModerationStatusType @default(PENDING)
+  createdDate          DateTime             @default(now())
+  updatedDate          DateTime             @updatedAt
+  deletedDate          DateTime?
+
+  categoryServices CategoryService[]
+  userServices     UserService[]
+  event            Event[]
+
+  @@unique([idWorkspaceFk, name])
+  @@index([idWorkspaceFk])
   @@map("services")
 }
 
-model UserService {
-  id          Int    @id @default(autoincrement())
-  idCompanyFk String // Foreign key a Company
-  idUserFk    String // Foreign key para la tabla User
-  idServiceFk Int // Foreign key para la tabla Service
+// ——————————————————————————————————————————————
+// Pivot “servicio ←→ categoría” dentro de cada establecimiento
+model CategoryService {
+  id           String    @id @default(uuid())
+  idCategoryFk String
+  idServiceFk  String
+  position     Int?      @default(0)
+  createdDate  DateTime  @default(now())
+  updatedDate  DateTime  @updatedAt
+  deletedDate  DateTime?
 
+  category Category @relation(fields: [idCategoryFk], references: [id])
+  service  Service  @relation(fields: [idServiceFk], references: [id])
+
+  @@unique([idCategoryFk, idServiceFk])
+  @@index([idServiceFk])
+  @@map("categoryServiceAssignments")
+}
+
+model UserService {
+  id          String    @id @default(uuid())
+  idCompanyFk String
+  idUserFk    String
+  idServiceFk String
   createdDate DateTime  @default(now())
   updatedDate DateTime  @updatedAt
   deletedDate DateTime?
-
-  // Relación con Service
-  service Service @relation(fields: [idServiceFk], references: [id])
+  service     Service   @relation(fields: [idServiceFk], references: [id])
 
   @@unique([idCompanyFk, idUserFk, idServiceFk])
   @@index([idCompanyFk])
@@ -475,56 +300,36 @@ model UserService {
   @@map("userServices")
 }
 
-model Category {
-  id          Int       @id @default(autoincrement())
-  idCompanyFk String // Foreign key a Company
-  name        String    @db.VarChar(100)
-  description String?   @db.VarChar(512)
-  color       String    @default("#4d5fd6") @db.VarChar(10)
-  createdDate DateTime  @default(now())
-  updatedDate DateTime  @updatedAt
-  deletedDate DateTime?
-
-  service               Service[]
-  categoryEstablishment CategoryEstablishment[]
-
-  // Relaciones
-  @@index([idCompanyFk])
-  @@map("categories")
-}
-
-model CategoryEstablishment {
-  id                Int       @id @default(autoincrement())
-  idCategoryFk      Int // Foreign key para la categoría
-  idEstablishmentFk String // Foreign key para el establecimiento
-  createdDate       DateTime  @default(now())
-  updatedDate       DateTime  @default(now()) @updatedAt
-  deletedDate       DateTime?
-
-  // Relaciones
-  category Category @relation(fields: [idCategoryFk], references: [id], onDelete: Cascade)
-
-  @@unique([idCategoryFk, idEstablishmentFk]) // Garantiza que una categoría no se duplique en un establecimiento
-  @@index([idEstablishmentFk])
-  @@map("categoryEstablishments")
-}
-
 enum EventSourceType {
   PLATFORM
   BOT
   GOOGLE
 }
 
+enum ServiceType {
+  AT_BUSINESS // cliente va al local
+  VIRTUAL // videollamada o remoto
+  AT_CLIENT // el proveedor se desplaza
+}
+
 enum EventStatusType {
   PENDING
-  ACEPTED
+  ACCEPTED
   CONFIRMED
   COMPLETED
   CANCELLED
+  CANCELLED_BY_CLIENT
+  CANCELLED_BY_CLIENT_REMOVED
   PAID
 }
 
-enum eventPurposeType {
+enum ModerationStatusType {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum EventPurposeType {
   APPOINTMENT
   VACATION
   SICK_LEAVE
@@ -541,4 +346,10 @@ enum WeekDayType {
   FRIDAY
   SATURDAY
   SUNDAY
+}
+
+enum RecurrenceStatusType {
+  ACTIVE
+  PAUSED
+  CANCELLED
 }

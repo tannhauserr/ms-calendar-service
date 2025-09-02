@@ -9,20 +9,20 @@ import * as InformationReservation from "../../models/rabbitmq/getCateroiesAndSe
 
 export class CheckCompanyMiddleware {
 
-    
+
     /**
      * Comprueba si el idCompanyFk del establecimiento es igual al idCompanyFk que se manda desde el front
      * @param req 
      * @param res 
      * @param next 
      */
-    static validateCompanyAccessInEstablishment = async (req: any, res: any, next: any) => {
+    static validateCompanyAccessInWorkspace = async (req: any, res: any, next: any) => {
 
         try {
 
-            const { idEstablishment, idEstablishmentFk, idCompany, idCompanyFk } = req.body;
+            const { idWorkspace, idWorkspaceFk, idCompany, idCompanyFk } = req.body;
 
-            const idEstablishmentAux = idEstablishmentFk || idEstablishment;
+            const idWorkspaceAux = idWorkspaceFk || idWorkspace;
             const idCompanyAux = idCompanyFk || idCompany;
 
             let jwtService = JWTService.instance;
@@ -32,18 +32,24 @@ export class CheckCompanyMiddleware {
             // Verifica y decodifica el token
             let decode = await jwtService.verify(token);
             // Extrae idCompanySelected del token decodificado
-            const isAdmin = decode?.role === 'ROLE_ADMIN';
+            const roleAllowed = ['ROLE_ADMIN', 'ROLE_MANAGER'];
+            const roleSuperAdmin = ["ROLE_DEVELOPER", "ROLE_SUPER_ADMIN", "ROLE_SUPPORT"];
+
+            console.log("decode", decode);
+            const isAdmin = roleAllowed.includes(decode.role);
+            const isSuperAdmin = roleSuperAdmin.includes(decode.role);
+
             const idCompanyInToken = decode?.idCompanySelected;
             const idUser = decode?.idUser;
 
-            // const response: GetCategoriesAndServicesResponse = await getCategoriesServicesUserForFlow(idEstablishment);
-            const response: InformationReservation.GetCategoriesAndServicesResponse = await getMainDataForAppointmentFlow(idEstablishmentAux);
+            // const response: GetCategoriesAndServicesResponse = await getCategoriesServicesUserForFlow(idWorkspace);
+            const response: InformationReservation.GetCategoriesAndServicesResponse = await getMainDataForAppointmentFlow(idWorkspaceAux);
 
             let existUser = response.users.find((user) => user.id === idUser);
-            if (!existUser) {
+            if (!existUser && !isSuperAdmin) {
                 // Validar si el usuario es administrador y pertenece a la empresa
                 if (isAdmin) {
-                    if (response?.establishment?.idCompanyFk === idCompanyInToken) {
+                    if (response?.workspace?.idCompanyFk === idCompanyInToken) {
                         // LOG: Usuario administrador autorizado, pero no pertenece al establecimiento
                         // console.log("LOG: Usuario administrador, autorizado porque pertenece a la empresa.");
                     } else {
@@ -59,15 +65,20 @@ export class CheckCompanyMiddleware {
             }
 
 
-            let existRelationBetweenUserAndEstablishment = response.establishment.idCompanyFk === idCompanyInToken;
+            let existRelationBetweenUserAndWorkspace = response.workspace.idCompanyFk === idCompanyInToken;
+            console.log("companySelected", idCompanyInToken);
+            console.log("que es idWorkspaceAux", idWorkspaceAux);
+             console.log("mira que es el response flow", response);
+            console.log("workspaces", response.workspace.id);
+            console.log("idCompanyFk", response.workspace.idCompanyFk);
+            console.log("existRelationBetweenUserAndWorkspace", existRelationBetweenUserAndWorkspace);
 
-            if (!existRelationBetweenUserAndEstablishment) {
+            if (!existRelationBetweenUserAndWorkspace) {
                 // LOG: Mandar petición log de que el establecimiento no pertenece a la compañía
                 return res.status(500).json(Response.build("El establecimiento no pertenece a la compañía", 404, false));
             }
 
-
-            req.establishmentData = response;
+            req.workspaceData = response;
             next();
         } catch (error: any) {
             // Si ocurre un error, responde con un mensaje de error del servidor
@@ -139,7 +150,7 @@ export class CheckCompanyMiddleware {
             }
 
             // Si el rol del usuario no es 'ROLE_ADMIN' o 'ROLE_MANAGER'
-            if (decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
+            if (decode.role !== 'ROLE_OWNER' && decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
                 // Verifica si el evento existe y pertenece al usuario
                 const eventExist = prisma.event.findFirst({
                     where: {

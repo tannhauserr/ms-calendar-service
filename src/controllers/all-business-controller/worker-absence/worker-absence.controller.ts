@@ -12,6 +12,18 @@ export class WorkerAbsenceController {
         this.workerAbsenceService = new WorkerAbsenceService();
     }
 
+    public get = async (req: any, res: any, next: any) => {
+        try {
+            const { pagination } = req.body;
+            const token = req.token;
+            await this.jwtService.verify(token);
+            const result = await this.workerAbsenceService.getWorkerAbsences(pagination);
+            res.status(200).json(Response.build("Ausencias encontradas", 200, true, result));
+        } catch (err: any) {
+            res.status(500).json({ message: err.message });
+        }
+    }
+
     public add = async (req: any, res: any, next: any) => {
         try {
             const body = req.body;
@@ -51,14 +63,14 @@ export class WorkerAbsenceController {
         }
     }
 
-    public getByEstablishment = async (req: any, res: any, next: any) => {
+    public getByWorkspace = async (req: any, res: any, next: any) => {
 
         try {
-            const { idEstablishment } = req.body;
+            const { idWorkspace } = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workerAbsenceService.getWorkerAbsencesByEstablishment(idEstablishment);
+            const result = await this.workerAbsenceService.getWorkerAbsencesByWorkspace(idWorkspace);
             res.status(200).json(Response.build("Ausencias encontradas", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });

@@ -9,6 +9,7 @@ export class RabbitMQService {
     private readonly port: number = Number(process.env.RABBITMQ_PORT) || 5672;
     private readonly user: string = process.env.RABBITMQ_USER;
     private readonly password: string = process.env.RABBITMQ_PASSWORD;
+    private readonly vhost: string = process.env.RABBITMQ_VHOST || '/';
 
     private constructor() { }
 
@@ -27,7 +28,8 @@ export class RabbitMQService {
                 hostname: this.host,
                 port: this.port,
                 username: this.user,
-                password: this.password
+                password: this.password,
+                vhost: this.vhost,
             });
             this.channel = await this.connection.createChannel();
             console.log('Conectado a RabbitMQ');

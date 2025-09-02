@@ -39,6 +39,7 @@ uploads/videos/*
 .yarn-integrity
 
 # Otros archivos y carpetas generados
+*.zip
 /.idea
 /.vscode
 /.DS_Store
@@ -63,3 +64,6 @@ uploads/videos/*
 # Dependencias específicas del sistema operativo
 .DS_Store
 Thumbs.db
+node_modules/
+node_modules.zip
+*.zip
