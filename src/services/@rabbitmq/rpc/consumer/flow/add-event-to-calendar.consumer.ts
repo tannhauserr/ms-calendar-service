@@ -33,7 +33,7 @@ export async function addEventToCalendarConsumer() {
                     idUserList = [],
                     idClient,
                     idCompany,
-                    idEstablishment,
+                    idWorkspace,
                     idService,
                     eventStart,
                     eventEnd,
@@ -46,9 +46,9 @@ export async function addEventToCalendarConsumer() {
                 const endDate = moment(eventEnd, 'YYYY-MM-DD HH:mm').toDate();
 
                 // Obtener horarios de negocio, trabajadores y temporales
-                const businessHours = await businessHoursService.getBusinessHoursFromRedis(idCompany, idEstablishment);
-                const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(idUserList, idCompany);
-                const temporaryHoursMap = await temporaryHoursService.getTemporaryHoursFromRedis(idUserList, idCompany);
+                const businessHours = await businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace);
+                const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(idUserList, idWorkspace);
+                const temporaryHoursMap = await temporaryHoursService.getTemporaryHoursFromRedis(idUserList, idWorkspace);
 
                 let selectedUser: string | null = null;
 
@@ -60,6 +60,7 @@ export async function addEventToCalendarConsumer() {
                     const isAvailable = await checkWorkerAvailability(
                         idUser,
                         idCompany,
+                        idWorkspace,
                         startDate,
                         endDate,
                         businessHours,
@@ -79,6 +80,7 @@ export async function addEventToCalendarConsumer() {
 
                 if (!selectedUser) {
                     console.log('No available user for the requested time slot');
+                    // No se genera evento, solo se manda cancelado para mostrar el "Error" en el FLOW
                     // Enviar una respuesta de error
                     channel.sendToQueue(msg.properties.replyTo, Buffer.from(JSON.stringify({ status: EventStatusType.CANCELLED })), {
                         correlationId: msg.properties.correlationId,
@@ -90,19 +92,60 @@ export async function addEventToCalendarConsumer() {
                 }
 
                 // Crear el evento con el usuario seleccionado
-                const eventCreated = await eventService.addEvent({
-                    title: "Cita",
+                // const eventCreated = await eventService.addEvent({
+                //     title: "Cita Bot",
+                //     idUserPlatformFk: selectedUser,
+                //     idClientFk: idClient,
+                //     idClientWorkspaceFk: "MANDARLO AL CONSUMER",
+                //     // idCompanyFk: idCompany,
+                //     // idWorkspaceFk: idWorkspace,
+                //     idServiceFk: idService && Number(idService) ? +idService : null,
+                //     startDate,
+                //     endDate,
+                //     commentClient: commentClient.substring(0, 255),
+                //     eventSourceType: EventSourceType.BOT,
+                //     eventStatusType: EventStatusType.CONFIRMED
+                // });
+
+                const calendar = await prisma.calendar.upsert({
+                    where: {
+                        idCompanyFk_idWorkspaceFk: {
+                            idCompanyFk: idCompany,
+                            idWorkspaceFk: idWorkspace,
+                        },
+                    },
+                    update: {},
+                    create: {
+                        idCompanyFk: idCompany,
+                        idWorkspaceFk: idWorkspace,
+                    },
+                });
+
+                // Agregar el idCalendar al objeto del evento
+                const eventData: any = {
+                    title: "Cita Bot",
                     idUserPlatformFk: selectedUser,
                     idClientFk: idClient,
-                    idCompanyFk: idCompany,
-                    idEstablishmentFk: idEstablishment,
-                    idServiceFk: idService && Number(idService) ? +idService : null,
+                    idClientWorkspaceFk: "MANDARLO_AL_CONSUMER",
                     startDate,
                     endDate,
                     commentClient: commentClient.substring(0, 255),
                     eventSourceType: EventSourceType.BOT,
-                    eventStatusType: EventStatusType.CONFIRMED
-                });
+                    eventStatusType: EventStatusType.CONFIRMED,
+                    calendar: {
+                        connect: { id: calendar.id }
+                    },
+                };
+
+                if (idService && Number(idService)) {
+                    eventData.service = {
+                        connect: {
+                            id: Number(idService),
+                        },
+                    };
+                }
+
+                const eventCreated = await eventService.addEvent(eventData);
 
                 // Enviar la respuesta de éxito
                 channel.sendToQueue(msg.properties.replyTo, Buffer.from(JSON.stringify({ status: EventStatusType.CONFIRMED, event: eventCreated })), {
@@ -134,6 +177,7 @@ export async function addEventToCalendarConsumer() {
 async function checkWorkerAvailability(
     idUser: string,
     idCompany: string,
+    idWorkspace: string,
     startDate: Date,
     endDate: Date,
     businessHours: any,

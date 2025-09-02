@@ -46,10 +46,16 @@ export class RabbitRpcService {
         isPersistent: boolean = true,
         timeout: number = 10000 // Tiempo de espera predeterminado: 10 segundos
     ): Promise<any> {
+
+        if (!this.channel) {
+            await this.init();
+        }
+
+        
         const channel = await RabbitMQService.instance.connect();
 
         const callbackQueue = await channel.assertQueue('', { exclusive: true });
-        console.log("el queueName", queueName)
+        // console.log("el queueName", queueName)
         return new Promise((resolve, reject) => {
             const timeoutId = setTimeout(() => {
                 reject(new Error(`RPC request timed out after ${timeout}ms`));

@@ -29,11 +29,11 @@ export class BusinessHourController {
 
     public get = async (req: any, res: any, next: any) => {
         try {
-            const { idEstablishment } = req.body;
+            const { idWorkspace } = req.body;
             const token = req.token;
             await this.jwtBusinessHour.verify(token);
 
-            const result = await this.businessHourBusinessHour.getBusinessHours(idEstablishment);
+            const result = await this.businessHourBusinessHour.getBusinessHours(idWorkspace);
             res.status(200).json({ message: "Registros encontrados", ok: true, item: result });
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -94,12 +94,12 @@ export class BusinessHourController {
 
     public getBusinessHoursFromRedis = async (req: any, res: any, next: any) => {
         try {
-            const { idCompany, idEstablishment } = req.body;
+            const { idCompany, idWorkspace } = req.body;
 
             const token = req.token;
             await this.jwtBusinessHour.verify(token);
 
-            const result = await this.businessHourBusinessHour.getBusinessHoursFromRedis(idCompany, idEstablishment);
+            const result = await this.businessHourBusinessHour.getBusinessHoursFromRedis(idCompany, idWorkspace);
             res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });

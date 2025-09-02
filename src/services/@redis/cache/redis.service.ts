@@ -21,6 +21,7 @@ export class RedisCacheService {
                 port: parseInt(process.env.REDIS_PORT || '6379', 10),
             },
             password: process.env.REDIS_PASSWORD,
+            database: parseInt(process.env.REDIS_DB || '0', 10),
         });
 
         this.subscriberClient = createClient({
@@ -29,6 +30,7 @@ export class RedisCacheService {
                 port: parseInt(process.env.REDIS_PORT || '6379', 10),
             },
             password: process.env.REDIS_PASSWORD,
+            database: parseInt(process.env.REDIS_DB || '0', 10),
         });
 
 

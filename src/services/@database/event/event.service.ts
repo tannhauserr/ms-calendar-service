@@ -1,29 +1,59 @@
-import { Prisma, Event, EventStatusType } from "@prisma/client";
+import { $Enums, Event, EventStatusType, Prisma } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
 import { Pagination } from "../../../models/pagination";
-import { getGeneric } from "../../../utils/get-genetic/getGenetic";
-import { UtilGeneral } from "../../../utils/util-general";
-import { getGenericSpecial } from "../../../utils/get-genetic/calendar-event/getGenericSpecial";
 import { getGenericSpecialEvent2 } from "../../../utils/get-genetic/calendar-event/getGenericSpecialEvent2";
 
 
 
 export interface EventForService {
-    id: number,
+    id: string,
     title: string,
     description: string,
     startDate: Date,
     endDate: Date,
-    idClientFk: number,
+    idClientFk: true,
+    idClientWorkspaceFk: true,
     idUserPlatformFk: string,
     idGoogleEvent: string,
     calendar: {
-        id: number,
+        id: string,
         idGoogleCalendar: string,
     }
 }
 
+
+export interface EventV2 {
+    event: {
+        id?: string
+        title: string
+        description?: string | null
+        startDate: Date | string
+        endDate: Date | string
+        idUserPlatformFk?: string | null
+        commentClient?: string | null
+        idRecurrenceRuleFk?: string | null
+        eventSourceType?: $Enums.EventSourceType
+        isEditableByClient?: boolean
+        numberUpdates?: number | null
+        eventStatusType?: $Enums.EventStatusType
+    },
+    // recurrenceRule?: Prisma.RecurrenceRuleCreateInput | null
+    recurrenceRule?: {
+        id?: string
+        dtstart: Date | string
+        until?: Date | string | null
+        rrule: string
+        tzid: string
+        recurrenceStatusType?: $Enums.RecurrenceStatusType
+    },
+    eventParticipant?: {
+        id?: string;
+        idEventFk?: string;
+        idClientWorkspaceFk?: string;
+        idClientFk?: string;
+    }
+}
 
 
 export class EventService {
@@ -31,6 +61,7 @@ export class EventService {
 
     async addEvent(item: any): Promise<any> {
         try {
+            delete item?.id;
             return await prisma.event.create({
                 data: {
                     ...item,
@@ -44,6 +75,7 @@ export class EventService {
                     startDate: true,
                     endDate: true,
                     // idClientFk: true,
+                    // idClientWorkspaceFk: true,
                     idUserPlatformFk: true,
                     idServiceFk: true,
                     eventPurposeType: true,
@@ -57,12 +89,21 @@ export class EventService {
                             description: true,
                         }
                     },
+
                     eventParticipant: {
                         select: {
                             id: true,
                             idClientFk: true,
+                            idClientWorkspaceFk: true,
                         }
-                    }
+                    },
+                    recurrenceRule: {}
+                    // eventParticipant: {
+                    //     select: {
+                    //         id: true,
+                    //         idClientFk: true,
+                    //     }
+                    // }
                     // idGoogleEvent: true,
                     // calendar: {
                     //     select: {
@@ -78,13 +119,14 @@ export class EventService {
     }
 
 
-    async getEventById(id: number): Promise<any> {
+    async getEventById(id: string): Promise<any> {
         try {
             return await prisma.event.findUnique({
                 where: {
                     id: id,
                     eventStatusType: {
-                        not: EventStatusType.CANCELLED
+                        // not: EventStatusType.CANCELLED
+                        notIn: [EventStatusType.CANCELLED, EventStatusType.CANCELLED_BY_CLIENT_REMOVED]
                     }
                 },
                 select: {
@@ -94,6 +136,7 @@ export class EventService {
                     startDate: true,
                     endDate: true,
                     // idClientFk: true,
+                    // idClientWorkspaceFk: true,
                     idUserPlatformFk: true,
                     idServiceFk: true,
                     eventPurposeType: true,
@@ -107,12 +150,20 @@ export class EventService {
                             description: true,
                         }
                     },
+
                     eventParticipant: {
                         select: {
                             id: true,
                             idClientFk: true,
+                            idClientWorkspaceFk: true,
                         }
                     }
+                    // eventParticipant: {
+                    //     select: {
+                    //         id: true,
+                    //         idClientFk: true,
+                    //     }
+                    // }
                     // calendar: {
                     //     select: {
                     //         id: true,
@@ -129,7 +180,7 @@ export class EventService {
     }
     // async updateEvent(item: Partial<Event>): Promise<any> {
     //     try {
-    //         const id = item.id as number;
+    //         const id = item.id as string;
     //         delete item.id;
 
     //         // Construimos el objeto de datos a actualizar dinámicamente
@@ -194,7 +245,7 @@ export class EventService {
 
     async updateEvent(item: Partial<Event>): Promise<any> {
         try {
-            const id = item.id as number;
+            const id = item.id as string;
             delete item.id;
 
             // Construimos el objeto de datos a actualizar dinámicamente
@@ -214,18 +265,18 @@ export class EventService {
             }
 
             // Incluye la lógica para actualizar el estado de los participantes
-            if (item.eventStatusType) {
-                updateData.eventParticipant = {
-                    updateMany: {
-                        where: {
-                            idEventFk: id,
-                        },
-                        data: {
-                            eventStatusType: item.eventStatusType,
-                        },
-                    },
-                };
-            }
+            // if (item.eventStatusType) {
+            //     updateData.eventParticipant = {
+            //         updateMany: {
+            //             where: {
+            //                 idEventFk: id,
+            //             },
+            //             data: {
+            //                 eventStatusType: item.eventStatusType,
+            //             },
+            //         },
+            //     };
+            // }
 
             return await prisma.event.update({
                 where: { id: id },
@@ -241,6 +292,8 @@ export class EventService {
                     eventPurposeType: true,
                     eventSourceType: true,
                     eventStatusType: true,
+                    // idClientWorkspaceFk: true,
+                    // idClientFk: true,
 
                     service: {
                         select: {
@@ -254,18 +307,27 @@ export class EventService {
                         select: {
                             id: true,
                             idClientFk: true,
-                            eventStatusType: true,
-                        },
-                    },
+                            idClientWorkspaceFk: true,
+                        }
+                    }
+
+                    // eventParticipant: {
+                    //     select: {
+                    //         id: true,
+                    //         idClientFk: true,
+                    //         eventStatusType: true,
+                    //     },
+                    // },
                 },
             });
+
         } catch (error: any) {
             throw new CustomError('EventService.updateEvent', error);
         }
     }
 
 
-    async deleteEvent(id: number): Promise<Event> {
+    async deleteEvent(id: string): Promise<Event> {
         try {
             return await prisma.event.delete({
                 where: { id: id },
@@ -284,10 +346,12 @@ export class EventService {
                 startDate: true,
                 endDate: true,
                 // idClientFk: true,
+                // idClientWorkspaceFk: true,
                 idUserPlatformFk: true,
                 eventStatusType: true,
                 eventPurposeType: true,
                 eventSourceType: true,
+                
 
                 service: {
                     select: {
@@ -296,12 +360,21 @@ export class EventService {
                         description: true,
                     }
                 },
+
                 eventParticipant: {
                     select: {
                         id: true,
                         idClientFk: true,
+                        idClientWorkspaceFk: true,
+
                     }
                 }
+                // eventParticipant: {
+                //     select: {
+                //         id: true,
+                //         idClientFk: true,
+                //     }
+                // }
                 // Calendar: {
                 //     select: {
                 //         id: true,
@@ -346,17 +419,7 @@ export class EventService {
         }
     }
 
-    getEventByIdGoogleEvent(idGoogleEvent: string) {
-        try {
-            return prisma.event.findFirst({
-                where: {
-                    idGoogleEvent: idGoogleEvent
-                }
-            });
-        } catch (error: any) {
-            throw new CustomError('EventService.getEventByIdGoogleEvent', error);
-        }
-    }
+
 
 
 
@@ -384,18 +447,35 @@ export class EventService {
             },
             where: {
                 eventStatusType: {
-                    not: EventStatusType.CANCELLED
+                    // not: EventStatusType.CANCELLED
+                    notIn: [
+                        EventStatusType.CANCELLED,
+                        EventStatusType.CANCELLED_BY_CLIENT,
+                        EventStatusType.CANCELLED_BY_CLIENT_REMOVED
+                    ]
                 },
                 idUserPlatformFk: idUserPlatformFk,
+                // AND: [
+                //     {
+                //         startDate: {
+                //             lte: endDate, // El evento comienza antes o durante el final del rango
+                //         }
+                //     },
+                //     {
+                //         endDate: {
+                //             gte: startDate, // El evento termina después o durante el comienzo del rango
+                //         }
+                //     }
+                // ]
                 AND: [
                     {
                         startDate: {
-                            lte: endDate, // El evento comienza antes o durante el final del rango
+                            lt: endDate, // el evento comienza estrictamente antes del final del rango
                         }
                     },
                     {
                         endDate: {
-                            gte: startDate, // El evento termina después o durante el comienzo del rango
+                            gt: startDate, // el evento termina estrictamente después del inicio del rango
                         }
                     }
                 ]
@@ -403,7 +483,7 @@ export class EventService {
         });
     }
 
-    async changeEventStatus(id: number, status: EventStatusType) {
+    async changeEventStatus(id: string, status: EventStatusType) {
 
         try {
 
@@ -427,17 +507,17 @@ export class EventService {
                         eventStatusType: status,
 
                         // TODO: Lo de eventParticipant se hizo nuevo el 27 de diciembre del 2024
-                        eventParticipant: {
-                            updateMany: {
-                                where: {
-                                    idEventFk: id,
-                                },
-                                data: {
-                                    eventStatusType: status,
-                                }
+                        // eventParticipant: {
+                        //     updateMany: {
+                        //         where: {
+                        //             idEventFk: id,
+                        //         },
+                        //         data: {
+                        //             eventStatusType: status,
+                        //         }
 
-                            }
-                        }
+                        //     }
+                        // }
                     },
                 });
 

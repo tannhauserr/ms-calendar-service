@@ -15,9 +15,10 @@ import { RedisCacheService } from "./services/@redis/cache/redis.service";
 import { RedisPublisherService } from "./services/@redis/pubsub/redis-publisher.service";
 import { RedisSubscriberService } from "./services/@redis/pubsub/redis-subscriber.service";
 import { initializeSubscriptionsRedis } from "./services/@redis/pubsub/initializeSubscriptions";
-import { initializeChannels } from "./services/caledar-googleapi/channel-calendar/initializeChannelCalendar";
+// import { initializeChannels } from "./services/caledar-googleapi/channel-calendar/initializeChannelCalendar";
 import { initializeConsumerRabbitMQ } from "./services/@rabbitmq/initializeConsumers";
 import { initializeConsumerRCP_RabbitMQ } from "./services/@rabbitmq/rpc/initializeRpcConsumer";
+import { initializeConsumerPubSub_RabbitMQ } from "./services/@rabbitmq/pubsub/initializePubSubConsumer";
 
 // const ip = process.env.IP || "127.0.0.1";
 
@@ -49,6 +50,7 @@ const app = express();
 // };
 
 
+console.log("🌐 CORS WHITELIST:", process.env.WEB_WHITELIST_CORS);
 app.use(cors(corsOptions));
 // Necesario para recibir y enviar tokens
 app.use(cookieParser());
@@ -97,43 +99,49 @@ app.listen(port, () => {
     CheckCacheCronService.instance.start();
     // TODO: Hasta que no tenga ruta https no se hacen pruebas con el canal de eventos
     // CalendarChannelRefreshCronService.instance.start();
-
+    console.log("🌐 CORS WHITELIST:", process.env.WEB_WHITELIST_CORS);
     // Inicializar las suscripciones de Redis
     initializeSubscriptionsRedis();
 
     // Inicializar los consumers de RabbitMQ
-    initializeConsumerRabbitMQ();
+    initializeConsumerPubSub_RabbitMQ();
     initializeConsumerRCP_RabbitMQ();
 
-/**
-   * IMPORTANTE LEER:
-   * 
-   * Hasta que no se disponga de una ruta HTTPS, no se deben realizar pruebas con el canal de eventos.
-   * 
-   * Se ha decidido comentar la lógica de los canales de eventos en la plataforma por las siguientes razones:
-   * 
-   * 1. **Duplicación de Eventos:**
-   *    - Cuando se crea un evento desde la plataforma o el bot, el canal de Google Calendar se activa y
-   *      trata de replicar esa misma acción. Esto provoca duplicación de acciones o eventos en el sistema.
-   * 
-   * 2. **Solución Temporal:**
-   *    - Se consideró una solución en la que se almacenaría en Redis una propiedad con el ID del evento para
-   *      evitar esta duplicación. Esta solución funciona, pero podría no cubrir todos los posibles problemas
-   *      que puedan surgir con el manejo del canal de eventos.
-   * 
-   * 3. **Decisión:**
-   *    - Por precaución, se ha decidido comentar el código relacionado con la lógica de los canales para evitar
-   *      problemas imprevistos que no se hayan considerado.
-   * 
-   * 4. **Recordatorio:**
-   *    - Los archivos `createEventGoogle.subscription.ts`, `updateEventGoogle.subscription.ts` y `deleteEventGoogle.subscription.ts`
-   *      contienen la lógica comentada que impide que el canal duplique la acción de creación, actualización o eliminación
-   *      de eventos.
-   * 
-   * 5. **Función:**
-   *  initializeChannels()
-   */
-   
+    // TODO: Seguramente se quitará por ser antiguo
+    // initializeConsumerRabbitMQ();
+
+
+
+
+    /**
+       * IMPORTANTE LEER:
+       * 
+       * Hasta que no se disponga de una ruta HTTPS, no se deben realizar pruebas con el canal de eventos.
+       * 
+       * Se ha decidido comentar la lógica de los canales de eventos en la plataforma por las siguientes razones:
+       * 
+       * 1. **Duplicación de Eventos:**
+       *    - Cuando se crea un evento desde la plataforma o el bot, el canal de Google Calendar se activa y
+       *      trata de replicar esa misma acción. Esto provoca duplicación de acciones o eventos en el sistema.
+       * 
+       * 2. **Solución Temporal:**
+       *    - Se consideró una solución en la que se almacenaría en Redis una propiedad con el ID del evento para
+       *      evitar esta duplicación. Esta solución funciona, pero podría no cubrir todos los posibles problemas
+       *      que puedan surgir con el manejo del canal de eventos.
+       * 
+       * 3. **Decisión:**
+       *    - Por precaución, se ha decidido comentar el código relacionado con la lógica de los canales para evitar
+       *      problemas imprevistos que no se hayan considerado.
+       * 
+       * 4. **Recordatorio:**
+       *    - Los archivos `createEventGoogle.subscription.ts`, `updateEventGoogle.subscription.ts` y `deleteEventGoogle.subscription.ts`
+       *      contienen la lógica comentada que impide que el canal duplique la acción de creación, actualización o eliminación
+       *      de eventos.
+       * 
+       * 5. **Función:**
+       *  initializeChannels()
+       */
+
 
 
 });

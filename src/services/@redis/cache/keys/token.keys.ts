@@ -15,18 +15,18 @@ export const TokenKeys = {
     changeChatHandler: (chatId: string) => `changeChatHandler:${chatId}`,
 
     /**
-    * Saved basic information to create a reservetation by idEstablishment
+    * Saved basic information to create a reservetation by idWorkspace
     * Ms-Chat - MS-Login y MS-Calendar
     */
-    savedBasicInformationToCreateReservationByIdEstablishment: (idEstablishment: string) => `savedBasicInformationToCreateReservationByIdEstablishment:${idEstablishment}`,
+    savedBasicInformationToCreateReservationByIdWorkspace: (idWorkspace: string) => `savedBasicInformationToCreateReservationByIdWorkspace:${idWorkspace}`,
 
 
     /**
      * Usada en getAvailableTimeSlots(
-     * @param idEstablishment 
+     * @param idWorkspace 
      * @returns 
      */
-    businessHours: (idEstablishment: string) => `businessHours:${idEstablishment}`,
+    businessHours: (idWorkspace: string) => `businessHours:${idWorkspace}`,
 
     /**
      * Usada en getAvailableTimeSlots
@@ -44,4 +44,7 @@ export const TokenKeys = {
     * @returns 
     */
     temporaryHours: (idCompany: string, idUser: string) => `temporaryHours:${idCompany}:${idUser}`,
+
+
+    userCompanyRoleKey: (userId: string) => `userCompanyRole:${userId}`,
 };

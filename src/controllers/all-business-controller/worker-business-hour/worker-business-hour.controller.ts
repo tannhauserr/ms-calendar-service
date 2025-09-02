@@ -69,13 +69,13 @@ export class WorkerBusinessHourController {
         }
     }
 
-    public getByWorker = async (req: any, res: any, next: any) => {
+    public getByWorkerAndWorkspace = async (req: any, res: any, next: any) => {
         try {
-            const { idWorker } = req.params;
+            const { idWorker, idWorkspace } = req.params;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workBusinessHourService.getWorkerBusinessHourByWorker(idWorker);
+            const result = await this.workBusinessHourService.getWorkerBusinessHourByWorkerAndWorkspace(idWorker, idWorkspace);
             res.status(200).json(Response.build("Registro encontrado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -110,12 +110,12 @@ export class WorkerBusinessHourController {
 
     getWorkerHoursFromRedis = async (req: any, res: any, next: any) => {
         try {
-            const { idUserList, idCompany } = req.body;
+            const { idUserList, idWorkspace } = req.body;
 
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workBusinessHourService.getWorkerHoursFromRedis(idUserList, idCompany);
+            const result = await this.workBusinessHourService.getWorkerHoursFromRedis(idUserList, idWorkspace);
             res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });

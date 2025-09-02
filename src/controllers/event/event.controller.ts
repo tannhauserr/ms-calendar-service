@@ -1,20 +1,26 @@
-import { GoogleOAuthErrorCodes } from "../../models/error-codes/oauth-error-codes";
-import { googleCalendarColors } from "../../models/interfaces/google-events-color";
+import { TIME_SECONDS } from "../../constant/time";
 import { Response } from "../../models/messages/response";
-import { EventService } from "../../services/@database/event/event.service";
-import { UserColorService } from "../../services/@database/user-color/user-color.service";
-import { RedisSubscriptionStrategyFactory } from "../../services/@redis/pubsub/estrategies/redis-subscription/redisSubscriptionStrategyFactory";
-import { EventCalendarGoogleService } from "../../services/caledar-googleapi/event-calendar-googleapi.service";
-import { UserColorCalendar } from "../../services/caledar-googleapi/interfaces/user-color-calendar";
+import { BusinessHourService } from "../../services/@database/all-business-services/business-hours/business-hours.service";
+import { TemporaryBusinessHourService } from "../../services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service";
+import { WorkerBusinessHourService } from "../../services/@database/all-business-services/worker-business-hours/worker-business-hours.service";
+import { EventV2Service } from "../../services/@database/event/eventv2.service";
+
+import * as RPC from "../../services/@rabbitmq/rpc/functions";
+import { IRedisSavedWorkspaceStrategy } from "../../services/@redis/cache/interfaces/interfaces";
+import { RedisStrategyFactory } from "../../services/@redis/cache/strategies/redisStrategyFactory";
 import { JWTService } from "../../services/jwt/jwt.service";
 
 export class EventController {
-    public eventService: EventService;
+    public eventService: EventV2Service;
     private jwtService: JWTService;
+
+    private businessHoursService = new BusinessHourService();
+    private workerHoursService = new WorkerBusinessHourService();
+    private temporaryHoursService = new TemporaryBusinessHourService();
 
     constructor() {
         this.jwtService = JWTService.instance;
-        this.eventService = new EventService();
+        this.eventService = new EventV2Service();
     }
 
     public add = async (req: any, res: any, next: any) => {
@@ -23,7 +29,11 @@ export class EventController {
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.eventService.addEvent(body);
+            const result = await this.eventService.addEventV2(body);
+
+            // TODO: Usad el send de RabbitMQ para crear notificación en su Microservicio
+            // Por hacer
+
             res.status(200).json(Response.build("Evento creado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -31,181 +41,85 @@ export class EventController {
     }
 
 
-    // TODO: Esto funciona a dia de hoy: 31/08/2024
-    // public addGoogleTotal = async (req: any, res: any, next: any) => {
-    //     try {
-    //         const {
-    //             // idGoogleCalendar,
-    //             title,
-    //             startDate,
-    //             endDate,
-    //             description,
-    //             idUserPlatformFk,
-    //             idCalendarFk,
-    //             idServiceFk,
-    //             eventSourceType
-    //         } = req.body;
-    //         const token = req.token;
-    //         await this.jwtService.verify(token);
-
-    //         console.log("*************************");
-    //         console.log("mira que es body", req.body);
-    //         console.log("*************************");
-
-
-    //         // Primero, guarda el evento en tu base de datos
-    //         const newEvent = await this.eventService.addEvent({
-    //             title,
-    //             description,
-    //             startDate,
-    //             endDate,
-    //             idUserPlatformFk: idUserPlatformFk,
-    //             idCalendarFk,
-    //             idServiceFk,
-    //             eventSourceType
-    //         });
-
-
-
-    //         console.log("*************************");
-    //         console.log("mira que es newEvent", newEvent);
-
-    //         const idGoogleCalendar = newEvent.calendar.idGoogleCalendar;
-
-
-
-
-    //         const userColor = await this._getUserColor(idUserPlatformFk);
-    //         const eventColor = userColor?.eventColorGoogle?.idColorGoogle || googleCalendarColors.get("1").id;
-
-
-
-    //         // Valida los datos del evento antes de crearlo en Google Calendar
-    //         const isValid = await this._validadorCreateEvent(idUserPlatformFk, idGoogleCalendar, { summary: title, startDate, endDate: undefined });
-    //         console.log("que sale de la validación", isValid);
-    //         if (!isValid) {
-    //             return res.status(200).json(Response.build("No se ha creado el evento en Google", 200, false, newEvent));
-    //         }
-
-    //         // Luego, crea el evento en Google Calendar
-    //         // Crea el evento en Google Calendar en paralelo
-    //         const [googleEvent] = await Promise.all([
-    //             this._createGoogleEvent(idUserPlatformFk, idGoogleCalendar, title, startDate, endDate, description, eventColor),
-    //             // Otras tareas en paralelo si es necesario
-    //         ]);
-    //         console.log("*************************");
-    //         console.log("mira que es googleEvent", googleEvent);
-
-    //         // Finalmente, actualiza tu evento en la base de datos con el ID del evento de Google
-    //         await this.eventService.updateEvent({ id: newEvent.id, idGoogleEvent: googleEvent.id });
-
-    //         res.status(200).json(Response.build("Evento creado exitosamente", 200, true, { newEvent, googleEvent }));
-    //     } catch (err: any) {
-    //         res.status(401).json(Response.build("Error al crear el evento", 401, false, err.message));
-    //     }
-    // }
-
-
-
-    public addGoogleTotal = async (req: any, res: any, next: any) => {
+    addFromWeb = async (req: any, res: any) => {
         try {
-            const {
-                title,
-                startDate,
-                endDate,
-                description,
-                idUserPlatformFk,
-                idCalendarFk,
-                idServiceFk,
-                eventSourceType,
-                eventPurposeType,
-                eventStatusType
-            } = req.body;
+            const payload = req.body;
+            const token = req.token;
+            await this.jwtService.verify(token);
 
-            await this.jwtService.verify(req.token);
+            // Validación básica
+            if (!payload?.idCompany || !payload?.idWorkspace) {
+                return res.status(400).json({ message: "Faltan idCompany o idWorkspace" });
+            }
+            if (!payload?.date || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) {
+                return res.status(400).json({ message: "date debe ser YYYY-MM-DD" });
+            }
+            if (!payload?.timezone) {
+                return res.status(400).json({ message: "Falta timezone" });
+            }
+            if (!Array.isArray(payload?.attendees) || payload.attendees.length === 0) {
+                return res.status(400).json({ message: "attendees vacío" });
+            }
 
-            const newEvent = await this.eventService.addEvent({
-                title,
-                description,
-                startDate,
-                endDate,
-                idUserPlatformFk,
-                idCalendarFk,
-                idServiceFk,
-                eventSourceType,
-                eventPurposeType,
-                eventStatusType,
+            const savedWorkspace = RedisStrategyFactory.getStrategy('savedWorkspace') as IRedisSavedWorkspaceStrategy;
+            let workspace: any = await savedWorkspace.getSavedWorkspaceByIdWorkspace(payload.idWorkspace);
+            if (!workspace) {
+                const rpcRes: any = await RPC.getEstablishmentByIdForFlow(payload.idWorkspace);
+                workspace = rpcRes?.workspace ?? null;
+                if (workspace?.id) {
+                    await savedWorkspace.setSavedWorkspaceByIdWorkspace(
+                        workspace.id,
+                        workspace,
+                        TIME_SECONDS.HOUR
+                    );
+                }
+            }
+            const timeZoneWorkspace = workspace?.timeZone;
+            if (!timeZoneWorkspace) {
+                return res.status(400).json({ message: "No se pudo resolver el timezone del workspace" });
+            }
+
+            const result = await this.eventService.addEventFromWeb(payload, {
+                timeZoneWorkspace,
+                businessHoursService: this.businessHoursService,
+                workerHoursService: this.workerHoursService,
+                temporaryHoursService: this.temporaryHoursService,
+                bookingConfig: workspace?.bookingConfig ?? { slot: { alignMode: "service" } }, // recomiendo "service"
+                
+                // cache: opcional si tienes una capa con get/set
             });
 
-            // const idGoogleCalendar = newEvent.calendar.idGoogleCalendar;
-            // const userColor = await this._getUserColor(idUserPlatformFk);
-            // const eventColor = userColor?.eventColorGoogle?.idColorGoogle || googleCalendarColors.get("1").id;
-
-
-
-            // RedisSubscriptionStrategyFactory.execute('publish', 'createEventGoogle', {
-            //     idRowEventDB: newEvent.id,
-            //     idUserPlatformFk,
-            //     idGoogleCalendar,
-            //     title,
-            //     startDate,
-            //     endDate,
-            //     description,
-            //     eventColor
-            // });
-
-            res.status(200).json(Response.build("Evento creado exitosamente", 200, true, newEvent));
+            return res.status(201).json(Response.build("Evento creado", 201, true, result));
         } catch (err: any) {
-            res.status(401).json(Response.build("Error al crear el evento", 401, false, err.message));
+            return res.status(500).json({ message: err?.message ?? "Unexpected error" });
+        }
+    };
+
+    public update = async (req: any, res: any, next: any) => {
+        try {
+            const body = req.body;
+            const token = req.token;
+            await this.jwtService.verify(token);
+
+            const result = await this.eventService.updateEventV2(body);
+
+            // TODO: Usad el send de RabbitMQ para crear notificación en su Microservicio
+            // Por hacer
+
+
+            res.status(200).json(Response.build("Evento actualizado", 200, true, result));
+        } catch (err: any) {
+            res.status(500).json({ message: err.message });
         }
     }
 
-    // private async _getUserColor(idUserPlatformFk: string): Promise<UserColorCalendar | null> {
-    //     const userColorService = new UserColorService();
-    //     return await userColorService.getUserColorByIdUser(idUserPlatformFk, true);
-    // }
 
-    // private async _validadorCreateEvent(idUser: string, idCalendarGoogle, eventData: {
-    //     summary: string;
-    //     startDate: string;
-    //     endDate: string;
-    // }): Promise<boolean> {
-    //     const calendarExistValidator = new CalendarExistValidator();
-    //     const accessValidator = new HasAccessToCalendarValidator();
-    //     const eventDataValidator = new ValidateEventDataValidator();
-
-    //     // Configurar la cadena de validación
-    //     calendarExistValidator
-    //         .setNext(accessValidator)
-    //         .setNext(eventDataValidator);
-
-    //     // Crear el objeto request para los validadores
-    //     const validationRequest: CalendarValidationRequest = {
-    //         idUser: idUser,
-    //         calendarId: idCalendarGoogle,
-    //         eventData
-    //     };
-
-    //     const isValid = await calendarExistValidator.validate(validationRequest);
-
-    //     console.log("*********** ENTRO este otro valid, saldrá antes", isValid);
-    //     // Lógica para validar los datos del evento
-    //     return isValid;
-    // }
-
-    // private async _createGoogleEvent(idUserPlatformFk: string, idGoogleCalendar: string, title: string, startDate: string, endDate: string, description: string, eventColor: string): Promise<any> {
-    //     const eventCalendarGoogleService = new EventCalendarGoogleService();
-    //     return await eventCalendarGoogleService.createEvent(
-    //         idUserPlatformFk,
-    //         idGoogleCalendar,
-    //         title,
-    //         startDate,
-    //         endDate,
-    //         description,
-    //         eventColor
-    //     );
-    // }
-
+    /**
+     * Se devuelve los activos y los cancelados solo por el cliente
+     * @param req 
+     * @param res 
+     * @param next 
+     */
     public get = async (req: any, res: any, next: any) => {
         try {
             const { pagination } = req.body;
@@ -219,6 +133,106 @@ export class EventController {
         }
     }
 
+    // src/event/event.controller.ts
+    public getEventExtraData = async (req: any, res: any, _next: any) => {
+        try {
+
+            console.log("getEventExtraData called");
+            const { idList } = req.body;           // ⬅️ asegúrate de mandar el id del local
+            const { idCompany, idWorkspace } = req.params;
+
+            if (!Array.isArray(idList) || idList.length === 0) {
+                return res.status(400).json({ message: 'Faltan ids de evento' });
+            }
+            if (!idWorkspace) {
+                return res.status(400).json({ message: 'Falta el id del establecimiento' });
+            }
+
+            // 1) Seguridad JWT
+            const token = req.token;
+            await this.jwtService.verify(token);
+
+            // 2) Datos “crudos” (participantes, recurrenceRule, servicio)
+            const events = await this.eventService.getEventExtraData(idList);
+
+            console.log("Eventos encontrados:", events);
+
+            // 3) Colecciona todos los ids de cliente
+            const allClientIds = events
+                .flatMap(ev => ev.eventParticipant.map(p => p.idClientFk))
+                .filter((id): id is string => !!id);                  // quita null/undefined
+
+            const uniqueClientIds = [...new Set(allClientIds)];
+
+            // 4) Pide a MS-clientes vía RPC -> devuelve nombre, avatar, etc.
+            const clientWorkspaceRPCList =
+                await RPC.getClientstByIdClientAndIdWorkspace(
+                    idWorkspace,
+                    uniqueClientIds,
+                );
+
+            // 5) Mapea a Map para lookup O(1)
+            const clientMap = new Map(
+                clientWorkspaceRPCList.map(c => [c.idClientFk, c]),
+            );
+
+            // 6) Enriquecemos cada evento
+            // const eventsWithClients = events.map(ev => ({
+            //     ...ev,
+            //     eventParticipant: ev.eventParticipant.map(p => ({
+            //         ...p,
+            //         client: clientMap.get(p.idClientFk) ?? null,        // ⬅️ aquí queda el objeto cliente
+            //     })),
+            // }));
+
+            // 6) Enriquecemos cada evento, pero recortando el objeto client
+            const eventsWithClients = events.map(ev => ({
+                ...ev,
+                eventParticipant: ev.eventParticipant.map(p => {
+                    // busca el objeto completo
+                    const fullClient = clientMap.get(p.idClientFk) ?? null;
+
+                    // recórtalo al shape que quieres
+                    const client = fullClient
+                        ? {
+                            name: fullClient.name,
+                            surname1: fullClient.surname1,
+                            surname2: fullClient.surname2,
+                            image: fullClient.image,
+                        }
+                        : null;
+
+                    return {
+                        ...p,
+                        client,
+                    };
+                }),
+            }));
+
+
+            // 7) Respuesta
+            res.status(200)
+                .json(
+                    Response.build(
+                        'Datos extra de eventos encontrados',
+                        200,
+                        true,
+                        eventsWithClients,
+                    ),
+                );
+        } catch (err: any) {
+            res.status(500).json({ message: err.message });
+        }
+    };
+
+
+
+    /**
+     * Se devuelve los cancelados y los activos
+     * @param req 
+     * @param res 
+     * @param next 
+     */
     public getList = async (req: any, res: any, next: any) => {
         try {
             const { pagination } = req.body;
@@ -245,244 +259,18 @@ export class EventController {
         }
     }
 
-    public updateGoogleTotal = async (req: any, res: any, next: any) => {
+
+
+
+    public deleteEvent = async (req: any, res: any, next: any) => {
         try {
-            const {
-                id,
-                title,
-                startDate,
-                endDate,
-                description,
-                idUserPlatformFk,
-                idCalendarFk,
-                idServiceFk,
-                eventSourceType,
-                eventPurposeType,
-                eventStatusType
-            } = req.body;
-            await this.jwtService.verify(req.token);
-
-            const updatedEvent = await this.eventService.updateEvent({
-                id,
-                title,
-                description,
-                startDate,
-                endDate,
-                idUserPlatformFk,
-                // idCalendarFk,
-                idServiceFk,
-                eventSourceType,
-                eventPurposeType,
-                eventStatusType
-            });
-
-            // const idGoogleCalendar = updatedEvent.calendar.idGoogleCalendar;
-            // const idGoogleEvent = updatedEvent.idGoogleEvent;
-
-            // const userColor = await this._getUserColor(idUserPlatformFk);
-            // const eventColor = userColor?.eventColorGoogle?.idColorGoogle || googleCalendarColors.get("1").id;
-
-            // // Publicar en Pub/Sub para actualizar el evento en Google Calendar
-            // RedisSubscriptionStrategyFactory.execute('publish', 'updateEventGoogle', {
-            //     idRowEventDB: updatedEvent.id,
-            //     idUserPlatformFk,
-            //     idGoogleCalendar,
-            //     idGoogleEvent,
-            //     title,
-            //     startDate,
-            //     endDate,
-            //     description,
-            //     eventColor
-            // });
-
-            res.status(200).json(Response.build("Evento actualizado exitosamente", 200, true, updatedEvent));
-        } catch (err: any) {
-            if (err?.message.includes('Missing required parameters: eventId')) {
-                res.status(400).json(Response.build("El evento no tiene un ID de Google Calendar", 400, false, { code: GoogleOAuthErrorCodes.MISSING_EVENT_ID }));
-            } else {
-                res.status(401).json(Response.build("Error al actualizar el evento", 401, false, err.message));
-            }
-        }
-    }
-
-    // public updateGoogleTotal = async (req: any, res: any, next: any) => {
-    //     try {
-    //         const {
-    //             id,
-    //             title,
-    //             startDate,
-    //             endDate,
-    //             description,
-    //             idUserPlatformFk,
-    //             idCalendarFk,
-    //             idServiceFk,
-    //             eventSourceType,
-    //         } = req.body;
-    //         const token = req.token;
-    //         await this.jwtService.verify(token);
-
-    //         console.log("*************************");
-    //         console.log("mira que es body", req.body);
-    //         console.log("*************************");
-
-    //         // Actualiza el evento en tu base de datos
-    //         const updatedEvent = await this.eventService.updateEvent({
-    //             id,
-    //             title,
-    //             description,
-    //             startDate,
-    //             endDate,
-    //             idUserPlatformFk,
-    //             idCalendarFk,
-    //             idServiceFk,
-    //             eventSourceType,
-    //         });
-
-    //         console.log("*************************");
-    //         console.log("mira que es updatedEvent", updatedEvent);
-
-    //         const idGoogleCalendar = updatedEvent.calendar.idGoogleCalendar;
-
-    //         // Obtén el color del evento, si no está disponible usa uno por defecto
-    //         const userColor = await this._getUserColor(idUserPlatformFk);
-    //         const eventColor = userColor?.eventColorGoogle?.idColorGoogle || googleCalendarColors.get("1").id;
-
-    //         // Actualiza el evento en Google Calendar en paralelo
-    //         const updatedGoogleEvent = await this._updateGoogleEvent(
-    //             idUserPlatformFk,
-    //             idGoogleCalendar,
-    //             updatedEvent.idGoogleEvent,
-    //             title,
-    //             startDate,
-    //             endDate,
-    //             description,
-    //             eventColor
-    //         );
-
-    //         console.log("*************************");
-    //         console.log("mira que es updatedGoogleEvent", updatedGoogleEvent);
-
-    //         res.status(200).json(Response.build("Evento actualizado exitosamente", 200, true, { updatedEvent, updatedGoogleEvent }));
-    //     } catch (err: any) {
-
-    //         if (err?.message.includes('Missing required parameters: eventId')) {
-    //             res.status(400).json(Response.build("El evento no tiene un ID de Google Calendar", 400, false, { code: GoogleOAuthErrorCodes.MISSING_EVENT_ID }));
-    //         } else {
-    //             res.status(401).json(Response.build("Error al actualizar el evento", 401, false, err.message));
-    //         }
-    //     }
-    // }
-
-    // private async _updateGoogleEvent(
-    //     idUserPlatformFk: string,
-    //     idGoogleCalendar: string,
-    //     idGoogleEvent: string,
-    //     title: string,
-    //     startDate: string,
-    //     endDate: string,
-    //     description: string,
-    //     eventColor: string
-    // ): Promise<any> {
-    //     const eventCalendarGoogleService = new EventCalendarGoogleService();
-
-    //     console.log("llega idGoogleEvent", idGoogleEvent);
-    //     return await eventCalendarGoogleService.updateEvent(
-    //         idUserPlatformFk,
-    //         idGoogleCalendar,
-    //         idGoogleEvent,
-    //         title,
-    //         startDate,
-    //         endDate,
-    //         description,
-    //         eventColor
-    //     );
-    // }
-
-    // public delete = async (req: any, res: any, next: any) => {
-    //     try {
-    //         const { id } = req.body;
-    //         const token = req.token;
-    //         await this.jwtService.verify(token);
-
-    //         const result = await this.eventService.deleteEvent(id);
-    //         res.status(200).json(Response.build("Evento eliminado", 200, true, result));
-    //     } catch (err: any) {
-    //         res.status(500).json({ message: err.message });
-    //     }
-    // }
-
-
-    // public deleteGoogleTotal = async (req: any, res: any, next: any) => {
-    //     try {
-    //         const { id } = req.body;
-    //         const token = req.token;
-    //         await this.jwtService.verify(token);
-
-    //         // Primero, obtén el evento desde la base de datos para obtener el idGoogleEvent y otros datos necesarios
-    //         const event = await this.eventService.getEventById(id);
-
-    //         if (!event) {
-    //             return res.status(404).json(Response.build("Evento no encontrado en la base de datos", 404, false));
-    //         }
-
-    //         console.log("mira que es id", id);
-    //         console.log("mira que es event", event);
-
-    //         // Luego, elimina el evento de la base de datos
-    //         const result = await this.eventService.deleteEvent(id);
-
-
-    //         // Elimina el evento de Google Calendar si tiene un idGoogleEvent
-    //         if (event?.idGoogleEvent && event?.calendar && event?.calendar?.idGoogleCalendar) {
-    //             try {
-    //                 const eventCalendarGoogleService = new EventCalendarGoogleService();
-    //                 await eventCalendarGoogleService.deleteEvent(
-    //                     event.idUserPlatformFk,  // Usuario
-    //                     event.calendar.idGoogleCalendar, // ID del calendario de Google
-    //                     event.idGoogleEvent  // ID del evento en Google Calendar
-    //                 );
-    //             } catch (googleError: any) {
-    //                 // Verifica si el error es porque el evento no existe en Google Calendar
-    //                 if (googleError.message && googleError.message.includes('Resource not found')) {
-    //                     console.warn("El evento no se encontró en Google Calendar, pero será eliminado de la base de datos.");
-    //                 } else {
-    //                     throw googleError;
-    //                 }
-    //             }
-    //         }
-
-
-
-    //         res.status(200).json(Response.build("Evento eliminado exitosamente", 200, true, result));
-    //     } catch (err: any) {
-    //         console.error("Error al eliminar el evento:", err);
-    //         res.status(500).json({ message: err.message });
-    //     }
-    // }
-
-
-    public deleteGoogleTotal = async (req: any, res: any, next: any) => {
-        try {
-            const { id } = req.body;
+            const { idList } = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            // Primero, obtén el evento desde la base de datos para obtener el idGoogleEvent y otros datos necesarios
-            const event = await this.eventService.getEventById(id);
-
-            if (!event) {
-                return res.status(404).json(Response.build("Evento no encontrado en la base de datos", 404, false));
-            }
-
             // Luego, elimina el evento de la base de datos
-            const result = await this.eventService.deleteEvent(id);
+            const result = await this.eventService.deleteEventsV2(idList);
 
-            // Publicar la acción para eliminar el evento en Google Calendar
-            RedisSubscriptionStrategyFactory.execute('publish', 'deleteEventGoogle', {
-                idUserPlatformFk: event?.idUserPlatformFk,
-                idGoogleCalendar: event.calendar?.idGoogleCalendar,
-                idGoogleEvent: event?.idGoogleEvent
-            });
 
             res.status(200).json(Response.build("Evento eliminado exitosamente", 200, true, result));
         } catch (err: any) {
@@ -499,6 +287,24 @@ export class EventController {
             await this.jwtService.verify(token);
 
             const result = await this.eventService.changeEventStatus(id, status);
+            res.status(200).json(Response.build("Estado del evento actualizado", 200, true, result));
+        } catch (err: any) {
+            res.status(500).json({ message: err.message });
+        }
+    }
+
+    changeEventStatusByParticipant = async (req: any, res: any, next: any) => {
+        try {
+            const { id, idClient, idClientWorkspace, action } = req.body;
+            const token = req.token;
+            await this.jwtService.verify(token);
+
+            const result = await this.eventService.changeParticipantStatus(
+                id,
+                idClient,
+                idClientWorkspace,
+                action
+            );
             res.status(200).json(Response.build("Estado del evento actualizado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });

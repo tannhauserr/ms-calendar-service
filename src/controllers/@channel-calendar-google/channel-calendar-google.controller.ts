@@ -113,32 +113,32 @@ export class ChannelCalendarGoogleController {
     }
 
     private async handleCancelledEvent(eventId: string) {
-        const existingEvent = await this.eventService.getEventByIdGoogleEvent(eventId);
-        if (existingEvent) {
-            await this.eventService.deleteEvent(existingEvent.id);
-            console.log(`Evento eliminado: ${eventId}`);
-        }
+        // const existingEvent = await this.eventService.getEventByIdGoogleEvent(eventId);
+        // if (existingEvent) {
+        //     // await this.eventService.deleteEvent(existingEvent.id);
+        //     // console.log(`Evento eliminado: ${eventId}`);
+        // }
     }
 
     private async handleUpsertEvent(event: any, userCalendar: any, calendarId: number) {
-        const existingEvent = await this.eventService.getEventByIdGoogleEvent(event.id);
-        const eventData = {
-            title: event.summary || '',
-            description: event.description || '',
-            startDate: new Date(event.start.dateTime || event.start.date),
-            endDate: new Date(event.end.dateTime || event.end.date),
-            idGoogleEvent: event.id,
-            idUserPlatformFk: userCalendar.idUserFk,
-            eventSourceType: EventSourceType.GOOGLE,
-        };
+        // const existingEvent = await this.eventService.getEventByIdGoogleEvent(event.id);
+        // const eventData = {
+        //     title: event.summary || '',
+        //     description: event.description || '',
+        //     startDate: new Date(event.start.dateTime || event.start.date),
+        //     endDate: new Date(event.end.dateTime || event.end.date),
+        //     idGoogleEvent: event.id,
+        //     idUserPlatformFk: userCalendar.idUserFk,
+        //     eventSourceType: EventSourceType.GOOGLE,
+        // };
 
-        if (existingEvent) {
-            await this.eventService.updateEvent({ id: existingEvent.id, ...eventData });
-            console.log(`Evento actualizado: ${event.id}`);
-        } else {
-            await this.eventService.addEvent({ ...eventData, eventPurposeType: 'APPOINTMENT', idCalendarFk: calendarId });
-            console.log(`Evento creado: ${event.id}`);
-        }
+        // if (existingEvent) {
+        //     await this.eventService.updateEvent({ id: existingEvent.id, ...eventData });
+        //     console.log(`Evento actualizado: ${event.id}`);
+        // } else {
+        //     await this.eventService.addEvent({ ...eventData, eventPurposeType: 'APPOINTMENT', idCalendarFk: calendarId });
+        //     console.log(`Evento creado: ${event.id}`);
+        // }
     }
 
     private async getGoogleAuthByCredentials() {
