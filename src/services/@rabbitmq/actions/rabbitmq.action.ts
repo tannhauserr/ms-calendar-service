@@ -17,7 +17,7 @@ export interface ActionPayloads {
 
     // TODO: Nuevo 10 de junio 2025
     // id el establecimiento e id del cliente (general). Se guardará el cliente del establecimiento en Redis
-    requestGetCliensByIdClientListAndIdWorkspace: { idWorkspace: string; idClientList: string[] };
+    requestGetCliensByIdClientListAndIdWorkspace: { idWorkspace: string; idClientList: string[], idCompany?: string };
     /**
     * Recibe las categorias y los servicios de un establecimiento en concreto
     * MS-Chat - MS-Calendar - MS-Login
@@ -162,6 +162,10 @@ export interface ActionPayloads {
             nameWorkspace?: string
         }
     };
+
+
+
+
 }
 
 // Acciones asociadas a eventos genéricos de RabbitMQ
@@ -198,7 +202,8 @@ export const SubscriberActions = {
     requestUpdateServiceInEvent: "requestUpdateServiceInEvent",
 
     // Usado en MS-Login - MS-Calendar - MS-Chat
-    requestGetWorkspaceBySearch: "requestGetWorkspaceBySearch"
+    requestGetWorkspaceBySearch: "requestGetWorkspaceBySearch",
+
 } as const;
 
 // Tipos derivados

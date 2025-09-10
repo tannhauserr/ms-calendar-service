@@ -20,6 +20,7 @@ import { TemporaryBusinessHourService } from "../all-business-services/temporary
 import { WorkerBusinessHourService } from "../all-business-services/worker-business-hours/worker-business-hours.service";
 import { GetAvailableDaysInput, DayFlag } from "./types";
 import { getUsersWhoCanPerformService, enumerateDays, getEventsOverlappingRange, hasAnySlotForDayWithCapacity } from "./util/event-availability";
+import { CONSOLE_COLOR } from "../../../constant/console-color";
 
 
 
@@ -91,38 +92,42 @@ import {
 } from "../event/availability-special.service"; // <-- ajusta la ruta
 
 import { z } from "zod";
+import { toPrismaEventCreate } from "./util/toPrismaEventCreate";
+import e from "express";
+import { _getServicesSnapshotById } from "./util/getInfoServices";
+import { RedisStrategyFactory } from "../../@redis/cache/strategies/redisStrategyFactory";
+import { IRedisRoundRobinStrategy } from "../../@redis/cache/interfaces/interfaces";
+import { TIME_SECONDS } from "../../../constant/time";
+import { OnlineBookingConfig } from "../../@redis/cache/interfaces/models/booking-config";
 
-const AddFromWebSchema = z.object({
-    idCompany: z.string().min(8),
-    idWorkspace: z.string().min(8),
 
-    // Hora elegida por el cliente (en su TZ)
-    timeZoneClient: z.string().min(3),
-    startLocalISO: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/),
+type AddFromWebInput = {
+    idCompany: string;
+    idWorkspace: string;
+    timeZoneClient: string;          // p.ej. "Europe/Madrid"
+    startLocalISO: string;           // "YYYY-MM-DDTHH:mm:ss" en TZ del cliente
+    attendees: Array<{
+        serviceId: string;
+        durationMin: number;
+        staffId?: string | null;
+        categoryId?: string | null;
+    }>;
+    excludeEventId?: string;
+    note?: string;
+    customer: {
+        id: string;                    // id del cliente (plataforma)
+        idClient?: string;             // alias mismo id si lo usas así
+        idClientWorkspace?: string;    // ⬅️ VIENE DEL CONTROLLER (RPC)
+        name?: string;
+        email?: string;
+        phone?: string;
+    };
+};
 
-    // Servicios secuenciales que quiere reservar
-    attendees: z.array(
-        z.object({
-            serviceId: z.string().min(6),
-            durationMin: z.number().int().positive(),
-            staffId: z.string().min(6).optional().nullable(),
-            categoryId: z.string().min(6).optional().nullable(),
-        })
-    ).min(1),
-
-    // Opcionales
-    excludeEventId: z.string().optional(),
-    note: z.string().max(2000).optional(),
-    // Datos del cliente (si los adjuntas)
-    customer: z.object({
-        id: z.string().optional(),
-        name: z.string().optional(),
-        phone: z.string().optional(),
-        email: z.string().email().optional(),
-    }).optional(),
-});
-
-export type AddFromWebInput = z.infer<typeof AddFromWebSchema>;
+interface WeightedResource {
+    id: string;     // UUID del staff
+    weight: number; // 0..100
+}
 
 type AddFromWebDeps = {
     timeZoneWorkspace: string; // resuelto por el controlador desde Redis/RPC
@@ -139,9 +144,7 @@ type AddFromWebDeps = {
             range?: { date: string } // HoursRangeInput minimal
         ): Promise<TemporaryHoursMapType>;
     };
-    bookingConfig: {
-        slot: { alignMode: "clock" | "service" }; // usa lo que tengas en workspace.bookingConfig
-    };
+    bookingConfig: OnlineBookingConfig;
     // Cache opcional (si ya la tienes, p.ej. Redis get/set)
     cache?: AvailabilityDepsSpecial["cache"];
 };
@@ -917,115 +920,352 @@ export class EventV2Service {
 
 
 
-    // public
-
-    /**
-     * Devuelve días con disponibilidad (true/false) en el rango dado,
-     * para la selección actual (servicios + staff opcional).
-     *
-     * Nota: Para marcar el día como disponible se comprueba que **cada**
-     * servicio de la selección tenga al menos un slot posible ese día.
-     * (Aproximación conservadora; la orquestación real por horas se hace
-     * en el endpoint de horas.)
-     */
-    // public async publicGetAvailableDays(input: GetAvailableDaysInput): Promise<{ days: DayFlag[] }> {
+    // GetAvailableDaysInput
+    // public async publicGetAvailableDays(input: GetTimeSlotsInputSpecial, deps: AvailabilityDepsSpecial): Promise<{ days: DayFlag[] }> {
     //     try {
+    //         // const {
+    //         //     idCompany,
+    //         //     idWorkspace,
+    //         //     timezone,
+    //         //     range: { start, end },
+    //         //     attendees,
+    //         //     excludeEventId,
+    //         //     idClient, // opcional
+    //         // } = input;
     //         const {
     //             idCompany,
     //             idWorkspace,
-    //             timezone,
+    //             timeZoneClient,
     //             range: { start, end },
     //             attendees,
     //             excludeEventId,
+    //             idClient, // opcional
     //         } = input;
 
-    //         console.log("input", input)
-    //         // Validación básica
+    //         const {
+    //             bookingConfig,
+    //             businessHoursService,
+    //             workerHoursService,
+    //             temporaryHoursService,
+
+    //         } = deps;
+
+    //         const BOOKING_PAGE_CONFIG: OnlineBookingConfig = bookingConfig;
+
+    //         const alignMode: "clock" | "service" = BOOKING_PAGE_CONFIG.slot?.alignMode === "service" ? "service" : "clock";
+    //         const intervalMinutes =
+    //             alignMode === "service"
+    //                 ? attendees?.reduce((acc, a) => acc + (a.durationMin ?? 0), 0)
+    //                 : BOOKING_PAGE_CONFIG?.slot?.stepMinutes;
+
+    //         const professionalAllowed = BOOKING_PAGE_CONFIG?.resources?.ids
+    //             ?.map(r => Array.isArray(r) ? r?.[0] : r) ?? [];
+
+
     //         if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany o idWorkspace");
     //         if (!start || !end) throw new Error("Faltan fechas de rango (start/end)");
-    //         if (!Array.isArray(attendees) || attendees.length === 0) {
-    //             // si no hay servicios seleccionados, no hay nada que calcular
-    //             return { days: [] };
+    //         if (typeof intervalMinutes !== "number" || isNaN(intervalMinutes) || intervalMinutes <= 0) {
+    //             throw new Error("El intervalo de minutos debe ser un número positivo");
     //         }
+    //         if (!Array.isArray(attendees) || attendees.length === 0) return { days: [] };
+    //         if (professionalAllowed.length === 0) return { days: [] }
 
-    //         console.log("input2")
-    //         // 1) Resolver los candidatos (users) por servicio
-    //         //    - Si staffId viene → se usa ese.
-    //         //    - Si staffId es null → buscamos “quién puede realizar el servicio”.
+
+
+    //         // Paso base de enumeración de inicios
+    //         const STEP_MINUTES = intervalMinutes;
+
+    //         // Helpers locales
+    //         type Range = { start: moment.Moment; end: moment.Moment };
+    //         const toLocal = (d: Date | string) => moment(d).tz(timeZoneClient).seconds(0).milliseconds(0);
+
+    //         const mergeRanges = (rs: Range[]) => {
+    //             const arr = rs
+    //                 .map(r => ({ start: r.start.clone(), end: r.end.clone() }))
+    //                 .filter(r => r.start.isBefore(r.end))
+    //                 .sort((a, b) => a.start.valueOf() - b.start.valueOf());
+    //             if (!arr.length) return arr;
+    //             const out: Range[] = [];
+    //             let cur = arr[0];
+    //             for (let i = 1; i < arr.length; i++) {
+    //                 const r = arr[i];
+    //                 if (r.start.isSameOrBefore(cur.end)) {
+    //                     if (r.end.isAfter(cur.end)) cur.end = r.end.clone();
+    //                 } else {
+    //                     out.push(cur);
+    //                     cur = r;
+    //                 }
+    //             }
+    //             out.push(cur);
+    //             return out;
+    //         };
+
+    //         // resta [busy] a [shift] -> free[]
+    //         const subtractBusy = (shift: Range, busy: Range[]) => {
+    //             const merged = mergeRanges(busy);
+    //             let cursor = shift.start.clone();
+    //             const free: Range[] = [];
+    //             for (const b of merged) {
+    //                 if (b.end.isSameOrBefore(cursor) || b.start.isSameOrAfter(shift.end)) continue;
+    //                 if (b.start.isAfter(cursor)) {
+    //                     free.push({ start: cursor.clone(), end: moment.min(b.start, shift.end) });
+    //                 }
+    //                 cursor = moment.max(cursor, b.end);
+    //                 if (!cursor.isBefore(shift.end)) break;
+    //             }
+    //             if (cursor.isBefore(shift.end)) free.push({ start: cursor, end: shift.end.clone() });
+    //             return free.filter(r => r.start.isBefore(r.end));
+    //         };
+
+    //         // cuenta inicios posibles dentro de ventanas, usando ceil relativo al comienzo de la ventana
+    //         const countStartsInWindows = (wins: Range[], durMin: number, stepMin: number, clampFrom?: moment.Moment) => {
+    //             let total = 0;
+    //             for (const w of wins) {
+    //                 const wStart = clampFrom ? moment.max(w.start, clampFrom) : w.start;
+    //                 const latestStart = w.end.clone().subtract(durMin, "minutes");
+    //                 if (wStart.isAfter(latestStart)) continue;
+
+    //                 // ceil relativo a w.start
+    //                 const offsetMin = Math.max(0, Math.floor((wStart.valueOf() - w.start.valueOf()) / 60000));
+    //                 const rem = offsetMin % stepMin;
+    //                 const cur = wStart.clone().add(rem === 0 ? 0 : (stepMin - rem), "minutes").seconds(0).milliseconds(0);
+
+    //                 const spanMin = Math.max(0, Math.floor((latestStart.valueOf() - cur.valueOf()) / 60000));
+    //                 const cnt = 1 + Math.floor(spanMin / stepMin);
+    //                 if (cnt > 0) total += cnt;
+    //             }
+    //             return total;
+    //         };
+
+    //         // 1) Elegibles por servicio
+    //         const withinAllowed = (ids: string[]) =>
+    //             ids.filter(id => professionalAllowed.includes(id));
+
     //         const userIdsByService = new Map<string, string[]>();
-
     //         for (const a of attendees) {
+    //             // if (a.staffId) userIdsByService.set(a.serviceId, [a.staffId]);
+    //             // else {
+    //             //     const users = await getUsersWhoCanPerformService(idWorkspace, a.serviceId, a.categoryId);
+    //             //     userIdsByService.set(a.serviceId, users);
+    //             // }
     //             if (a.staffId) {
-    //                 userIdsByService.set(a.serviceId, [a.staffId]);
+    //                 const elig = professionalAllowed.includes(a.staffId) ? [a.staffId] : [];
+    //                 userIdsByService.set(a.serviceId, elig);
     //             } else {
     //                 const users = await getUsersWhoCanPerformService(idWorkspace, a.serviceId, a.categoryId);
-    //                 userIdsByService.set(a.serviceId, users);
+    //                 userIdsByService.set(a.serviceId, withinAllowed(users));
     //             }
     //         }
-
-    //         console.log("input3")
-    //         console.log("input3", userIdsByService)
-
-    //         // Unión de todos los usuarios para cargar horas y eventos de una vez
-    //         const allUserIds = Array.from(
-    //             new Set(Array.from(userIdsByService.values()).flat())
-    //         );
-
-    //         console.log("input4", allUserIds)
-
-
-    //         if (allUserIds.length === 0) {
-    //             // Nadie puede hacer alguno de los servicios → todo false
-    //             const days = enumerateDays(start, end).map(d => ({ date: d, hasSlots: false }));
+    //         const allUserIds = Array.from(new Set(Array.from(userIdsByService.values()).flat()));
+    //         if (!allUserIds.length) {
+    //             const days = enumerateDays(start, end).map(d => ({ date: d, hasSlots: false, capacity: 0 }));
     //             return { days };
     //         }
 
-    //         console.log("input5", allUserIds)
+    //         // 2) Calendar y reglas
+    //         const calendar = await prisma.calendar.findFirst({
+    //             where: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace, deletedDate: null },
+    //             select: { id: true },
+    //         });
 
-    //         // 2) Cargar reglas/horarios desde cache/DB
-    //         const businessHours = await this.businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace);
-    //         const workerHoursMap = await this.workerHoursService.getWorkerHoursFromRedis(allUserIds, idCompany);
-    //         const temporaryHoursMap = await this.temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idCompany);
-
-
-    //         console.log("input6", businessHours, workerHoursMap, temporaryHoursMap)
-    //         // 3) Cargar eventos que solapen el rango (para TODOS los users candidatos)
+    //         const businessHours = await businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace);
+    //         const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(allUserIds, idWorkspace);
+    //         const temporaryHoursMap = await temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idWorkspace, { start, end });
     //         const events = await getEventsOverlappingRange(allUserIds, start, end, excludeEventId);
 
-    //         // 4) Para cada día del rango, comprobar si TODOS los servicios disponen de al menos 1 slot
-    //         const INTERVAL_MINUTES = 30; // tu granularidad actual
+    //         // 3) Capacidad por servicio (para detectar grupales)
+    //         const serviceCaps = await prisma.service.findMany({
+    //             where: { id: { in: attendees.map(a => a.serviceId) } },
+    //             select: { id: true, maxParticipants: true },
+    //         });
+    //         const capByService = new Map(serviceCaps.map(s => [s.id, Math.max(1, s.maxParticipants ?? 1)]));
 
-    //         const days: DayFlag[] = [];
-    //         for (const dateISO of enumerateDays(start, end)) {
-    //             // Para cada servicio de la selección, ¿existe al menos 1 slot?
-    //             let allServicesFit = true;
+    //         // Agrupa eventos por user para acelerar
+    //         const eventsByUser = new Map<string, Array<{ startDate: Date; endDate: Date }>>();
+    //         for (const ev of events) {
+    //             const uid = (ev as any).idUserPlatformFk as string | null;
+    //             if (!uid) continue;
+    //             const arr = eventsByUser.get(uid) || [];
+    //             arr.push({ startDate: ev.startDate, endDate: ev.endDate });
+    //             eventsByUser.set(uid, arr);
+    //         }
 
-    //             for (const a of attendees) {
-    //                 const usersForService = userIdsByService.get(a.serviceId) ?? [];
-    //                 if (usersForService.length === 0) {
-    //                     allServicesFit = false;
-    //                     break;
-    //                 }
+    //         // Helper para obtener turnos de un user en un día (ya respetando worker=null y temporary)
+    //         const getShiftsFor = (uid: string, dateISO: string): Range[] => {
+    //             const weekDay = moment.tz(`${dateISO}T00:00:00`, "YYYY-MM-DDTHH:mm:ss", timeZoneClient)
+    //                 .format("dddd").toUpperCase() as any;
 
-    //                 const ok = hasAnySlotForDay({
-    //                     dateISO,
-    //                     serviceDuration: a.durationMin,
-    //                     usersToConsider: usersForService,
-    //                     intervalMinutes: INTERVAL_MINUTES,
-    //                     businessHours,
-    //                     workerHoursMap,
-    //                     temporaryHoursMap,
-    //                     events,
-    //                     workspaceTimeZone: timezone,
-    //                 });
+    //             // Si workerHours es null explícito, no trabaja
+    //             const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
+    //             const tempDay = (temporaryHoursMap as any)?.[uid]?.[dateISO];
 
-    //                 if (!ok) {
-    //                     allServicesFit = false;
-    //                     break;
-    //                 }
+    //             let slots: string[][] = [];
+    //             if (tempDay === null) slots = [];                  // cierre temporal (no trabaja)
+    //             else if (Array.isArray(tempDay) && tempDay.length) slots = tempDay;
+    //             else if (workerDay === null) slots = [];           // no trabaja ese weekday
+    //             else if (Array.isArray(workerDay) && workerDay.length) slots = workerDay;
+    //             else {
+    //                 const biz = (businessHours as any)?.[weekDay];
+    //                 slots = biz === null ? [] : (Array.isArray(biz) ? biz : []);
     //             }
 
-    //             days.push({ date: dateISO, hasSlots: allServicesFit });
+    //             return (slots || []).map(([s, e]) => ({
+    //                 start: moment.tz(`${dateISO}T${s}`, "YYYY-MM-DDTHH:mm:ss", timeZoneClient),
+    //                 end: moment.tz(`${dateISO}T${e}`, "YYYY-MM-DDTHH:mm:ss", timeZoneClient),
+    //             }));
+    //         };
+
+    //         const days: DayFlag[] = [];
+
+    //         for (const dateISO of enumerateDays(start, end)) {
+    //             const dayStart = moment.tz(`${dateISO}T00:00:00`, "YYYY-MM-DDTHH:mm:ss", timeZoneClient);
+    //             const dayEnd = dayStart.clone().endOf("day");
+    //             const dayStartUTC = dayStart.clone().utc().toDate();
+    //             const dayEndUTC = dayEnd.clone().utc().toDate();
+    //             const isToday = dateISO === moment().tz(timeZoneClient).format("YYYY-MM-DD");
+    //             const nowLocal = moment().tz(timeZoneClient).seconds(0).milliseconds(0);
+
+    //             // ---- Caso: 1 servicio
+    //             if (attendees.length === 1) {
+    //                 const a = attendees[0];
+    //                 const elig = userIdsByService.get(a.serviceId) ?? [];
+    //                 if (!elig.length) {
+    //                     days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+    //                     continue;
+    //                 }
+
+    //                 const svcCap = capByService.get(a.serviceId) ?? 1;
+    //                 const isGroup = svcCap > 1;
+
+    //                 // 3.1) Denominador: inicios posibles por turnos (sin busy), sumados en todos los elegibles
+    //                 let denomStarts = 0;
+    //                 for (const uid of elig) {
+    //                     const shifts = getShiftsFor(uid, dateISO);
+    //                     const mergedShifts = mergeRanges(shifts);
+    //                     // si es hoy, no cuentes pasado
+    //                     const clamp = isToday ? nowLocal : undefined;
+    //                     denomStarts += countStartsInWindows(mergedShifts, a.durationMin, STEP_MINUTES, clamp);
+    //                 }
+    //                 const denomSeats = denomStarts * (isGroup ? svcCap : 1);
+
+    //                 // Si ni siquiera hay posibilidad teórica, el día no tiene slots
+    //                 if (denomSeats <= 0) {
+    //                     days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+    //                     continue;
+    //                 }
+
+    //                 // 3.2) Numerador:
+    //                 // (A) plazas libres en clases existentes de este servicio (solo de pros elegibles)
+    //                 let seatsFromExisting = 0;
+    //                 if (calendar && isGroup) {
+    //                     const groupEvents = await prisma.event.findMany({
+    //                         where: {
+    //                             idCalendarFk: calendar.id,
+    //                             idServiceFk: a.serviceId,
+    //                             idUserPlatformFk: { in: elig },
+    //                             startDate: { lt: dayEndUTC },
+    //                             endDate: { gt: dayStartUTC },
+    //                             ...(excludeEventId ? { id: { not: excludeEventId } } : {}),
+    //                             deletedDate: null,
+    //                         },
+    //                         select: {
+    //                             id: true,
+    //                             eventParticipant: {
+    //                                 where: { deletedDate: null },
+    //                                 select: { idClientFk: true, idClientWorkspaceFk: true },
+    //                             },
+    //                         },
+    //                     });
+
+    //                     for (const ev of groupEvents) {
+    //                         const booked = ev.eventParticipant.length;
+    //                         const alreadyIn = !!(idClient && ev.eventParticipant.some(p =>
+    //                             p.idClientFk === idClient || p.idClientWorkspaceFk === idClient
+    //                         ));
+    //                         const left = Math.max(0, svcCap - booked);
+    //                         seatsFromExisting += alreadyIn ? 0 : left;
+    //                     }
+    //                 }
+
+    //                 // (B) plazas potenciales por crear nuevas clases (libres tras busy)
+    //                 let startsCreatable = 0;
+    //                 for (const uid of elig) {
+    //                     const shifts = getShiftsFor(uid, dateISO);
+
+    //                     // busy del user en ese día
+    //                     const busy: Range[] = (eventsByUser.get(uid) || [])
+    //                         .filter(ev => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
+    //                         .map(ev => ({ start: toLocal(ev.startDate), end: toLocal(ev.endDate) }));
+
+    //                     // free windows = turnos - busy (clamp si hoy)
+    //                     const freeWins: Range[] = [];
+    //                     for (const sh of shifts) {
+    //                         const shStart = isToday ? moment.max(sh.start, nowLocal) : sh.start;
+    //                         if (!shStart.isBefore(sh.end)) continue;
+    //                         freeWins.push(...subtractBusy({ start: shStart, end: sh.end }, busy));
+    //                     }
+    //                     const mergedFree = mergeRanges(freeWins);
+
+    //                     startsCreatable += countStartsInWindows(mergedFree, a.durationMin, STEP_MINUTES);
+    //                 }
+    //                 const seatsFromNew = startsCreatable * (isGroup ? svcCap : 1);
+
+    //                 const numeratorSeats = seatsFromExisting + seatsFromNew;
+    //                 const ratio = Math.max(0, Math.min(1, numeratorSeats / denomSeats));
+
+    //                 days.push({ date: dateISO, hasSlots: ratio > 0, capacity: Number(ratio.toFixed(2)) });
+    //                 continue;
+    //             }
+
+    //             // ---- Caso: >1 servicio (sin grupos mezclados)
+    //             let anyGroup = false;
+    //             for (const a of attendees) {
+    //                 if ((capByService.get(a.serviceId) ?? 1) > 1) { anyGroup = true; break; }
+    //             }
+    //             if (anyGroup) {
+    //                 // si quieres soportar multi-servicio con grupales, aquí tendríamos que hacer otra lógica
+    //                 days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+    //                 continue;
+    //             }
+
+    //             // Para cada servicio individual: ratio = (#starts libres) / (#starts posibles)
+    //             const ratios: number[] = [];
+    //             for (const a of attendees) {
+    //                 const elig = userIdsByService.get(a.serviceId) ?? [];
+    //                 if (!elig.length) { ratios.push(0); continue; }
+
+    //                 // denom
+    //                 let denomStarts = 0;
+    //                 for (const uid of elig) {
+    //                     const shifts = getShiftsFor(uid, dateISO);
+    //                     const mergedShifts = mergeRanges(shifts);
+    //                     const clamp = isToday ? nowLocal : undefined;
+    //                     denomStarts += countStartsInWindows(mergedShifts, a.durationMin, STEP_MINUTES, clamp);
+    //                 }
+    //                 if (denomStarts <= 0) { ratios.push(0); continue; }
+
+    //                 // numerador (libres tras busy)
+    //                 let freeStarts = 0;
+    //                 for (const uid of elig) {
+    //                     const shifts = getShiftsFor(uid, dateISO);
+    //                     const busy: Range[] = (eventsByUser.get(uid) || [])
+    //                         .filter(ev => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
+    //                         .map(ev => ({ start: toLocal(ev.startDate), end: toLocal(ev.endDate) }));
+
+    //                     const freeWins: Range[] = [];
+    //                     for (const sh of shifts) {
+    //                         const shStart = isToday ? moment.max(sh.start, nowLocal) : sh.start;
+    //                         if (!shStart.isBefore(sh.end)) continue;
+    //                         freeWins.push(...subtractBusy({ start: shStart, end: sh.end }, busy));
+    //                     }
+    //                     const mergedFree = mergeRanges(freeWins);
+    //                     freeStarts += countStartsInWindows(mergedFree, a.durationMin, STEP_MINUTES);
+    //                 }
+    //                 ratios.push(Math.max(0, Math.min(1, freeStarts / denomStarts)));
+    //             }
+
+    //             const minRatio = ratios.length ? Math.min(...ratios) : 0;
+    //             days.push({ date: dateISO, hasSlots: minRatio > 0, capacity: Number(minRatio.toFixed(2)) });
     //         }
 
     //         return { days };
@@ -1035,92 +1275,465 @@ export class EventV2Service {
     // }
 
 
-    public async publicGetAvailableDays(input: GetAvailableDaysInput): Promise<{ days: DayFlag[] }> {
+    public async publicGetAvailableDays(
+        input: GetTimeSlotsInputSpecial,
+        deps: AvailabilityDepsSpecial
+    ): Promise<{ days: DayFlag[] }> {
         try {
             const {
                 idCompany,
                 idWorkspace,
-                timezone,
+                timeZoneClient,
                 range: { start, end },
                 attendees,
                 excludeEventId,
+                idClient, // opcional
             } = input;
+
+            const {
+                bookingConfig,
+                businessHoursService,
+                workerHoursService,
+                temporaryHoursService,
+            } = deps;
+
+            const BOOKING_PAGE_CONFIG: OnlineBookingConfig = bookingConfig;
+
+            // 🆕 bookingWindow
+            const { maxAdvanceDays = 60, minLeadTimeMin = 60 } =
+                BOOKING_PAGE_CONFIG.bookingWindow ?? {};
+
+            const alignMode: "clock" | "service" =
+                BOOKING_PAGE_CONFIG.slot?.alignMode === "service" ? "service" : "clock";
+            const intervalMinutes =
+                alignMode === "service"
+                    ? attendees?.reduce((acc, a) => acc + (a.durationMin ?? 0), 0)
+                    : BOOKING_PAGE_CONFIG?.slot?.stepMinutes;
+
+            const professionalAllowed =
+                BOOKING_PAGE_CONFIG?.resources?.ids?.map((r) =>
+                    Array.isArray(r) ? r?.[0] : r
+                ) ?? [];
 
             if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany o idWorkspace");
             if (!start || !end) throw new Error("Faltan fechas de rango (start/end)");
-            if (!Array.isArray(attendees) || attendees.length === 0) {
-                return { days: [] };
+            if (
+                typeof intervalMinutes !== "number" ||
+                isNaN(intervalMinutes) ||
+                intervalMinutes <= 0
+            ) {
+                throw new Error("El intervalo de minutos debe ser un número positivo");
             }
+            if (!Array.isArray(attendees) || attendees.length === 0) return { days: [] };
+            if (professionalAllowed.length === 0) return { days: [] };
 
-            // resolver candidatos
+            // Paso base de enumeración de inicios
+            const STEP_MINUTES = intervalMinutes;
+
+            // Helpers locales
+            type Range = { start: moment.Moment; end: moment.Moment };
+            const TZ = timeZoneClient; // 🆕 si prefieres el TZ del negocio, cámbialo aquí
+            const toLocal = (d: Date | string) =>
+                moment(d).tz(TZ).seconds(0).milliseconds(0);
+
+            const mergeRanges = (rs: Range[]) => {
+                const arr = rs
+                    .map((r) => ({ start: r.start.clone(), end: r.end.clone() }))
+                    .filter((r) => r.start.isBefore(r.end))
+                    .sort((a, b) => a.start.valueOf() - b.start.valueOf());
+                if (!arr.length) return arr;
+                const out: Range[] = [];
+                let cur = arr[0];
+                for (let i = 1; i < arr.length; i++) {
+                    const r = arr[i];
+                    if (r.start.isSameOrBefore(cur.end)) {
+                        if (r.end.isAfter(cur.end)) cur.end = r.end.clone();
+                    } else {
+                        out.push(cur);
+                        cur = r;
+                    }
+                }
+                out.push(cur);
+                return out;
+            };
+
+            // resta [busy] a [shift] -> free[]
+            const subtractBusy = (shift: Range, busy: Range[]) => {
+                const merged = mergeRanges(busy);
+                let cursor = shift.start.clone();
+                const free: Range[] = [];
+                for (const b of merged) {
+                    if (b.end.isSameOrBefore(cursor) || b.start.isSameOrAfter(shift.end)) continue;
+                    if (b.start.isAfter(cursor)) {
+                        free.push({ start: cursor.clone(), end: moment.min(b.start, shift.end) });
+                    }
+                    cursor = moment.max(cursor, b.end);
+                    if (!cursor.isBefore(shift.end)) break;
+                }
+                if (cursor.isBefore(shift.end)) free.push({ start: cursor, end: shift.end.clone() });
+                return free.filter((r) => r.start.isBefore(r.end));
+            };
+
+            // cuenta inicios posibles dentro de ventanas, usando ceil relativo al comienzo de la ventana
+            const countStartsInWindows = (
+                wins: Range[],
+                durMin: number,
+                stepMin: number,
+                clampFrom?: moment.Moment
+            ) => {
+                let total = 0;
+                for (const w of wins) {
+                    const wStart = clampFrom ? moment.max(w.start, clampFrom) : w.start;
+                    const latestStart = w.end.clone().subtract(durMin, "minutes");
+                    if (wStart.isAfter(latestStart)) continue;
+
+                    // ceil relativo a w.start
+                    const offsetMin = Math.max(
+                        0,
+                        Math.floor((wStart.valueOf() - w.start.valueOf()) / 60000)
+                    );
+                    const rem = offsetMin % stepMin;
+                    const cur = wStart
+                        .clone()
+                        .add(rem === 0 ? 0 : stepMin - rem, "minutes")
+                        .seconds(0)
+                        .milliseconds(0);
+
+                    const spanMin = Math.max(
+                        0,
+                        Math.floor((latestStart.valueOf() - cur.valueOf()) / 60000)
+                    );
+                    const cnt = 1 + Math.floor(spanMin / stepMin);
+                    if (cnt > 0) total += cnt;
+                }
+                return total;
+            };
+
+            // 1) Elegibles por servicio
+            const withinAllowed = (ids: string[]) =>
+                ids.filter((id) => professionalAllowed.includes(id));
+
             const userIdsByService = new Map<string, string[]>();
             for (const a of attendees) {
                 if (a.staffId) {
-                    userIdsByService.set(a.serviceId, [a.staffId]);
+                    const elig = professionalAllowed.includes(a.staffId) ? [a.staffId] : [];
+                    userIdsByService.set(a.serviceId, elig);
                 } else {
-                    const users = await getUsersWhoCanPerformService(idWorkspace, a.serviceId, a.categoryId);
-                    userIdsByService.set(a.serviceId, users);
+                    const users = await getUsersWhoCanPerformService(
+                        idWorkspace,
+                        a.serviceId,
+                        a.categoryId
+                    );
+                    userIdsByService.set(a.serviceId, withinAllowed(users));
                 }
             }
-            const allUserIds = Array.from(new Set(Array.from(userIdsByService.values()).flat()));
-            if (allUserIds.length === 0) {
-                const days = enumerateDays(start, end).map(d => ({ date: d, hasSlots: false, capacity: 0 }));
+            const allUserIds = Array.from(
+                new Set(Array.from(userIdsByService.values()).flat())
+            );
+            if (!allUserIds.length) {
+                const days = enumerateDays(start, end).map((d) => ({
+                    date: d,
+                    hasSlots: false,
+                    capacity: 0,
+                }));
                 return { days };
             }
 
-            const businessHours = await this.businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace);
-            const workerHoursMap = await this.workerHoursService.getWorkerHoursFromRedis(
-                allUserIds,
-                idWorkspace,
+            // 2) Calendar y reglas
+            const calendar = await prisma.calendar.findFirst({
+                where: {
+                    idCompanyFk: idCompany,
+                    idWorkspaceFk: idWorkspace,
+                    deletedDate: null,
+                },
+                select: { id: true },
+            });
+
+            const businessHours = await businessHoursService.getBusinessHoursFromRedis(
+                idCompany,
+                idWorkspace
             );
-            const temporaryHoursMap = await this.temporaryHoursService.getTemporaryHoursFromRedis(
+            const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(
                 allUserIds,
-                idWorkspace,
-                {
-                    start,
-                    end
-                });
+                idWorkspace
+            );
+            const temporaryHoursMap =
+                await temporaryHoursService.getTemporaryHoursFromRedis(
+                    allUserIds,
+                    idWorkspace,
+                    { start, end }
+                );
+            const events = await getEventsOverlappingRange(
+                allUserIds,
+                start,
+                end,
+                excludeEventId
+            );
 
-            console.log("temporary hours", temporaryHoursMap)
+            // 3) Capacidad por servicio (para detectar grupales)
+            const serviceCaps = await prisma.service.findMany({
+                where: { id: { in: attendees.map((a) => a.serviceId) } },
+                select: { id: true, maxParticipants: true },
+            });
+            const capByService = new Map(
+                serviceCaps.map((s) => [s.id, Math.max(1, s.maxParticipants ?? 1)])
+            );
 
-            const events = await getEventsOverlappingRange(allUserIds, start, end, excludeEventId);
+            // Agrupa eventos por user para acelerar
+            const eventsByUser = new Map<
+                string,
+                Array<{ startDate: Date; endDate: Date }>
+            >();
+            for (const ev of events) {
+                const uid = (ev as any).idUserPlatformFk as string | null;
+                if (!uid) continue;
+                const arr = eventsByUser.get(uid) || [];
+                arr.push({ startDate: ev.startDate, endDate: ev.endDate });
+                eventsByUser.set(uid, arr);
+            }
 
-            const INTERVAL_MINUTES = 30;
+            // Helper para obtener turnos de un user en un día
+            const getShiftsFor = (uid: string, dateISO: string): Range[] => {
+                const weekDay = moment
+                    .tz(`${dateISO}T00:00:00`, "YYYY-MM-DDTHH:mm:ss", TZ)
+                    .format("dddd")
+                    .toUpperCase() as any;
 
-            const days: DayFlag[] = [];
-            for (const dateISO of enumerateDays(start, end)) {
-                let allServicesFit = true;
-                let minCapacity = 1;
+                const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
+                const tempDay = (temporaryHoursMap as any)?.[uid]?.[dateISO];
 
-                for (const a of attendees) {
-                    const usersForService = userIdsByService.get(a.serviceId) ?? [];
-                    if (usersForService.length === 0) {
-                        allServicesFit = false;
-                        minCapacity = 0;
-                        break;
-                    }
-
-                    const { ok, capacity } = hasAnySlotForDayWithCapacity({
-                        dateISO,
-                        serviceDuration: a.durationMin,
-                        usersToConsider: usersForService,
-                        intervalMinutes: INTERVAL_MINUTES,
-                        businessHours,
-                        workerHoursMap,
-                        temporaryHoursMap,
-                        events,
-                        workspaceTimeZone: timezone,
-                    });
-
-                    if (!ok) {
-                        allServicesFit = false;
-                        minCapacity = 0;
-                        break;
-                    }
-                    minCapacity = Math.min(minCapacity, capacity);
+                let slots: string[][] = [];
+                if (tempDay === null) slots = [];
+                else if (Array.isArray(tempDay) && tempDay.length) slots = tempDay;
+                else if (workerDay === null) slots = [];
+                else if (Array.isArray(workerDay) && workerDay.length) slots = workerDay;
+                else {
+                    const biz = (businessHours as any)?.[weekDay];
+                    slots = biz === null ? [] : Array.isArray(biz) ? biz : [];
                 }
 
-                days.push({ date: dateISO, hasSlots: allServicesFit, capacity: minCapacity });
+                return (slots || []).map(([s, e]) => ({
+                    start: moment.tz(`${dateISO}T${s}`, "YYYY-MM-DDTHH:mm:ss", TZ),
+                    end: moment.tz(`${dateISO}T${e}`, "YYYY-MM-DDTHH:mm:ss", TZ),
+                }));
+            };
+
+            // 🆕 Ventana absoluta permitida (TZ = TZ)
+            const nowRef = moment.tz(TZ);
+            const earliestAllowed = nowRef
+                .clone()
+                .add(minLeadTimeMin, "minutes")
+                .seconds(0)
+                .milliseconds(0);
+            const latestAllowedEnd = nowRef.clone().add(maxAdvanceDays, "days").endOf("day");
+
+            const days: DayFlag[] = [];
+
+            for (const dateISO of enumerateDays(start, end)) {
+                const dayStart = moment.tz(
+                    `${dateISO}T00:00:00`,
+                    "YYYY-MM-DDTHH:mm:ss",
+                    TZ
+                );
+                const dayEnd = dayStart.clone().endOf("day");
+                const dayStartUTC = dayStart.clone().utc().toDate();
+                const dayEndUTC = dayEnd.clone().utc().toDate();
+
+                // 🆕 Cortes rápidos por día completo
+                if (dayEnd.isBefore(earliestAllowed)) {
+                    days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+                    continue;
+                }
+                if (dayStart.isAfter(latestAllowedEnd)) {
+                    days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+                    continue;
+                }
+
+                // 🆕 Si es el día del lead, clamp desde earliestAllowed
+                const isLeadDay = dayStart.isSame(earliestAllowed, "day");
+                const clampFrom = isLeadDay ? earliestAllowed : undefined;
+
+                // ---- Caso: 1 servicio
+                if (attendees.length === 1) {
+                    const a = attendees[0];
+                    const elig = userIdsByService.get(a.serviceId) ?? [];
+                    if (!elig.length) {
+                        days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+                        continue;
+                    }
+
+                    const svcCap = capByService.get(a.serviceId) ?? 1;
+                    const isGroup = svcCap > 1;
+
+                    // Denominador: inicios posibles por turnos (sin busy), sumados en todos los elegibles
+                    let denomStarts = 0;
+                    for (const uid of elig) {
+                        const shifts = getShiftsFor(uid, dateISO);
+                        const mergedShifts = mergeRanges(shifts);
+                        denomStarts += countStartsInWindows(
+                            mergedShifts,
+                            a.durationMin,
+                            STEP_MINUTES,
+                            clampFrom // 🆕 clamp por lead
+                        );
+                    }
+                    const denomSeats = denomStarts * (isGroup ? svcCap : 1);
+
+                    if (denomSeats <= 0) {
+                        days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+                        continue;
+                    }
+
+                    // Numerador:
+                    // (A) plazas libres en clases existentes de este servicio (solo pros elegibles)
+                    let seatsFromExisting = 0;
+                    if (calendar && isGroup) {
+                        const groupEvents = await prisma.event.findMany({
+                            where: {
+                                idCalendarFk: calendar.id,
+                                idServiceFk: a.serviceId,
+                                idUserPlatformFk: { in: elig },
+                                startDate: { lt: dayEndUTC },
+                                endDate: { gt: dayStartUTC },
+                                ...(excludeEventId ? { id: { not: excludeEventId } } : {}),
+                                deletedDate: null,
+                            },
+                            select: {
+                                id: true,
+                                startDate: true, // 🆕 necesitaremos el start para filtrar lead
+                                eventParticipant: {
+                                    where: { deletedDate: null },
+                                    select: { idClientFk: true, idClientWorkspaceFk: true },
+                                },
+                            },
+                        });
+
+                        for (const ev of groupEvents) {
+                            // 🆕 si es día de lead, ignora clases que empiezan antes del earliestAllowed
+                            if (isLeadDay) {
+                                const evStartLocal = toLocal(ev.startDate);
+                                if (evStartLocal.isBefore(earliestAllowed)) continue;
+                            }
+
+                            const booked = ev.eventParticipant.length;
+                            const alreadyIn = !!(
+                                idClient &&
+                                ev.eventParticipant.some(
+                                    (p) => p.idClientFk === idClient || p.idClientWorkspaceFk === idClient
+                                )
+                            );
+                            const left = Math.max(0, svcCap - booked);
+                            seatsFromExisting += alreadyIn ? 0 : left;
+                        }
+                    }
+
+                    // (B) plazas potenciales por nuevas clases (libres tras busy)
+                    let startsCreatable = 0;
+                    for (const uid of elig) {
+                        const shifts = getShiftsFor(uid, dateISO);
+
+                        const busy: Range[] = (eventsByUser.get(uid) || [])
+                            .filter((ev) => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
+                            .map((ev) => ({ start: toLocal(ev.startDate), end: toLocal(ev.endDate) }));
+
+                        const freeWins: Range[] = [];
+                        for (const sh of shifts) {
+                            const shStart = clampFrom ? moment.max(sh.start, clampFrom) : sh.start; // 🆕 clamp lead
+                            if (!shStart.isBefore(sh.end)) continue;
+                            freeWins.push(...subtractBusy({ start: shStart, end: sh.end }, busy));
+                        }
+                        const mergedFree = mergeRanges(freeWins);
+
+                        startsCreatable += countStartsInWindows(
+                            mergedFree,
+                            a.durationMin,
+                            STEP_MINUTES,
+                            clampFrom // 🆕 clamp lead
+                        );
+                    }
+                    const seatsFromNew = startsCreatable * (isGroup ? svcCap : 1);
+
+                    const numeratorSeats = seatsFromExisting + seatsFromNew;
+                    const ratio = Math.max(0, Math.min(1, numeratorSeats / denomSeats));
+
+                    days.push({
+                        date: dateISO,
+                        hasSlots: ratio > 0,
+                        capacity: Number(ratio.toFixed(2)),
+                    });
+                    continue;
+                }
+
+                // ---- Caso: >1 servicio (sin grupos mezclados)
+                let anyGroup = false;
+                for (const a of attendees) {
+                    if ((capByService.get(a.serviceId) ?? 1) > 1) {
+                        anyGroup = true;
+                        break;
+                    }
+                }
+                if (anyGroup) {
+                    days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+                    continue;
+                }
+
+                // Para cada servicio individual: ratio = (#starts libres) / (#starts posibles)
+                const ratios: number[] = [];
+                for (const a of attendees) {
+                    const elig = userIdsByService.get(a.serviceId) ?? [];
+                    if (!elig.length) {
+                        ratios.push(0);
+                        continue;
+                    }
+
+                    // denom
+                    let denomStarts = 0;
+                    for (const uid of elig) {
+                        const shifts = getShiftsFor(uid, dateISO);
+                        const mergedShifts = mergeRanges(shifts);
+                        denomStarts += countStartsInWindows(
+                            mergedShifts,
+                            a.durationMin,
+                            STEP_MINUTES,
+                            clampFrom // 🆕 clamp lead
+                        );
+                    }
+                    if (denomStarts <= 0) {
+                        ratios.push(0);
+                        continue;
+                    }
+
+                    // numerador (libres tras busy)
+                    let freeStarts = 0;
+                    for (const uid of elig) {
+                        const shifts = getShiftsFor(uid, dateISO);
+                        const busy: Range[] = (eventsByUser.get(uid) || [])
+                            .filter((ev) => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
+                            .map((ev) => ({ start: toLocal(ev.startDate), end: toLocal(ev.endDate) }));
+
+                        const freeWins: Range[] = [];
+                        for (const sh of shifts) {
+                            const shStart = clampFrom ? moment.max(sh.start, clampFrom) : sh.start; // 🆕 clamp lead
+                            if (!shStart.isBefore(sh.end)) continue;
+                            freeWins.push(...subtractBusy({ start: shStart, end: sh.end }, busy));
+                        }
+                        const mergedFree = mergeRanges(freeWins);
+                        freeStarts += countStartsInWindows(
+                            mergedFree,
+                            a.durationMin,
+                            STEP_MINUTES,
+                            clampFrom // 🆕 clamp lead
+                        );
+                    }
+                    ratios.push(Math.max(0, Math.min(1, freeStarts / denomStarts)));
+                }
+
+                const minRatio = ratios.length ? Math.min(...ratios) : 0;
+                days.push({
+                    date: dateISO,
+                    hasSlots: minRatio > 0,
+                    capacity: Number(minRatio.toFixed(2)),
+                });
             }
 
             return { days };
@@ -1132,428 +1745,559 @@ export class EventV2Service {
 
 
 
-    // public async publicGetAvailableTimeSlots(input: GetTimeSlotsInput): Promise<{ timeSlots: TimeSlot[] }> {
-    //     const {
-    //         idCompany,
-    //         idWorkspace,
-    //         timeZoneWorkspace,
-    //         timeZoneClient,
-    //         date,
-    //         attendees,
-    //         intervalMinutes = 30,
-    //         excludeEventId,
-    //     } = input;
 
-    //     if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany / idWorkspace");
-    //     if (!timeZoneWorkspace) throw new Error("Falta timezone");
-    //     if (!timeZoneWorkspace) throw new Error("Falta timezone");
-    //     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("date inválido");
-    //     if (!Array.isArray(attendees) || attendees.length === 0) return { timeSlots: [] };
+    // ⬇️ util: crea o une a un evento de grupo (capacidad = Service.maxParticipants)
+    async createOrJoinGroupEvent(
+        tx: Prisma.TransactionClient,
+        params: {
+            calendarId: string;
+            seg: { serviceId: string; userId: string; start: moment.Moment; end: moment.Moment };
+            svc: {
+                id: string;
+                name?: string | null;
+                price?: number | null;
+                discount?: number | null;
+                duration?: number | null;
+                maxParticipants?: number | null; // <=1 => individual
+            };
+            timeZoneWorkspace: string;
+            note?: string | null;
+            customer: { id: string; idClientWorkspace: string };
+        }
+    ): Promise<{ event: Event; action: "created" | "joined" | "already-in" }> {
+        const { calendarId, seg, svc, timeZoneWorkspace, note, customer } = params;
+        const startDate = seg.start.toDate();
+        const endDate = seg.end.toDate();
+        const capacity = Math.max(1, svc.maxParticipants ?? 1);
+        const isGroup = capacity > 1;
 
-    //     console.log("input de time slots", input)
-    //     // 1) Resolver candidatos por servicio
-    //     const userIdsByService = new Map<string, string[]>();
-    //     for (const a of attendees) {
-    //         if (a.staffId) {
-    //             userIdsByService.set(a.serviceId, [a.staffId]);
-    //         } else {
-    //             const users = await getUsersWhoCanPerformService(idWorkspace, a.serviceId, a.categoryId);
-    //             userIdsByService.set(a.serviceId, users);
-    //         }
-    //     }
+        // 🔒 lock por (pro|servicio)+inicio
+        await tx.$executeRawUnsafe(
+            `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`,
+            `${seg.userId}|${seg.serviceId}`,
+            seg.start.toISOString()
+        );
 
-    //     const allUserIds = Array.from(new Set(Array.from(userIdsByService.values()).flat()));
-    //     if (allUserIds.length === 0) return { timeSlots: [] };
+        // ¿ya existe ese evento exacto?
+        const existing = await tx.event.findFirst({
+            where: {
+                idCalendarFk: calendarId,
+                idServiceFk: seg.serviceId,
+                idUserPlatformFk: seg.userId,
+                startDate,
+                endDate,
+            },
+            select: { id: true },
+        });
 
-    //     // 2) Cargar reglas/horarios
-    //     const businessHours = await this.businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace);
-    //     const workerHoursMap = await this.workerHoursService.getWorkerHoursFromRedis(allUserIds, idCompany);
-    //     const temporaryHoursMap = await this.temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idCompany);
+        if (existing) {
+            if (!isGroup) {
+                // Individual ⇒ si ya está el mismo cliente, idempotente; si no, ocupado
+                const same = await tx.eventParticipant.findFirst({
+                    where: {
+                        idEventFk: existing.id,
+                        idClientWorkspaceFk: customer.idClientWorkspace,
+                        deletedDate: null,
+                    },
+                    select: { id: true },
+                });
+                const ev = await tx.event.findUnique({ where: { id: existing.id } });
+                if (same) return { event: ev!, action: "already-in" };
+                throw new Error("Ese horario ya está ocupado.");
+            }
 
-    //     // 3) Eventos del día (todos los usuarios candidatos)
-    //     const dayStartLocal = moment.tz(`${date}T00:00:00`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace);
-    //     const dayEndLocal = dayStartLocal.clone().endOf("day");
-    //     const dayStartUTC = dayStartLocal.clone().utc();
-    //     const dayEndUTC = dayEndLocal.clone().utc();
+            // Grupal ⇒ comprueba plazas y si ya está dentro
+            const [count, already] = await Promise.all([
+                tx.eventParticipant.count({ where: { idEventFk: existing.id, deletedDate: null } }),
+                tx.eventParticipant.findFirst({
+                    where: {
+                        idEventFk: existing.id,
+                        idClientWorkspaceFk: customer.idClientWorkspace,
+                        deletedDate: null,
+                    },
+                    select: { id: true },
+                }),
+            ]);
 
-    //     const events = await getEventsOverlappingRange(
-    //         allUserIds,
-    //         // dayStartUTC.toISOString(),
-    //         // dayEndUTC.toISOString(),
-    //         date,
-    //         date,
-    //         excludeEventId
-    //     );
+            const ev = await tx.event.findUnique({ where: { id: existing.id } });
 
-    //     console.log("events", events?.map(e => {
-    //         console.log("event", e?.id, e?.startDate);
-    //     }))
+            if (already) return { event: ev!, action: "already-in" };
+            if (count >= capacity) throw new Error("No quedan plazas disponibles en ese grupo.");
 
-    //     // 4) Construye “turnos de trabajo” por usuario para ese día (en TZ local)
-    //     const weekDay = dayStartLocal.format("dddd").toUpperCase(); // MONDAY...
-    //     const bizShifts: string[][] = (() => {
-    //         const biz = (businessHours as any)?.[weekDay];
-    //         return biz === null ? [] : Array.isArray(biz) ? biz : [];
-    //     })();
+            await tx.eventParticipant.create({
+                data: {
+                    idEventFk: existing.id,
+                    idClientFk: customer.id,
+                    idClientWorkspaceFk: customer.idClientWorkspace,
+                },
+            });
 
-    //     // Por usuario, resolvemos shifts aplicando temporary > worker > business
-    //     const shiftsByUserLocal: Record<
-    //         string,
-    //         Array<{ start: moment.Moment; end: moment.Moment }>
-    //     > = {};
+            return { event: ev!, action: "joined" };
+        }
 
-    //     for (const uid of allUserIds) {
-    //         let workShifts: string[][] = [];
-    //         const tmp = (temporaryHoursMap as any)?.[uid]?.[date];
+        // Evitar solapes con otros eventos del pro
+        const overlappingOther = await tx.event.findFirst({
+            where: {
+                idUserPlatformFk: seg.userId,
+                startDate: { lt: endDate },
+                endDate: { gt: startDate },
+            },
+            select: { id: true },
+        });
+        if (overlappingOther) throw new Error("Ese profesional ya tiene otro evento en ese horario.");
 
-    //         if (tmp === null) {
-    //             workShifts = []; // cerrado por temporal
-    //         } else if (Array.isArray(tmp) && tmp.length > 0) {
-    //             workShifts = tmp;
-    //         } else {
-    //             const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
-    //             if (workerDay === null) workShifts = []; // cerrado explícito
-    //             else if (Array.isArray(workerDay) && workerDay.length > 0) workShifts = workerDay;
-    //             else workShifts = bizShifts; // fallback negocio
-    //         }
+        // Crear evento
+        const ev = await tx.event.create({
+            data: {
+                calendar: { connect: { id: calendarId } },
+                service: { connect: { id: seg.serviceId } },
+                idUserPlatformFk: seg.userId,
+                startDate,
+                endDate,
+                title: svc.name ?? "Cita",
+                description: note ?? null,
+                timeZone: timeZoneWorkspace,
+                eventPurposeType: "APPOINTMENT",
+                serviceNameSnapshot: svc.name ?? null,
+                servicePriceSnapshot: typeof svc.price === "number" ? svc.price : null,
+                serviceDiscountSnapshot: typeof svc.discount === "number" ? svc.discount : null,
+                serviceDurationSnapshot: typeof svc.duration === "number" ? svc.duration : null,
+                eventParticipant: {
+                    create: {
+                        idClientFk: customer.id,
+                        idClientWorkspaceFk: customer.idClientWorkspace,
+                    },
+                },
+            },
+        });
 
-    //         shiftsByUserLocal[uid] = (workShifts || []).map(([s, e]) => ({
-    //             start: moment.tz(`${date}T${s}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-    //             end: moment.tz(`${date}T${e}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-    //         }));
-    //     }
-
-    //     // 5) Construye “bloques libres” por usuario restando eventos
-    //     const eventsByUser = groupEventsByUser(events);
-    //     const freeWindowsByUser: Record<string, Array<{ start: moment.Moment; end: moment.Moment }>> = {};
-
-    //     const nowLocal = moment.tz(timeZoneWorkspace);
-    //     const isToday = dayStartLocal.isSame(nowLocal, "day");
-
-    //     for (const uid of allUserIds) {
-    //         const busy = (eventsByUser[uid] || []).map(ev => ({
-    //             // start: moment.utc(ev.startDate).tz(timezone),
-    //             // end: moment.utc(ev.endDate).tz(timezone),
-    //             start: moment(ev.startDate).tz(timeZoneWorkspace),
-    //             end: moment(ev.endDate).tz(timeZoneWorkspace),
-    //         }));
-
-    //         // console.log("mira que es busy", busy)
-
-    //         const rawShifts = shiftsByUserLocal[uid] || [];
-    //         let free: Array<{ start: moment.Moment; end: moment.Moment }> = [];
-
-    //         // para cada shift, recorta por eventos
-    //         for (const sh of rawShifts) {
-    //             // si es hoy, no ofrecer horas pasadas
-    //             const shiftStart = sh.start.clone();
-    //             if (isToday && shiftStart.isBefore(nowLocal)) {
-    //                 shiftStart.minute(Math.ceil(nowLocal.minute() / intervalMinutes) * intervalMinutes).second(0);
-    //                 if (shiftStart.isAfter(sh.end)) continue;
-    //             }
-    //             const pieces = subtractBusyFromShift(shiftStart, sh.end, busy);
-    //             free.push(...pieces);
-    //         }
-    //         // normaliza por si hay solapes contiguos
-    //         free = mergeTouchingWindows(free);
-    //         freeWindowsByUser[uid] = free;
-    //     }
-
-    //     // console.log("mira que es freeWindowsByUser", freeWindowsByUser)
-
-    //     // 6) Genera candidatos de inicio (toda la jornada, saltando intervalMinutes)
-    //     const totalDuration = attendees.reduce((acc, a) => acc + a.durationMin, 0);
-    //     const candidates: moment.Moment[] = [];
-    //     {
-    //         let cursor = dayStartLocal.clone();
-    //         if (isToday && cursor.isBefore(nowLocal)) {
-    //             cursor = nowLocal.clone().minute(Math.ceil(nowLocal.minute() / intervalMinutes) * intervalMinutes).second(0);
-    //         }
-    //         // límite de inicio: que quepa el bloque completo dentro del día (y, en la práctica, dentro de algún turno)
-    //         const latest = dayEndLocal.clone().subtract(totalDuration, "minutes");
-    //         while (!cursor.isAfter(latest)) {
-    //             candidates.push(cursor.clone());
-    //             cursor.add(intervalMinutes, "minutes");
-    //         }
-    //     }
-
-    //     // 7) Para cada candidato, intenta asignar todos los servicios en secuencia
-    //     const timeSlots: TimeSlot[] = [];
-
-    //     // Prepara “quién puede hacer qué”
-    //     const eligibleUsersByService: Record<string, string[]> = {};
-    //     for (const a of attendees) {
-    //         eligibleUsersByService[a.serviceId] = userIdsByService.get(a.serviceId) ?? [];
-    //     }
-
-    //     for (const start of candidates) {
-    //         const assignment: Array<{
-    //             serviceId: string;
-    //             userId: string;
-    //             start: moment.Moment;
-    //             end: moment.Moment;
-    //         }> = [];
-
-    //         // backtracking/DFS rápido
-    //         const ok = assignSequentially({
-    //             idx: 0,
-    //             start,
-    //             attendees,
-    //             eligibleUsersByService,
-    //             freeWindowsByUser,
-    //             usedByUserAt: [], // reservas que vamos haciendo en este candidato
-    //             assignment,
-    //         });
-
-    //         if (ok) {
-    //             // const end = start.clone().add(totalDuration, "minutes");
-    //             // timeSlots.push({
-    //             //     startLocalISO: start.format("YYYY-MM-DDTHH:mm:ss"),
-    //             //     endLocalISO: end.format("YYYY-MM-DDTHH:mm:ss"),
-    //             //     label: start.format("HH:mm"),
-    //             //     // meta: { assignment: assignment.map(x => ({
-    //             //     //   serviceId: x.serviceId,
-    //             //     //   userId: x.userId,
-    //             //     //   startLocalISO: x.start.format("YYYY-MM-DDTHH:mm:ss"),
-    //             //     //   endLocalISO: x.end.format("YYYY-MM-DDTHH:mm:ss"),
-    //             //     // })) }
-    //             // });
+        return { event: ev, action: "created" };
+    }
 
 
-    //             const end = start.clone().add(totalDuration, "minutes");
-    //             timeSlots.push({
-    //                 startLocalISO: start.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-    //                 endLocalISO: end.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-    //                 label: start.clone().tz(timeZoneClient).format("HH:mm"),
-    //             });
-    //         }
-    //     }
+    async addEventFromWeb(input: AddFromWebInput, deps: AddFromWebDeps) {
+        try {
+            const {
+                idCompany, idWorkspace, timeZoneClient, startLocalISO,
+                attendees, excludeEventId, note, customer,
+            } = input;
+            const {
+                timeZoneWorkspace, businessHoursService, workerHoursService,
+                temporaryHoursService, bookingConfig, cache,
+            } = deps;
 
-    //     return { timeSlots };
-    // }
+            console.log(CONSOLE_COLOR.FgMagenta, "[addEventFromWeb] input:", input, CONSOLE_COLOR.Reset);
+
+            if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany/idWorkspace");
+            if (!timeZoneWorkspace) throw new Error("Falta timeZoneWorkspace");
+            if (!timeZoneClient) throw new Error("Falta timeZoneClient");
+            if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(startLocalISO))
+                throw new Error("startLocalISO debe ser YYYY-MM-DDTHH:mm:ss");
+            if (!Array.isArray(attendees) || attendees.length === 0) throw new Error("attendees vacío");
+            if (!customer?.id) throw new Error("Falta customer.id");
+            if (!customer?.idClientWorkspace) throw new Error("Falta customer.idClientWorkspace");
+
+            console.log(CONSOLE_COLOR.FgCyan, "[addEventFromWeb] startLocalISO:", startLocalISO, CONSOLE_COLOR.Reset);
+
+            const startClient = moment.tz(startLocalISO, "YYYY-MM-DDTHH:mm:ss", timeZoneClient);
+            if (!startClient.isValid()) throw new Error("startLocalISO inválido");
+
+            const startWS = startClient.clone().tz(timeZoneWorkspace);
+            const dateWS = startWS.format("YYYY-MM-DD");
+
+            const todayWS = moment().tz(timeZoneWorkspace).startOf("day");
+            if (startWS.clone().startOf("day").isBefore(todayWS, "day")) {
+                console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Día pasado en TZ workspace", CONSOLE_COLOR.Reset);
+                return { ok: false };
+            }
+
+            const { roundedNow, isToday } = computeSlotConfig({
+                // alignMode: bookingConfig?.slot?.alignMode ?? "service",
+                // attendees,
+                intervalMinutes: 5,
+                timeZoneWorkspace,
+                dayStartLocal: startWS.clone().startOf("day"),
+            });
+            if (isToday && startWS.isBefore(roundedNow)) {
+                console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Hora pasada en TZ workspace", CONSOLE_COLOR.Reset);
+                return { ok: false };
+            }
+
+            // 2) Elegibles por servicio (quién puede hacer el servicio)
+            const userIdsByService = new Map<string, string[]>();
+            for (const a of attendees) {
+                if (a.staffId) userIdsByService.set(a.serviceId, [a.staffId]);
+                else {
+                    const users = await getUsersWhoCanPerformService_SPECIAL(
+                        idWorkspace, a.serviceId, a.categoryId, cache
+                    );
+                    userIdsByService.set(a.serviceId, users);
+                }
+            }
+            const allUserIds = Array.from(new Set(Array.from(userIdsByService.values()).flat()));
+            if (allUserIds.length === 0) {
+                console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] No hay profesionales elegibles", CONSOLE_COLOR.Reset);
+                return { ok: false };
+            }
+
+            // 3) Reglas del día (ventanas de trabajo reales por user)
+            const businessHours = await businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace);
+            const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(allUserIds, idWorkspace);
+            const temporaryHoursMap = await temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idWorkspace, { date: dateWS });
+
+            const events = await getEventsOverlappingRange_SPECIAL(allUserIds, dateWS, dateWS, excludeEventId);
+            const eventsByUser = groupEventsByUser_SPECIAL(events);
+
+            type MM = { start: moment.Moment; end: moment.Moment };
+            const weekDay = startWS.format("dddd").toUpperCase() as any;
+            const bizShifts: string[][] = (() => {
+                const biz = (businessHours as any)?.[weekDay];
+                return biz === null ? [] : Array.isArray(biz) ? biz : [];
+            })();
+
+            const shiftsByUserLocal: Record<string, MM[]> = {};
+            for (const uid of allUserIds) {
+                let workShifts: string[][] = [];
+                const tmp = (temporaryHoursMap as any)?.[uid]?.[dateWS];
+                if (tmp === null) workShifts = [];
+                else if (Array.isArray(tmp) && tmp.length > 0) workShifts = tmp;
+                else {
+                    const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
+                    if (workerDay === null) workShifts = [];
+                    else if (Array.isArray(workerDay) && workerDay.length > 0) workShifts = workerDay;
+                    else workShifts = bizShifts;
+                }
+                shiftsByUserLocal[uid] = (workShifts || []).map(([s, e]) => ({
+                    start: moment.tz(`${dateWS}T${s}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
+                    end: moment.tz(`${dateWS}T${e}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
+                }));
+            }
+
+            const freeWindowsByUser: Record<string, MM[]> = {};
+            for (const uid of allUserIds) {
+                const busy = (eventsByUser[uid] || []).map((ev) => ({
+                    start: moment(ev.startDate).tz(timeZoneWorkspace),
+                    end: moment(ev.endDate).tz(timeZoneWorkspace),
+                }));
+                const raw = shiftsByUserLocal[uid] || [];
+                const free: MM[] = [];
+                for (const sh of raw) {
+                    const startClamped = isToday ? moment.max(sh.start, roundedNow) : sh.start.clone();
+                    if (!startClamped.isBefore(sh.end)) continue;
+                    free.push(...subtractBusyFromShift_SPECIAL(startClamped, sh.end, busy));
+                }
+                freeWindowsByUser[uid] = mergeTouchingWindows_SPECIAL(free);
+            }
+
+            // 3.5) Snapshot servicios (saber si es grupal)
+            const serviceById = await _getServicesSnapshotById({ idCompany, idWorkspace, attendees });
+
+            // ==== Pesos RR (0–100; default 100) ====
+            const rawIds = Array.isArray(bookingConfig?.resources?.ids)
+                ? bookingConfig!.resources!.ids as unknown as [string, number][]
+                : [];
+
+            const weightsMap: Record<string, number> = Object.fromEntries(
+                rawIds.map(([id, w]) => [id, Number.isFinite(w) ? w : 100])
+            );
+
+
+            // === PATH ESPECIAL: 1 servicio GRUPAL ===
+            const isSingleGroup =
+                attendees.length === 1 &&
+                Math.max(1, serviceById[attendees[0].serviceId]?.maxParticipants ?? 1) > 1;
+
+            let assignment: Array<{ serviceId: string; userId: string; start: moment.Moment; end: moment.Moment }> = [];
+
+            if (isSingleGroup) {
+                const svcReq = attendees[0];
+                const svcSnap = serviceById[svcReq.serviceId];
+                const dur = svcReq.durationMin ?? (svcSnap?.duration ?? 0);
+                const endWS = startWS.clone().add(dur, "minutes");
+                const elig = userIdsByService.get(svcReq.serviceId) ?? [];
+
+                // 1) intentar UNIRSE a un evento existente por solape
+                const calendar = await prisma.calendar.findFirst({
+                    where: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace, deletedDate: null },
+                    select: { id: true },
+                });
+
+                if (calendar && elig.length) {
+                    const overlappingEvents = await prisma.event.findMany({
+                        where: {
+                            idCalendarFk: calendar.id,
+                            idServiceFk: svcReq.serviceId,
+                            idUserPlatformFk: { in: elig },
+                            startDate: { lt: endWS.toDate() },
+                            endDate: { gt: startWS.toDate() },
+                            ...(excludeEventId ? { id: { not: excludeEventId } } : {}),
+                            deletedDate: null,
+                        },
+                        orderBy: { startDate: "asc" },
+                        select: {
+                            id: true,
+                            idUserPlatformFk: true,
+                            startDate: true,
+                            endDate: true,
+                            eventParticipant: { where: { deletedDate: null }, select: { idClientFk: true, idClientWorkspaceFk: true } },
+                        },
+                    });
+
+                    const pick = (() => {
+                        if (!overlappingEvents.length) return null;
+                        const exact = overlappingEvents.find(ev =>
+                            moment(ev.startDate).isSame(startWS, "minute") &&
+                            moment(ev.endDate).isSame(endWS, "minute")
+                        );
+                        if (exact) return exact;
+                        return overlappingEvents
+                            .map(ev => ({ ev, d: Math.abs(moment(ev.startDate).diff(startWS, "minutes")) }))
+                            .sort((a, b) => a.d - b.d)[0].ev;
+                    })();
+
+                    if (pick && pick.idUserPlatformFk) {
+                        const capacity = Math.max(1, svcSnap?.maxParticipants ?? 1);
+                        const booked = pick.eventParticipant.length;
+                        const hasSeat = booked < capacity;
+
+                        const alreadyIn = pick.eventParticipant.some(p =>
+                            p.idClientFk === customer.id || p.idClientWorkspaceFk === customer.idClientWorkspace
+                        );
+
+                        if (hasSeat && !alreadyIn) {
+                            assignment = [{
+                                serviceId: svcReq.serviceId,
+                                userId: pick.idUserPlatformFk,
+                                start: startWS.clone().seconds(0).milliseconds(0),
+                                end: endWS.clone().seconds(0).milliseconds(0),
+                            }];
+                        }
+                    }
+                }
+
+                // 2) si no había evento con plazas, crear el primero con RR
+                if (assignment.length === 0) {
+                    const eligAvail = (userIdsByService.get(svcReq.serviceId) ?? []).filter(uid =>
+                        (freeWindowsByUser[uid] ?? []).some(w => startWS.isSameOrAfter(w.start) && endWS.isSameOrBefore(w.end))
+                    );
+
+                    const chosen = await this.chooseStaffWithRR(
+                        idWorkspace,
+                        undefined, // idBookingPage (no lo tenemos aquí)
+                        svcReq.serviceId,
+                        startWS.toDate(),
+                        endWS.toDate(),
+                        eligAvail,
+                        weightsMap
+                    );
+                    if (!chosen) {
+                        console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Grupo: ningún pro disponible para el slot", CONSOLE_COLOR.Reset);
+                        return { ok: false };
+                    }
+                    assignment = [{
+                        serviceId: svcReq.serviceId,
+                        userId: chosen,
+                        start: startWS.clone().seconds(0).milliseconds(0),
+                        end: endWS.clone().seconds(0).milliseconds(0),
+                    }];
+                }
+            } else {
+                // === PATH NORMAL ===
+                const isSingleIndividual =
+                    attendees.length === 1 &&
+                    Math.max(1, serviceById[attendees[0].serviceId]?.maxParticipants ?? 1) === 1;
+
+                if (isSingleIndividual) {
+                    // RR para individual (sin backtracking)
+                    const svcReq = attendees[0];
+                    const dur = svcReq.durationMin ?? (serviceById[svcReq.serviceId]?.duration ?? 0);
+                    const endWS = startWS.clone().add(dur, "minutes");
+
+                    const eligAvail = (userIdsByService.get(svcReq.serviceId) ?? []).filter(uid =>
+                        (freeWindowsByUser[uid] ?? []).some(w => startWS.isSameOrAfter(w.start) && endWS.isSameOrBefore(w.end))
+                    );
+
+                    const chosen = await this.chooseStaffWithRR(
+                        idWorkspace,
+                        undefined, // idBookingPage (no lo tenemos aquí)
+                        svcReq.serviceId,
+                        startWS.toDate(),
+                        endWS.toDate(),
+                        eligAvail,
+                        weightsMap
+                    );
+                    if (!chosen) {
+                        console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Individual: ningún pro disponible para el slot", CONSOLE_COLOR.Reset);
+                        return { ok: false };
+                    }
+
+                    assignment = [{
+                        serviceId: svcReq.serviceId,
+                        userId: chosen,
+                        start: startWS.clone().seconds(0).milliseconds(0),
+                        end: endWS.clone().seconds(0).milliseconds(0),
+                    }];
+                } else {
+                    // Multi-servicio → tu flujo actual (sin RR)
+                    // Verificación previa
+                    for (const svc of attendees) {
+                        const elig = userIdsByService.get(svc.serviceId) ?? [];
+                        const algunoTieneHueco = elig.some((uid) =>
+                            (freeWindowsByUser[uid] ?? []).some(
+                                (w) => w.end.diff(w.start, "minutes") >= svc.durationMin
+                            )
+                        );
+                        if (!algunoTieneHueco) {
+                            console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] No hay hueco suficiente para al menos uno de los servicios.", CONSOLE_COLOR.Reset);
+                            return { ok: false };
+                        }
+                    }
+
+                    const eligibleUsersByService: Record<string, string[]> = {};
+                    for (const a of attendees) {
+                        eligibleUsersByService[a.serviceId] = userIdsByService.get(a.serviceId) ?? [];
+                    }
+
+                    const _assignment: typeof assignment = [];
+                    const ok = assignSequentially_SPECIAL({
+                        idx: 0,
+                        start: startWS.clone().seconds(0).milliseconds(0),
+                        attendees,
+                        eligibleUsersByService,
+                        freeWindowsByUser,
+                        usedByUserAt: [],
+                        assignment: _assignment,
+                    });
+                    if (!ok) {
+                        console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] El inicio elegido ya no está disponible (cambió la disponibilidad).", CONSOLE_COLOR.Reset);
+                        return { ok: false };
+                    }
+                    assignment = _assignment;
+                }
+            }
+
+            // total/end para la respuesta
+            const totalDuration = attendees.reduce((acc, a) => acc + a.durationMin, 0);
+            const endWS = startWS.clone().add(totalDuration, "minutes");
+
+            // 6) Calendar & transacción (group-aware)
+            const calendar = await prisma.calendar.upsert({
+                where: { idCompanyFk_idWorkspaceFk: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace } },
+                update: {},
+                create: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace },
+            });
+
+            const created = await prisma.$transaction(async (tx) => {
+                const events = [];
+                for (const seg of assignment) {
+                    const svc = serviceById[seg.serviceId];
+                    if (!svc) throw new Error("Servicio no disponible o no pertenece a este workspace.");
+                    const ev = await this.createOrJoinGroupEvent(tx, {
+                        calendarId: calendar.id,
+                        seg,
+                        svc,
+                        timeZoneWorkspace,
+                        note,
+                        customer: { id: customer.id, idClientWorkspace: customer.idClientWorkspace! },
+                    });
+                    events.push(ev);
+                }
+                return events;
+            });
+
+            return {
+                ok: true as const,
+                appointment: {
+                    startLocalISO: startWS.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+                    endLocalISO: endWS.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+                    timeZoneClient,
+                    timeZoneWorkspace,
+                    totalDurationMin: totalDuration,
+                },
+                assignments: assignment.map((a) => ({
+                    serviceId: a.serviceId,
+                    userId: a.userId,
+                    startUTC: a.start.toISOString(),
+                    endUTC: a.end.toISOString(),
+                    startLocalClient: a.start.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+                    endLocalClient: a.end.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+                })),
+                created,
+            };
+        } catch (error: any) {
+            console.error("Error en EventV2Service:", error);
+            throw new CustomError("Error al crear evento", error);
+        }
+    }
+
 
 
     /**
-  * Crea una cita *si y solo si* el inicio elegido es todavía válido.
-  * - Recalcula ventanas libres en el día y asigna profesionales (backtracking).
-  * - Revalida dentro de una transacción para evitar condiciones de carrera.
-  * - Guarda 1 evento por profesional/servicio (ajusta TODOs a tu schema).
-  */
-    public async addEventFromWeb(input: AddFromWebInput, deps: AddFromWebDeps) {
-        const payload = AddFromWebSchema.parse(input);
+    * Elige un staff aplicando Weighted Smooth Round Robin,
+    * con lock/hold temporal en Redis para evitar colisiones.
+    *
+    * Ahora está “scoped” por booking page.
+    *
+    * @param idWorkspace   - workspace actual
+    * @param idBookingPage - booking page dentro del workspace
+    * @param idService     - servicio a reservar
+    * @param start         - inicio del slot (Date)
+    * @param end           - fin del slot (Date)
+    * @param eligibles     - userIds elegibles (ya filtrados por disponibilidad)
+    * @param weightsMap    - mapa userId -> peso (0–100), default 100
+    */
+    chooseStaffWithRR = async (
+        idWorkspace: string,
+        idBookingPage: string,
+        idService: string,
+        start: Date,
+        end: Date,
+        eligibles: string[],
+        weightsMap: Record<string, number>
+    ): Promise<string | null> => {
+        if (!eligibles.length) return null;
 
-        const {
-            idCompany,
+        const rr = RedisStrategyFactory.getStrategy("roundRobin") as IRedisRoundRobinStrategy;
+
+        // 1) Hold del slot (scoped por workspace + bookingPage + service)
+        const acquired = await rr.acquireHold({
             idWorkspace,
-            timeZoneClient,
-            startLocalISO,
-            attendees,
-            excludeEventId,
-            customer,
-            note,
-        } = payload;
+            idBookingPage,
+            idService,
+            startISO: start.toISOString(),
+            endISO: end.toISOString(),
+            ttlSec: TIME_SECONDS.MINUTE,
+        });
+        if (!acquired) return null; // otro proceso está reservando este mismo slot
 
-        const { timeZoneWorkspace, businessHoursService, workerHoursService, temporaryHoursService, bookingConfig, cache } = deps;
-
-        // 1) Normalizaciones base
-        const startClient = moment.tz(startLocalISO, "YYYY-MM-DDTHH:mm:ss", timeZoneClient);
-        if (!startClient.isValid()) throw new Error("startLocalISO inválido");
-
-        const startWS = startClient.clone().tz(timeZoneWorkspace);
-        const dateWS = startWS.format("YYYY-MM-DD");
-
-        // No permitir días pasados (en TZ del workspace)
-        const todayWS = moment().tz(timeZoneWorkspace).startOf("day");
-        if (startWS.clone().startOf("day").isBefore(todayWS, "day")) {
-            throw new Error("El día seleccionado ya ha pasado en el huso horario del negocio.");
-        }
-
-        // 2) Configurar step/now según bookingConfig
-        const { stepMinutes, roundedNow, isToday } = computeSlotConfig({
-            alignMode: bookingConfig?.slot?.alignMode ?? "service",
-            attendees,
-            // TODO preparar el config de booking para dar el tiempo
-            intervalMinutes: 5,               // si tu UI usa otro, pásalo aquí
-            timeZoneWorkspace,
-            dayStartLocal: startWS.clone().startOf("day"),
+        // 2) Weighted Smooth RR (usa pesos 0–100; default 100)
+        const chosen = await rr.pickWeightedSmoothRR({
+            idWorkspace,
+            idBookingPage,
+            // idService, // es global
+            eligibles,
+            weights: weightsMap,
+            stateTTLSec: TIME_SECONDS.WEEK * 2
         });
 
-        // Si es hoy, forzar que el inicio sea ≥ "ahora redondeado"
-        if (isToday && startWS.isBefore(roundedNow)) {
-            throw new Error("La hora seleccionada ya no está disponible.");
-        }
-
-        // 3) Elegibles por servicio
-        const userIdsByService = new Map<string, string[]>();
-        for (const a of attendees) {
-            if (a.staffId) {
-                userIdsByService.set(a.serviceId, [a.staffId]);
-            } else {
-                const users = await getUsersWhoCanPerformService_SPECIAL(
-                    idWorkspace,
-                    a.serviceId,
-                    a.categoryId,
-                    cache
-                );
-                userIdsByService.set(a.serviceId, users);
-            }
-        }
-        const allUserIds = Array.from(new Set(Array.from(userIdsByService.values()).flat()));
-        if (allUserIds.length === 0) throw new Error("No hay profesionales elegibles para los servicios seleccionados.");
-
-        // 4) Reglas/horarios del día (en TZ workspace)
-        const businessHours = await businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace);
-        const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(allUserIds, idWorkspace);
-        const temporaryHoursMap = await temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idWorkspace, { date: dateWS });
-
-        // 5) Eventos del día (para calcular ventanas libres)
-        const events = await getEventsOverlappingRange_SPECIAL(allUserIds, dateWS, dateWS, excludeEventId);
-        const eventsByUser = groupEventsByUser_SPECIAL(events);
-
-        // 6) Construir ventanas libres por usuario (aplicando clamp si es hoy)
-        type MM = { start: moment.Moment; end: moment.Moment };
-        const weekDay = startWS.format("dddd").toUpperCase() as any; // Weekday
-        const bizShifts: string[][] = (() => {
-            const biz = (businessHours as any)?.[weekDay];
-            return biz === null ? [] : Array.isArray(biz) ? biz : [];
-        })();
-
-        const shiftsByUserLocal: Record<string, MM[]> = {};
-        for (const uid of allUserIds) {
-            let workShifts: string[][] = [];
-            const tmp = (temporaryHoursMap as any)?.[uid]?.[dateWS];
-
-            if (tmp === null) {
-                workShifts = [];
-            } else if (Array.isArray(tmp) && tmp.length > 0) {
-                workShifts = tmp;
-            } else {
-                const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
-                if (workerDay === null) workShifts = [];
-                else if (Array.isArray(workerDay) && workerDay.length > 0) workShifts = workerDay;
-                else workShifts = bizShifts;
-            }
-
-            shiftsByUserLocal[uid] = (workShifts || []).map(([s, e]) => ({
-                start: moment.tz(`${dateWS}T${s}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-                end: moment.tz(`${dateWS}T${e}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-            }));
-        }
-
-        const freeWindowsByUser: Record<string, MM[]> = {};
-        for (const uid of allUserIds) {
-            const busy = (eventsByUser[uid] || []).map((ev) => ({
-                start: moment(ev.startDate).tz(timeZoneWorkspace),
-                end: moment(ev.endDate).tz(timeZoneWorkspace),
-            }));
-
-            const raw = shiftsByUserLocal[uid] || [];
-            const free: MM[] = [];
-            for (const sh of raw) {
-                const startClamped = isToday ? moment.max(sh.start, roundedNow) : sh.start.clone();
-                if (!startClamped.isBefore(sh.end)) continue;
-                free.push(...subtractBusyFromShift_SPECIAL(startClamped, sh.end, busy));
-            }
-            freeWindowsByUser[uid] = mergeTouchingWindows_SPECIAL(free);
-        }
-
-        // 7) Verificación de hueco para cada servicio + backtracking de asignación
-        //    (Comprobamos que TODOS los servicios tengan ventana suficiente)
-        for (const svc of attendees) {
-            const elig = userIdsByService.get(svc.serviceId) ?? [];
-            const algunoTieneHueco = elig.some((uid) =>
-                (freeWindowsByUser[uid] ?? []).some((w) => w.end.diff(w.start, "minutes") >= svc.durationMin)
-            );
-            if (!algunoTieneHueco) throw new Error("No hay hueco suficiente para al menos uno de los servicios.");
-        }
-
-        // Correr backtracking arrancando en el *inicio elegido*
-        const eligibleUsersByService: Record<string, string[]> = {};
-        for (const a of attendees) {
-            eligibleUsersByService[a.serviceId] = userIdsByService.get(a.serviceId) ?? [];
-        }
-
-        const assignment: Array<{ serviceId: string; userId: string; start: moment.Moment; end: moment.Moment }> = [];
-        const ok = assignSequentially_SPECIAL({
-            idx: 0,
-            start: startWS.clone().seconds(0).milliseconds(0), // inicio exacto elegido, pisado a segundos=0
-            attendees,
-            eligibleUsersByService,
-            freeWindowsByUser,
-            usedByUserAt: [],
-            assignment,
-        });
-
-        if (!ok) {
-            throw new Error("El inicio elegido ya no está disponible (cambió la disponibilidad). Elige otro horario.");
-        }
-
-        // Rango total de la cita (secuencial)
-        const totalDuration = attendees.reduce((acc, a) => acc + a.durationMin, 0);
-        const endWS = startWS.clone().add(totalDuration, "minutes");
-
-        // 8) Guardado con verificación anti-carrera dentro de transacción
-        const created = await prisma.$transaction(async (tx) => {
-            // Re-check solapamientos *justo antes de crear*, por si entre la consulta y aquí se creó algo nuevo.
-            const overlapping = await tx.event.findMany({
-                where: {
-                    idUserPlatformFk: { in: assignment.map(a => a.userId) },
-                    startDate: { lt: endWS.toDate() },
-                    endDate: { gt: startWS.toDate() },
-                    ...(excludeEventId ? { id: { not: excludeEventId } } : {}),
-                },
-                select: { id: true, idUserPlatformFk: true, startDate: true, endDate: true },
+        if (!chosen) {
+            // si no pudimos elegir, liberamos el hold
+            await rr.releaseHold({
+                idWorkspace,
+                idBookingPage,
+                idService,
+                startISO: start.toISOString(),
+                endISO: end.toISOString(),
             });
+            return null;
+        }
 
-            if (overlapping.length) {
-                throw new Error("Se creó otra reserva en paralelo y ya no queda hueco. Prueba con otro horario.");
-            }
+        // Nota: deja el hold vivo hasta confirmar creación; si abortas luego, libera el hold.
+        return chosen;
+    };
 
-            // 💾 Inserciones
-            // ➜ Si en tu modelo existe un "parent appointment" + "segments", crea primero el padre y luego los hijos.
-            // ➜ Aquí creamos 1 evento por servicio/profesional.
-            const events = [];
-            for (const seg of assignment) {
-                const data: any = {
-                    idCompanyFk: idCompany,        // TODO: confirma nombres de columnas
-                    idWorkspaceFk: idWorkspace,    // TODO: confirma nombres de columnas
-                    idUserPlatformFk: seg.userId,  // profesional asignado
-                    startDate: seg.start.toDate(), // en UTC real
-                    endDate: seg.end.toDate(),     // en UTC real
-                    // Opcional/si existe:
-                    // serviceId: seg.serviceId,
-                    // note,
-                    // customerId: customer?.id,
-                    // source: "public", status: "CONFIRMED" | ...
-                };
 
-                const ev = await tx.event.create({ data });
-                events.push(ev);
-            }
 
-            return events;
-        });
 
-        // 9) Respuesta: útil para el front y para otros servicios
-        return {
-            ok: true as const,
-            appointment: {
-                startLocalISO: startWS.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-                endLocalISO: endWS.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-                timeZoneClient,
-                timeZoneWorkspace,
-                totalDurationMin: totalDuration,
-            },
-            assignments: assignment.map((a) => ({
-                serviceId: a.serviceId,
-                userId: a.userId,
-                startUTC: a.start.toISOString(),
-                endUTC: a.end.toISOString(),
-                startLocalClient: a.start.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-                endLocalClient: a.end.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-            })),
-            created, // registros de prisma.event
-        };
-    }
 
 }

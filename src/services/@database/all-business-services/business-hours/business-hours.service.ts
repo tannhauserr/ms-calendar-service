@@ -306,7 +306,7 @@ export class BusinessHourService {
         }
 
         // Guardar en Redis para futuras consultas
-        await businessHoursStrategy.saveBusinessHours(idWorkspace, businessHours, TIME_SECONDS.SECOND);
+        await businessHoursStrategy.saveBusinessHours(idWorkspace, businessHours, TIME_SECONDS.HOUR);
 
         console.log("Horarios de negocio guardados en Redis");
 

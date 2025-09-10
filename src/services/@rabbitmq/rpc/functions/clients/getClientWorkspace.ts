@@ -15,6 +15,7 @@ import { v4 as uuidv4 } from "uuid";
 export async function getClientstByIdClientAndIdWorkspace(
     idWorkspace: string,
     idClientList: string[],
+    idCompany?: string
 ): Promise<ClientWorkspace[]> {
     const rpcService = RabbitRpcService.instance;
     const correlationId = uuidv4(); // generar un ID único para la correlación

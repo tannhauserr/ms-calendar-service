@@ -10,18 +10,47 @@ export class ServiceService {
 
     async addService(item: Prisma.ServiceCreateInput): Promise<Service> {
         try {
-
+            // Normalizar valores numéricos
             if (item?.duration) {
-                item.duration = Number(item?.duration || 0);
+                (item as any).duration = Number((item as any).duration || 0);
             }
             if (item?.price) {
-                item.price = Number(item?.price || 0);
+                (item as any).price = Number((item as any).price || 0);
             }
 
+            if (item?.discount) {
+                (item as any).discount = Number((item as any).discount || 0);
+            }
 
+            if (item?.maxParticipants) {
+                (item as any).maxParticipants = Number((item as any).maxParticipants || 1);
+            }
+
+            // Preparar relaciones si viene un array de categorías desde el frontend
+            const data: any = { ...item };
+            // Eliminar id vacío si viene
+            if ((data as any).id === "" || (data as any).id === null) {
+                delete (data as any).id;
+            }
+
+            // Si idCategoryFk viene como array (puede ser array de ids o array de objetos {id,name})
+            if (Array.isArray((data as any).idCategoryFk)) {
+                const cats = (data as any).idCategoryFk as any[];
+                // Mapear a categoryServices.create con posición
+                data.categoryServices = {
+                    create: cats.map((c, idx) => ({
+                        idCategoryFk: typeof c === 'string' ? c : c?.id,
+                        position: idx + 1,
+                    })),
+                };
+                // eliminar la propiedad inválida que Prisma no acepta directamente
+                delete data.idCategoryFk;
+            }
+
+            // Finalmente crear el servicio incluyendo las relaciones preparadas
             return await prisma.service.create({
                 data: {
-                    ...item,
+                    ...data,
                     createdDate: new Date(),
                     updatedDate: new Date(),
                 },
@@ -99,6 +128,22 @@ export class ServiceService {
             const id = item.id as string;
 
             delete (item as any)?.userServices; // Eliminar la propiedad userServices del objeto item
+
+
+            if (item?.duration) {
+                (item as any).duration = Number((item as any).duration || 0);
+            }
+            if (item?.price) {
+                (item as any).price = Number((item as any).price || 0);
+            }
+
+            if (item?.discount) {
+                (item as any).discount = Number((item as any).discount || 0);
+            }
+
+            if (item?.maxParticipants) {
+                (item as any).maxParticipants = Number((item as any).maxParticipants || 1);
+            }
 
             // 1. Obtener el registro original para comparar los campos
             const oldRecord = await prisma.service.findUnique({
