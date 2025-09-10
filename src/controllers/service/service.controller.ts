@@ -18,15 +18,17 @@ export class ServiceController {
 
     public add = async (req: any, res: any, next: any) => {
         try {
-            const { body, action, notify } = req.body;
+
+            const body = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            // moderationStatusType false por defecto al crear
-            body.moderationStatusType = ModerationStatusType.PENDING;
-
-
-            const result = await this.serviceService.addService(body);
+            console.log("Add service request body:", body);
+       
+            const result = await this.serviceService.addService({
+                ...body,
+                moderationStatusType: ModerationStatusType.ACCEPTED
+            });
             res.status(200).json(Response.build("Servicio creado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });

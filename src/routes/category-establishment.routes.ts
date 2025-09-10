@@ -10,14 +10,14 @@
 
 // // Obtener todas las relaciones con paginación
 // router.post('/category-workspaces', [
-//     JWTService.verifyCookieToken,
+//     JWTService.authCookieOrBearer,
 //     OnlyAdminMiddleware.allowRoles(['ROLE_OWNER', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_SUPER_ADMIN', 'ROLE_DEVELOPER', "ROLE_SUPPORT"]),
 //     OnlyAdminMiddleware.accessAuthorized,
 // ], controller.get);
 
 // // Obtener una relación por ID
 // router.get('/category-workspaces/:id', [
-//     JWTService.verifyCookieToken,
+//     JWTService.authCookieOrBearer,
 //     // OnlyAdminMiddleware.accessOnlyAdminOrManager,
 //     OnlyAdminMiddleware.allowRoles(['ROLE_OWNER', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_SUPER_ADMIN', 'ROLE_DEVELOPER', "ROLE_SUPPORT"]),
 //     OnlyAdminMiddleware.accessAuthorized,
@@ -25,7 +25,7 @@
 
 // // Crear una nueva relación
 // router.post('/category-workspaces/add', [
-//     JWTService.verifyCookieToken,
+//     JWTService.authCookieOrBearer,
 //     // OnlyAdminMiddleware.accessOnlyAdminOrManager,
 //     // CheckCompanyMiddleware.validateCompanyAccessInWorkspace,
 //     OnlyAdminMiddleware.allowRoles(['ROLE_OWNER', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_SUPER_ADMIN', 'ROLE_DEVELOPER', "ROLE_SUPPORT"]),
@@ -34,7 +34,7 @@
 
 // // Eliminar múltiples relaciones
 // router.post('/category-workspaces/delete-definitive', [
-//     JWTService.verifyCookieToken,
+//     JWTService.authCookieOrBearer,
 //     OnlyAdminMiddleware.allowRoles(['ROLE_OWNER', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_SUPER_ADMIN', 'ROLE_DEVELOPER', "ROLE_SUPPORT"]),
 //     OnlyAdminMiddleware.accessAuthorized,
 // ], controller.delete);
