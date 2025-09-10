@@ -6,24 +6,24 @@ const router = express.Router();
 const controller = new UserCalendarController();
 
 // // Añadir un nuevo calendario de usuario
-// router.post('/user-calendars/add', JWTService.verifyCookieToken, controller.add);
-// router.post('/user-calendars/add-google-total', JWTService.verifyCookieToken, controller.addGoogleTotal);
+// router.post('/user-calendars/add', JWTService.authCookieOrBearer, controller.add);
+// router.post('/user-calendars/add-google-total', JWTService.authCookieOrBearer, controller.addGoogleTotal);
 
 // // Obtener calendario de usuario por ID
-// router.get('/user-calendars-:id', JWTService.verifyCookieToken, controller.getById);
+// router.get('/user-calendars-:id', JWTService.authCookieOrBearer, controller.getById);
 
 // // Obtener calendario de usuario por ID de usuario
-// router.get('/user-calendars/byUser-:idUserFk', JWTService.verifyCookieToken, controller.getByIdUser);
+// router.get('/user-calendars/byUser-:idUserFk', JWTService.authCookieOrBearer, controller.getByIdUser);
 
 // // Obtener calendario de usuario por ID de calendario
-// router.get('/user-calendars/byCalendar-:idCalendarFk', JWTService.verifyCookieToken, controller.getByIdCalendar);
+// router.get('/user-calendars/byCalendar-:idCalendarFk', JWTService.authCookieOrBearer, controller.getByIdCalendar);
 
 // // Actualizar un calendario de usuario
-// router.post('/user-calendars/update-:id', JWTService.verifyCookieToken, controller.update);
+// router.post('/user-calendars/update-:id', JWTService.authCookieOrBearer, controller.update);
 
 // // Borrar un calendario de usuario
-// // router.post('/user-calendars/delete', JWTService.verifyCookieToken, controller.delete);
-// router.post('/user-calendars/delete-google-total', JWTService.verifyCookieToken, controller.deleteGoogleTotal);
+// // router.post('/user-calendars/delete', JWTService.authCookieOrBearer, controller.delete);
+// router.post('/user-calendars/delete-google-total', JWTService.authCookieOrBearer, controller.deleteGoogleTotal);
 
 
 module.exports = router;

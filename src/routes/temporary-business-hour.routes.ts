@@ -11,7 +11,7 @@ const controller = new TemporaryBusinessHourController();
 // Añadir un nuevo horario de trabajo
 router.post('/temporary-business-hours/add',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.accessOnlyAdminOrManager,
 
         // TODO: No se agrega ya que las fechas vienen de otra manera
@@ -21,24 +21,24 @@ router.post('/temporary-business-hours/add',
     ], controller.add);
 
 // Obtener todos los horarios de trabajo con paginación
-router.post('/temporary-business-hours', JWTService.verifyCookieToken, controller.get);
+router.post('/temporary-business-hours', JWTService.authCookieOrBearer, controller.get);
 
 // Obtener un horario de trabajo por ID
-router.get('/temporary-business-hours-:id', JWTService.verifyCookieToken, controller.getById);
+router.get('/temporary-business-hours-:id', JWTService.authCookieOrBearer, controller.getById);
 
 // Obtener horarios de trabajo por día de la semana
-router.post('/temporary-business-hours/by-date', JWTService.verifyCookieToken, controller.getByDate);
+router.post('/temporary-business-hours/by-date', JWTService.authCookieOrBearer, controller.getByDate);
 
 // Obtener horarios de trabajo por trabajador
-router.post('/temporary-business-hours/by-worker-and-date', JWTService.verifyCookieToken, controller.getByWorkerAndDate);
+router.post('/temporary-business-hours/by-worker-and-date', JWTService.authCookieOrBearer, controller.getByWorkerAndDate);
 
-router.post('/temporary-business-hours/exception/by-worker-and-date-exception', JWTService.verifyCookieToken, controller.getDistinctDatesWithExceptionsByWorker);
+router.post('/temporary-business-hours/exception/by-worker-and-date-exception', JWTService.authCookieOrBearer, controller.getDistinctDatesWithExceptionsByWorker);
 
-router.post('/temporary-business-hours/r-temporary-business', JWTService.verifyCookieToken, controller.getTemporaryHoursFromRedis);
+router.post('/temporary-business-hours/r-temporary-business', JWTService.authCookieOrBearer, controller.getTemporaryHoursFromRedis);
 
 // Actualizar un horario de trabajo
 router.post('/temporary-business-hours/update-:id', [
-    JWTService.verifyCookieToken,
+    JWTService.authCookieOrBearer,
     OnlyAdminMiddleware.accessOnlyAdminOrManager,
 
     // TODO: No se agrega ya que las fechas vienen de otra manera
@@ -49,7 +49,7 @@ router.post('/temporary-business-hours/update-:id', [
 
 // Eliminar un horario de trabajo por ID
 router.post('/temporary-business-hours/delete', [
-    JWTService.verifyCookieToken,
+    JWTService.authCookieOrBearer,
     OnlyAdminMiddleware.accessOnlyAdminOrManager,
     // TODO: No se agrega ya que las fechas vienen de otra manera
     // BusinessHourMiddleware.convertToISOTime_FirstPart,
@@ -58,9 +58,9 @@ router.post('/temporary-business-hours/delete', [
 ], controller.delete);
 
 // Autocompletar horarios de trabajo
-router.post('/temporary-business-hours/autocomplete', JWTService.verifyCookieToken, controller.autocomplete);
+router.post('/temporary-business-hours/autocomplete', JWTService.authCookieOrBearer, controller.autocomplete);
 
 
-router.post('/temporary-business-hours/r-temporary-business-hours', [ JWTService.verifyCookieToken, OnlyAdminMiddleware.accessOnlyAdminOrManagerOrUser, ], controller.getTemporaryHoursFromRedis);
+router.post('/temporary-business-hours/r-temporary-business-hours', [ JWTService.authCookieOrBearer, OnlyAdminMiddleware.accessOnlyAdminOrManagerOrUser, ], controller.getTemporaryHoursFromRedis);
 
 module.exports = router;

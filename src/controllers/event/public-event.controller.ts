@@ -3,22 +3,28 @@ import { Response } from "../../models/messages/response";
 import { BusinessHourService } from "../../services/@database/all-business-services/business-hours/business-hours.service";
 import { TemporaryBusinessHourService } from "../../services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service";
 import { WorkerBusinessHourService } from "../../services/@database/all-business-services/worker-business-hours/worker-business-hours.service";
-import { publicGetAvailableTimeSlots_SPECIAL } from "../../services/@database/event/availability-special.service";
+import { EventTimesService } from "../../services/@database/event/event-times.service";
+// import { publicGetAvailableTimeSlots_SPECIAL } from "../../services/@database/event/availability-special.service";
 import { EventV2Service } from "../../services/@database/event/eventv2.service";
+import { _getServicesSnapshotById } from "../../services/@database/event/util/getInfoServices";
 
 import * as RPC from "../../services/@rabbitmq/rpc/functions";
 import { IRedisSavedWorkspaceStrategy } from "../../services/@redis/cache/interfaces/interfaces";
+import { Workspace } from "../../services/@redis/cache/interfaces/models/workspace";
 import { RedisStrategyFactory } from "../../services/@redis/cache/strategies/redisStrategyFactory";
 import { JWTService } from "../../services/jwt/jwt.service";
 
 export class PublicEventController {
     public eventService: EventV2Service;
+    public eventTimesService: EventTimesService;
+
     private businessHoursService = new BusinessHourService();
     private workerHoursService = new WorkerBusinessHourService();
     private temporaryHoursService = new TemporaryBusinessHourService();
 
     constructor() {
         this.eventService = new EventV2Service();
+        this.eventTimesService = new EventTimesService();
     }
 
 
@@ -50,36 +56,6 @@ export class PublicEventController {
             //   excludeEventId?: string
             // }
             const payload = req.body;
-            const result = await this.eventService.publicGetAvailableDays(payload);
-
-
-            console.log("mira que es result", result);
-            return res
-                .status(200)
-                .json(Response.build("Días disponibles", 200, true, result?.days || []));
-        } catch (err: any) {
-            return res.status(500).json({ message: err.message });
-        }
-    }
-
-
-    publicGetAvailableTimeSlots = async (req: any, res: any) => {
-        try {
-            const payload = req.body;
-
-            // Validación básica
-            if (!payload?.idCompany || !payload?.idWorkspace) {
-                return res.status(400).json({ message: "Faltan idCompany o idWorkspace" });
-            }
-            if (!payload?.date || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) {
-                return res.status(400).json({ message: "date debe ser YYYY-MM-DD" });
-            }
-            if (!payload?.timezone) {
-                return res.status(400).json({ message: "Falta timezone" });
-            }
-            if (!Array.isArray(payload?.attendees) || payload.attendees.length === 0) {
-                return res.status(400).json({ message: "attendees vacío" });
-            }
 
 
             const savedWorkspace = RedisStrategyFactory.getStrategy('savedWorkspace') as IRedisSavedWorkspaceStrategy;
@@ -101,6 +77,93 @@ export class PublicEventController {
                 }
             }
 
+
+
+            const timeZoneWorkspace = workspace?.timeZone ?? null;
+            if (!timeZoneWorkspace) {
+                console.log("que ????")
+                // si la estructura viene como { workspace: {...} } desde RPC, ya la cubrimos arriba
+                // si no hay timezone, devolvemos 400 para evitar cálculos erróneos
+                return res.status(400).json({ message: "No se pudo resolver el timezone del workspace" });
+            }
+
+            const result = await this.eventService.publicGetAvailableDays(
+                {
+                    ...payload,
+                    timeZoneClient: payload.timezone,
+                    timeZoneWorkspace: timeZoneWorkspace,
+                    range: payload.range,
+                    // intervalMinutes: 10
+                },
+                {
+                    businessHoursService: this.businessHoursService,
+                    workerHoursService: this.workerHoursService,
+                    temporaryHoursService: this.temporaryHoursService,
+                    bookingConfig: workspace?.config,
+                }
+
+            );
+
+
+            console.log("mira que es result", result);
+            return res
+                .status(200)
+                .json(Response.build("Días disponibles", 200, true, result?.days || []));
+        } catch (err: any) {
+            return res.status(500).json({ message: err.message });
+        }
+    }
+
+
+    publicGetAvailableTimeSlots = async (req: any, res: any) => {
+        try {
+            const payload = req.body;
+
+
+            console.log("mira que es payload en times get", payload);
+
+
+
+
+            // Validación básica
+            if (!payload?.idCompany || !payload?.idWorkspace) {
+                return res.status(400).json({ message: "Faltan idCompany o idWorkspace" });
+            }
+            if (!payload?.date || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) {
+                return res.status(400).json({ message: "date debe ser YYYY-MM-DD" });
+            }
+            if (!payload?.timezone) {
+                return res.status(400).json({ message: "Falta timezone" });
+            }
+            if (!Array.isArray(payload?.attendees) || payload.attendees.length === 0) {
+                return res.status(400).json({ message: "attendees vacío" });
+            }
+
+
+            // const savedWorkspace = RedisStrategyFactory.getStrategy('savedWorkspace') as IRedisSavedWorkspaceStrategy;
+            // // 1) Workspace desde Redis (por id). Fallback a RPC y cache set.
+            // let workspace: any = await savedWorkspace.getSavedWorkspaceByIdWorkspace(payload.idWorkspace);
+
+            // // console.log("mira que es workspace cacheado", workspace);
+            // if (!workspace) {
+            //     const rpcRes: any = await RPC.getEstablishmentByIdForFlow(payload.idWorkspace);
+            //     workspace = rpcRes?.workspace ?? null;
+
+            //     console.log("mira que es workspace desde rpc", workspace);
+            //     if (workspace?.id) {
+            //         await savedWorkspace.setSavedWorkspaceByIdWorkspace(
+            //             workspace?.id,
+            //             workspace,
+            //             TIME_SECONDS.HOUR
+            //         );
+            //     }
+            // }
+
+            const ctx = req.booking!.ctx;
+            const workspace: Workspace = ctx.workspace;
+
+
+
             const timeZoneWorkspace = workspace?.timeZone ?? null;
             if (!timeZoneWorkspace) {
                 console.log("que ????")
@@ -116,23 +179,29 @@ export class PublicEventController {
             //     timeZoneWorkspace: timeZoneWorkspace
             // });
 
+            console.log("voy arriba a llamar a publicGetAvailableTimeSlots_SPECIAL", workspace);
 
-
-            const result = await publicGetAvailableTimeSlots_SPECIAL(
+            const result = await this.eventTimesService.publicGetAvailableTimeSlots_SPECIAL(
                 {
                     ...payload,
                     timeZoneClient: payload.timezone,
-                    timeZoneWorkspace: timeZoneWorkspace
+                    timeZoneWorkspace: timeZoneWorkspace,
+                    // intervalMinutes: 10
                 },
                 {
                     businessHoursService: this.businessHoursService,
                     workerHoursService: this.workerHoursService,
                     temporaryHoursService: this.temporaryHoursService,
-                    bookingConfig: workspace?.bookingConfig ?? { slot: { alignMode: "clock" } },
+                    bookingConfig: workspace?.config,
+                    servicesSnapshot: {
+                        getServicesSnapshotById: (params) =>
+                            _getServicesSnapshotById(params), // ← tu función tal cual
+                    },
                 }
 
             );
 
+            console.log("mira que es result aaa", result);
 
             return res
                 .status(200)
@@ -140,7 +209,7 @@ export class PublicEventController {
         } catch (err: any) {
             return res.status(500).json({ message: err?.message ?? "Unexpected error" });
         }
-    };
+    }
 
 
 

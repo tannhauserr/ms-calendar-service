@@ -9,28 +9,28 @@ const controller = new RecurrenceRuleController();
 // Listar reglas con paginación
 router.post(
     '/recurrenceRules',
-    [JWTService.verifyCookieToken, OnlyAdminMiddleware.accessAuthorized],
+    [JWTService.authCookieOrBearer, OnlyAdminMiddleware.accessAuthorized],
     controller.get
 );
 
 // Listar reglas de un calendario específico
 router.post(
     '/recurrenceRules/byCalendar',
-    [JWTService.verifyCookieToken, OnlyAdminMiddleware.accessAuthorized],
+    [JWTService.authCookieOrBearer, OnlyAdminMiddleware.accessAuthorized],
     controller.getByCalendar
 );
 
 // Añadir una nueva regla de recurrencia
 router.post(
     '/recurrenceRules/add',
-    [JWTService.verifyCookieToken, OnlyAdminMiddleware.accessAuthorized],
+    [JWTService.authCookieOrBearer, OnlyAdminMiddleware.accessAuthorized],
     controller.add
 );
 
 // Obtener una regla por su ID
 router.get(
     '/recurrenceRules-:id',
-    [JWTService.verifyCookieToken, OnlyAdminMiddleware.accessAuthorized],
+    [JWTService.authCookieOrBearer, OnlyAdminMiddleware.accessAuthorized],
     controller.getById
 );
 
@@ -38,7 +38,7 @@ router.get(
 router.post(
     '/recurrenceRules/update-:id',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.allowRoles([
             'ROLE_ADMIN',
             'ROLE_MANAGER',
@@ -55,7 +55,7 @@ router.post(
 router.post(
     '/recurrenceRules/delete',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.allowRoles([
             'ROLE_ADMIN',
             'ROLE_SUPER_ADMIN',

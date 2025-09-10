@@ -12,7 +12,7 @@ const ROLE_ALLOWED = ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_OWNER', 'ROLE_SUPER_AD
 router.get(
     '/category-services/workspace/:idWorkspace',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.allowRoles(ROLE_ALLOWED),
         OnlyAdminMiddleware.accessAuthorized
     ],
@@ -23,7 +23,7 @@ router.get(
 router.get(
     '/category-services/:id',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.allowRoles(ROLE_ALLOWED),
         OnlyAdminMiddleware.accessAuthorized
     ],
@@ -34,7 +34,7 @@ router.get(
 router.post(
     '/category-services/add-multiple',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.allowRoles(ROLE_ALLOWED),
         OnlyAdminMiddleware.accessAuthorized
     ],
@@ -45,7 +45,7 @@ router.post(
 router.post(
     '/category-services/detete-multiple',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.allowRoles(ROLE_ALLOWED),
         OnlyAdminMiddleware.accessAuthorized
     ],
@@ -56,7 +56,7 @@ router.post(
 router.post(
     '/category-services/delete-by-category-service',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.allowRoles(ROLE_ALLOWED),
         OnlyAdminMiddleware.accessAuthorized
     ],

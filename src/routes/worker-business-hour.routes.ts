@@ -11,7 +11,7 @@ const controller = new WorkerBusinessHourController();
 // Añadir un nuevo horario de trabajo
 router.post('/worker-business-hours/add',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.accessOnlyAdminOrManager,
         BusinessHourMiddleware.convertToISOTime_FirstPart,
         BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
@@ -19,20 +19,20 @@ router.post('/worker-business-hours/add',
     ], controller.add);
 
 // Obtener todos los horarios de trabajo con paginación
-router.post('/worker-business-hours', JWTService.verifyCookieToken, controller.get);
+router.post('/worker-business-hours', JWTService.authCookieOrBearer, controller.get);
 
 // Obtener un horario de trabajo por ID
-router.get('/worker-business-hours-:id', JWTService.verifyCookieToken, controller.getById);
+router.get('/worker-business-hours-:id', JWTService.authCookieOrBearer, controller.getById);
 
 // Obtener horarios de trabajo por día de la semana
-router.get('/worker-business-hours/by-weekday-:weekDayType', JWTService.verifyCookieToken, controller.getByWeekDay);
+router.get('/worker-business-hours/by-weekday-:weekDayType', JWTService.authCookieOrBearer, controller.getByWeekDay);
 
 // Obtener horarios de trabajo por trabajador
-router.get('/worker-business-hours/by-worker-:idWorker-and-workspace-:idWorkspace', JWTService.verifyCookieToken, controller.getByWorkerAndWorkspace);
+router.get('/worker-business-hours/by-worker-:idWorker-and-workspace-:idWorkspace', JWTService.authCookieOrBearer, controller.getByWorkerAndWorkspace);
 
 // Actualizar un horario de trabajo
 router.post('/worker-business-hours/update-:id', [
-    JWTService.verifyCookieToken,
+    JWTService.authCookieOrBearer,
     OnlyAdminMiddleware.accessOnlyAdminOrManager,
     BusinessHourMiddleware.convertToISOTime_FirstPart,
     BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
@@ -41,7 +41,7 @@ router.post('/worker-business-hours/update-:id', [
 
 // Eliminar un horario de trabajo por ID
 router.post('/worker-business-hours/delete', [
-    JWTService.verifyCookieToken,
+    JWTService.authCookieOrBearer,
     OnlyAdminMiddleware.accessOnlyAdminOrManager,
     BusinessHourMiddleware.convertToISOTime_FirstPart,
     BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
@@ -49,12 +49,12 @@ router.post('/worker-business-hours/delete', [
 ], controller.delete);
 
 router.post('/worker-business-hours/r-worker-business-hours', [
-    JWTService.verifyCookieToken,
+    JWTService.authCookieOrBearer,
     OnlyAdminMiddleware.accessOnlyAdminOrManagerOrUser,
 
 ], controller.getWorkerHoursFromRedis);
 
 // Autocompletar horarios de trabajo
-// router.post('/worker-business-hours/autocomplete', JWTService.verifyCookieToken, controller.autocomplete);
+// router.post('/worker-business-hours/autocomplete', JWTService.authCookieOrBearer, controller.autocomplete);
 
 module.exports = router;

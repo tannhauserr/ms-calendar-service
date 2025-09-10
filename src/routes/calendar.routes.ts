@@ -10,7 +10,7 @@ const controller = new CalendarController();
 /**
  * Middleware para verificar el token JWT a través de cookies.
  */
-const verifyTokenMiddleware = JWTService.verifyCookieToken;
+const verifyTokenMiddleware = JWTService.authCookieOrBearer;
 
 /**
  * Rutas de Calendario
