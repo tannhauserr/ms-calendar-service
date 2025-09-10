@@ -7,6 +7,7 @@ import { AvoidSameEventStrategy } from "./avoidSameEvent/avoidSameEvent.strategy
 import { BusinessHoursStrategy } from "./businessHours/businessHours.strategy";
 import { ChannelCalendarStrategy } from "./channelCalendar/channelCalendar.strategy";
 import { GoogleOAuthStrategy } from "./googleOAuth/googleOAuth.strategy";
+import { RoundRobinStrategy } from "./roundRobin/roundRobinStrategy";
 import { TemporaryHoursStrategy } from "./temporaryHours/temporaryHours.strategy";
 import { UserColorStrategy } from "./useColor/useColor.strategy";
 import { UserCompanyRoleStrategy } from "./userCompanyRole/userCompanyRoleStrategy";
@@ -36,6 +37,8 @@ export class RedisStrategyFactory {
                 return new UserCompanyRoleStrategy();
             case 'savedWorkspace':
                 return new SavedWorkspaceStrategy();
+            case 'roundRobin':
+                return new RoundRobinStrategy();
 
 
             // Otros casos para diferentes estrategias...

@@ -15,7 +15,10 @@ export type GetAvailableDaysInput = {
     range: { start: string; end: string }; // YYYY-MM-DD
     attendees: AttendeeSelection[];        // 1 servicio por elemento (como en tu store)
     excludeEventId?: string;               // para edición
+    idClient?: string;
 };
+
+
 
 export type DayFlag = { date: string; hasSlots: boolean, capacity?: number };
 

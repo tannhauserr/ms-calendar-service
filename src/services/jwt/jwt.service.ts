@@ -204,23 +204,54 @@ export class JWTService {
      * @param res 
      * @param next 
      */
-    static verifyCookieToken(req, res, next) {
-        // console.log("llego")
+    // static verifyCookieToken(req, res, next) {
+    //     // console.log("llego")
 
-        // console.log("verificar token en cookies")
-        // console.log("req.cookies", req.cookies)
-        // console.log("req.cookies", req.cookies['booking.rbc.token'])
-        
-        // Obtener el token de las cookies
-        const cookieToken = req.cookies['booking.rbc.token'];
+    //     // console.log("verificar token en cookies")
+    //     // console.log("req.cookies", req.cookies)
+    //     // console.log("req.cookies", req.cookies['booking.rbc.token'])
 
-        // console.log("cookieToken", cookieToken)
+    //     // Obtener el token de las cookies
+    //     const cookieToken = req.cookies['booking.rbc.token'];
+
+    //     // console.log("cookieToken", cookieToken)
+    //     if (cookieToken) {
+    //         req.token = cookieToken;
+    //         next();
+    //     } else {
+    //         res.status(403).json(Response.build(Message.Failure.TOKEN_FORBIDDEN, 403, false));
+    //     }
+    // }
+
+
+    /**
+     * Nueva versión. Coge el token de las cookies o del auth.
+     * Es una adaptación para usar la app movil
+     * @param req ]
+     * @param res 
+     * @param next 
+     * @returns 
+     */
+    static authCookieOrBearer(req, res, next) {
+        // 1) Bearer header
+        const auth = req.headers.authorization;
+        if (auth?.startsWith("Bearer ")) {
+            req.token = auth.slice(7).trim();
+            return next();
+        }
+
+        // 2) Cookie
+        const cookieToken = req.cookies?.["booking.rbc.token"]
+            ?? req.cookies?.["booking_rbc_client_token"];
+
         if (cookieToken) {
             req.token = cookieToken;
-            next();
-        } else {
-            res.status(403).json(Response.build(Message.Failure.TOKEN_FORBIDDEN, 403, false));
+            return next();
         }
+
+        return res
+            .status(403)
+            .json(Response.build(Message.Failure.TOKEN_FORBIDDEN, 403, false));
     }
 
 }

@@ -61,8 +61,8 @@ model Event {
   service            Service?         @relation(fields: [idServiceFk], references: [id])
   recurrenceRule     RecurrenceRule?  @relation("recurrenceRules", fields: [idRecurrenceRuleFk], references: [id])
 
-  WorkerAbsence         WorkerAbsence[]
-  ExternalCalendarEvent ExternalCalendarEvent?
+  workerAbsence         WorkerAbsence[]
+  externalCalendarEvent ExternalCalendarEvent?
   eventParticipant      EventParticipant[]
 
   // Para búsquedas por usuario + rango temporal (solapes)
@@ -91,6 +91,9 @@ model EventParticipant {
   event Event @relation(fields: [idEventFk], references: [id], onDelete: Cascade)
 
   @@index([idEventFk])
+  @@index([idClientWorkspaceFk])
+  @@index([idClientFk])
+  @@index([idEventFk, eventStatusType])
   @@map("eventParticipants")
 }
 

@@ -83,7 +83,7 @@ export class OnlyAdminMiddleware {
 
 
     /**
-     * Coge el token guardado en request gracias al middleware JWTService.verifyCookieToken 
+     * Coge el token guardado en request gracias al middleware JWTService.authCookieOrBearer 
      * y comprueba si el usuario es administrador
      * @param req 
      * @param res 

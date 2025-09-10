@@ -9,7 +9,7 @@ const controller = new WorkerAbsenceController();
 
 // Obtener todas las ausencias de trabajadores
 router.post('/worker-absences',
-    JWTService.verifyCookieToken,
+    JWTService.authCookieOrBearer,
     OnlyAdminMiddleware.allowRoles(['ROLE_ADMIN', 'ROLE_MANAGER']),
     OnlyAdminMiddleware.accessAuthorized,
     controller.get
@@ -17,7 +17,7 @@ router.post('/worker-absences',
 // Añadir una nueva ausencia de trabajador
 router.post('/worker-absences/add',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.accessOnlyAdminOrManager,
         WorkerAbsenceMiddleware.cleanExceptionDate
     ],
@@ -27,7 +27,7 @@ router.post('/worker-absences/add',
 // Obtener una ausencia por ID
 router.get('/worker-absences-:id',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.accessOnlyAdminOrManager,
     ],
     controller.getById
@@ -35,7 +35,7 @@ router.get('/worker-absences-:id',
 
 // Obtener ausencias por establecimiento
 router.post('/worker-absences/by-workspace',
-    JWTService.verifyCookieToken,
+    JWTService.authCookieOrBearer,
     OnlyAdminMiddleware.accessOnlyAdminOrManager,
 
     controller.getByWorkspace
@@ -44,7 +44,7 @@ router.post('/worker-absences/by-workspace',
 // Obtener ausencias por trabajador
 router.post('/worker-absences/by-user',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.accessOnlyAdminOrManager,
     ],
     controller.getByUser
@@ -53,7 +53,7 @@ router.post('/worker-absences/by-user',
 // Actualizar una ausencia
 router.post('/worker-absences/update-:id',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.accessOnlyAdminOrManager,
         WorkerAbsenceMiddleware.cleanExceptionDate
     ],
@@ -63,7 +63,7 @@ router.post('/worker-absences/update-:id',
 // Eliminar ausencias por ID
 router.post('/worker-absences/delete-definitive',
     [
-        JWTService.verifyCookieToken,
+        JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.accessOnlyAdminOrManager,
 
     ],
