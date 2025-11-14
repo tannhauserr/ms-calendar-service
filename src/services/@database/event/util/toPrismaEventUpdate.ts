@@ -21,13 +21,15 @@ export function toPrismaEventScalars(
         isEditableByClient: e.isEditableByClient,
         numberUpdates: e.numberUpdates,
         eventStatusType: e.eventStatusType,
-        idServiceFk: e.service?.id ?? null,
-        idCalendarFk: e.idCalendarFk,
+        idServiceFk: e.idServiceFk ?? null,
+        // idCalendarFk: e.idCalendarFk,
+        idWorkspaceFk: e.idWorkspaceFk,
+        idCompanyFk: e.idCompanyFk,
 
-        serviceDiscountSnapshot: e.serviceDiscountSnapshot ?? null,
-        servicePriceSnapshot: e.servicePriceSnapshot ?? null,
-        serviceNameSnapshot: e.serviceNameSnapshot ?? null,
-        serviceDurationSnapshot: e.serviceDurationSnapshot ?? null,
+        serviceDiscountSnapshot: e?.serviceDiscountSnapshot || e?.service?.discount || null,
+        servicePriceSnapshot: e?.servicePriceSnapshot || e?.service?.price || null,
+        serviceNameSnapshot: e?.serviceNameSnapshot || e?.service?.name || null,
+        serviceDurationSnapshot: e?.serviceDurationSnapshot || e?.service?.duration || null,
     };
 }
 
@@ -41,21 +43,26 @@ export function toPrismaEventUpdate(
         description: e.description,
         startDate: new Date(e.startDate),
         endDate: new Date(e.endDate),
+
         idUserPlatformFk: e.idUserPlatformFk,
+        idWorkspaceFk: e.idWorkspaceFk,
+        idCompanyFk: e.idCompanyFk,
+        idServiceFk: e.idServiceFk ?? null,
+
         commentClient: e.commentClient ?? null,
         eventSourceType: e.eventSourceType,
         eventPurposeType: e.eventPurposeType,
         isEditableByClient: e.isEditableByClient,
         numberUpdates: e.numberUpdates,
         eventStatusType: e.eventStatusType,
-        
-        serviceDiscountSnapshot: e.serviceDiscountSnapshot ?? null,
-        servicePriceSnapshot: e.servicePriceSnapshot ?? null,
-        serviceNameSnapshot: e.serviceNameSnapshot ?? null,
-        serviceDurationSnapshot: e.serviceDurationSnapshot ?? null,
+
+        serviceDiscountSnapshot: e?.serviceDiscountSnapshot || e?.service?.discount || null,
+        servicePriceSnapshot: e?.servicePriceSnapshot || e?.service?.price || null,
+        serviceNameSnapshot: e?.serviceNameSnapshot || e?.service?.name || null,
+        serviceDurationSnapshot: e?.serviceDurationSnapshot || e?.service?.duration || null,
         // NO scalars de FK aquí
 
-        
+
     };
 }
 
@@ -67,13 +74,11 @@ export function buildNestedUpdates(
     participantsToDelete?: EventForBackend['eventParticipantDelete']
 ): Pick<
     Prisma.EventUpdateInput,
-    'service' | 'eventParticipant'
+    'eventParticipant'
 > {
     const ops: Partial<Prisma.EventUpdateInput> = {};
 
-    if (event.service?.id) {
-        ops.service = { connect: { id: event.service.id } };
-    }
+
 
     // participantes
     const creates = participants

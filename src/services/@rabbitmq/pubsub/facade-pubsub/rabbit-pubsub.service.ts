@@ -1,3 +1,125 @@
+// import { ActionKeys, ActionPayloads } from "../../actions/rabbitmq.action";
+// import { RabbitMQKeys } from "../../keys/rabbitmq.keys";
+// import { connect, Connection, Channel, ConsumeMessage } from "amqplib";
+
+// type QueueKeys = keyof typeof RabbitMQKeys;
+
+// export class RabbitPubSubService {
+//     private static _instance: RabbitPubSubService;
+
+//     private connection!: Connection;
+//     private channel!: Channel;
+//     private readonly host: string = process.env.RABBITMQ_HOST || "localhost";
+//     private readonly port: number = Number(process.env.RABBITMQ_PORT) || 5672;
+//     private readonly user: string = process.env.RABBITMQ_USER || "guest";
+//     private readonly password: string = process.env.RABBITMQ_PASSWORD || "guest";
+//     private readonly vhost: string = process.env.RABBITMQ_VHOST || "/";
+
+//     private constructor() { }
+
+//     public static get instance(): RabbitPubSubService {
+//         if (!this._instance) this._instance = new RabbitPubSubService();
+//         return this._instance;
+//     }
+
+//     public async connect(): Promise<Channel> {
+//         if (!this.connection) {
+//             this.connection = await connect({
+//                 hostname: this.host,
+//                 port: this.port,
+//                 username: this.user,
+//                 password: this.password,
+//                 vhost: this.vhost,
+//             });
+//             this.channel = await this.connection.createChannel();
+//             console.log("Conectado a RabbitMQ");
+//         }
+//         return this.channel;
+//     }
+
+//     public async assertExchange(
+//         exchangeKey: string,
+//         exchangeType: "fanout" | "topic" | "direct" = "fanout",
+//         durable: boolean = true
+//     ): Promise<void> {
+//         const channel = await RabbitPubSubService.instance.connect();
+//         await channel.assertExchange(exchangeKey, exchangeType, { durable });
+//         console.log(`Exchange ${exchangeKey} de tipo ${exchangeType} asegurado con durabilidad: ${durable}`);
+//     }
+
+//     public async bindQueueToExchange(
+//         queueKey: string,
+//         exchangeKey: string,
+//         routingKey: string = ""
+//     ): Promise<void> {
+//         const channel = await RabbitPubSubService.instance.connect();
+//         const queue = queueKey;
+//         await channel.bindQueue(queue, exchangeKey, routingKey);
+//         console.log(`Queue ${queue} enlazada a exchange ${exchangeKey} con routingKey ${routingKey}`);
+//     }
+
+//     public async publishToExchange<T extends ActionKeys>(
+//         exchangeKey: string,
+//         routingKey: string,
+//         message: ActionPayloads[T],
+//         options: {
+//             persistent?: boolean;
+//             expiration?: string;
+//             headers?: Record<string, any>;
+//         } = {}
+//     ): Promise<void> {
+//         const channel = await this.connect();
+//         const content = Buffer.from(JSON.stringify(message));
+//         await channel.publish(exchangeKey, routingKey, content, {
+//             persistent: options.persistent ?? true,
+//             expiration: options.expiration,
+//             headers: options.headers,
+//         });
+//         console.log(`Mensaje publicado a exchange ${exchangeKey} con routingKey ${routingKey}:`, message);
+//     }
+
+//     /**
+//      * Consume mensajes de una cola con prefetch configurable (por defecto 10).
+//      */
+//     public async consumeQueue<T extends ActionKeys>(
+//         queueName: string,
+//         onMessage: (
+//             content: ActionPayloads[T],
+//             rawMsg: ConsumeMessage,
+//             ack: () => void,
+//             nack: (requeue?: boolean) => void
+//         ) => Promise<void>,
+//         options?: { prefetch?: number }
+//     ): Promise<void> {
+//         const channel: Channel = await this.connect();
+
+//         // ⬅️ Prefetch (fix #3)
+//         const prefetch = options?.prefetch ?? Number(process.env.RABBITMQ_PREFETCH || 10);
+//         channel.prefetch(prefetch);
+
+//         await channel.consume(
+//             queueName,
+//             async (msg) => {
+//                 if (!msg) return;
+
+//                 const content = JSON.parse(msg.content.toString()) as ActionPayloads[T];
+//                 const ack = () => channel.ack(msg);
+//                 const nack = (requeue = false) => channel.nack(msg, false, requeue);
+
+//                 try {
+//                     await onMessage(content, msg, ack, nack);
+//                 } catch (err) {
+//                     console.error(`[consumeQueue] Handler error:`, err);
+//                     // Por defecto: NO requeue para evitar loops; ajusta si tienes DLQ configurada
+//                     nack(false);
+//                 }
+//             },
+//             { noAck: false }
+//         );
+//     }
+// }
+
+
 import { ActionKeys, ActionPayloads } from "../../actions/rabbitmq.action";
 import { RabbitMQKeys } from "../../keys/rabbitmq.keys";
 import { connect, Connection, Channel, ConsumeMessage } from "amqplib";
@@ -90,6 +212,7 @@ export class RabbitPubSubService {
         options: {
             persistent?: boolean;
             expiration?: string;
+            mandatory?: boolean;
             headers?: Record<string, any>;
         } = {}
     ): Promise<void> {
@@ -172,3 +295,4 @@ export class RabbitPubSubService {
         );
     }
 }
+

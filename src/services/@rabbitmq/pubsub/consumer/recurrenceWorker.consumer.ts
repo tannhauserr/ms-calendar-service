@@ -1,13 +1,13 @@
 
 import { Channel, ConsumeMessage } from "amqplib";
 import { RabbitPubSubService } from "../facade-pubsub/rabbit-pubsub.service";
-import prisma from "../../../../lib/prisma";
 import { RabbitMQKeys } from "../../keys/rabbitmq.keys";
 import { EventForBackend } from "../../../@database/event/dto/EventForBackend";
 import { RecurrenceStrategyFactory } from "../../../@database/recurrence-rule/strategy/factory";
 import { RecurrenceScope } from "../../../@database/recurrence-rule/types";
-import { NewStrategy } from "../../../@database/recurrence-rule/strategy/new.strategy";
 import { getValidRDates, isValidRRule } from "../../../@database/recurrence-rule/strategy/type";
+import prisma from "../../../../lib/prisma";
+
 const { RRule } = require('rrule');
 
 

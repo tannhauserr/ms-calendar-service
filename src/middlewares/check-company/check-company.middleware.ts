@@ -113,67 +113,71 @@ export class CheckCompanyMiddleware {
      * @throws Will return a 500 status code with an error message if there is a server error.
      */
     static checkCompanyInEvent = async (req: any, res: any, next: any) => {
-        try {
-            // Extrae idCalendarFk, idCalendarAux y myId del cuerpo de la solicitud
-            const { idCalendarFk, idCalendar: idCalendarAux, myId: string } = req.body;
-            // Asigna idCalendarFk a idCalendar si existe, de lo contrario usa idCalendarAux
-            let idCalendar = idCalendarFk || idCalendarAux;
+        // TODO: Esto se va a comprobar con un nuevo parámetro en el token del usuario
+        // En este nuevo parámetro saldrán todos los workspaces a los que tiene acceso el usuario
+        next();
+        // try {
+        //     // Extrae idCalendarFk, idCalendarAux y myId del cuerpo de la solicitud
+        //     const { idCalendarFk, idCalendar: idCalendarAux, myId: string } = req.body;
+        //     // Asigna idCalendarFk a idCalendar si existe, de lo contrario usa idCalendarAux
+        //     let idCalendar = idCalendarFk || idCalendarAux;
 
-            // Si no se proporciona idCalendar, responde con un error
-            if (!idCalendar) {
-                // LOG: Mandar petición log de que no se ha proporcionado el idCalendar
-                return res.status(500).json(Response.build("El idCalendar no se proporcionó", 404, false));
-            }
+        //     // Si no se proporciona idCalendar, responde con un error
+        //     if (!idCalendar) {
+        //         // LOG: Mandar petición log de que no se ha proporcionado el idCalendar
+        //         return res.status(500).json(Response.build("El idCalendar no se proporcionó", 404, false));
+        //     }
 
-            // Obtiene una instancia del servicio JWT
-            let jwtService = JWTService.instance;
+        //     // Obtiene una instancia del servicio JWT
+        //     let jwtService = JWTService.instance;
 
-            // Obtiene el token de la solicitud
-            const token = req.token;
-            // Verifica y decodifica el token
-            let decode = await jwtService.verify(token);
-            // Extrae idCompanySelected del token decodificado
-            const idCompany = decode?.idCompanySelected;
+        //     // Obtiene el token de la solicitud
+        //     const token = req.token;
+        //     // Verifica y decodifica el token
+        //     let decode = await jwtService.verify(token);
+        //     // Extrae idCompanySelected del token decodificado
+        //     const idCompany = decode?.idCompanySelected;
 
-            // Verifica si el calendario existe y pertenece a la compañía
-            const calendarExist = prisma.calendar.findFirst({
-                where: {
-                    id: idCalendar,
-                    idCompanyFk: idCompany
-                }
-            });
+        //     // Verifica si el calendario existe y pertenece a la compañía
+        //     // const calendarExist = prisma.calendar.findFirst({
+        //     //     where: {
+        //     //         id: idCalendar,
+        //     //         idCompanyFk: idCompany
+        //     //     }
+        //     // });
 
-            // Si el calendario no existe o no pertenece a la compañía, responde con un error
-            if (!calendarExist) {
-                // LOG: Mandar petición log de que el idCalendar no pertenece a la compañía
-                return res.status(500).json(Response.build("El idCalendar no pertenece a la compañía", 404, false));
-            }
+        //     // Si el calendario no existe o no pertenece a la compañía, responde con un error
+        //     // if (!calendarExist) {
+        //     //     // LOG: Mandar petición log de que el idCalendar no pertenece a la compañía
+        //     //     return res.status(500).json(Response.build("El idCalendar no pertenece a la compañía", 404, false));
+        //     // }
 
-            // Si el rol del usuario no es 'ROLE_ADMIN' o 'ROLE_MANAGER'
-            if (decode.role !== 'ROLE_OWNER' && decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
-                // Verifica si el evento existe y pertenece al usuario
-                const eventExist = prisma.event.findFirst({
-                    where: {
-                        idCalendarFk: idCalendar,
-                        idUserPlatformFk: decode.idUser
-                    }
-                });
+        //     // Si el rol del usuario no es 'ROLE_ADMIN' o 'ROLE_MANAGER'
+        //     if (decode.role !== 'ROLE_OWNER' && decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
+        //         // Verifica si el evento existe y pertenece al usuario
+        //         const eventExist = prisma.event.findFirst({
+        //             where: {
+        //                 // idCalendarFk: idCalendar,
+        //                 idWorkspaceFk
+        //                 idUserPlatformFk: decode.idUser
+        //             }
+        //         });
 
-                // Si el evento no pertenece al usuario, responde con un error
-                if (!eventExist) {
-                    // LOG: Mandar petición log de que el evento no pertenece al usuario
-                    return res.status(500).json(Response.build("El evento no pertenece al usuario", 404, false));
-                }
-            }
+        //         // Si el evento no pertenece al usuario, responde con un error
+        //         if (!eventExist) {
+        //             // LOG: Mandar petición log de que el evento no pertenece al usuario
+        //             return res.status(500).json(Response.build("El evento no pertenece al usuario", 404, false));
+        //         }
+        //     }
 
-            // Llama a la siguiente función middleware
-            next();
-        } catch (error: any) {
-            // Si ocurre un error, responde con un mensaje de error del servidor
-            return res.status(500).json({
-                message: 'Error en el servidor.'
-            });
-        }
+        //     // Llama a la siguiente función middleware
+        //     next();
+        // } catch (error: any) {
+        //     // Si ocurre un error, responde con un mensaje de error del servidor
+        //     return res.status(500).json({
+        //         message: 'Error en el servidor.'
+        //     });
+        // }
     }
 
 

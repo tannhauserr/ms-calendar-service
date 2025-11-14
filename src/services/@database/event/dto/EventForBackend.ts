@@ -2,8 +2,9 @@
 // import { EventPurposeType, EventSourceType, EventStatusType } from "./event"
 // import { RecurrenceStatusType } from "./recurrence-rule"
 
-import { EventPurposeType, EventSourceType, EventStatusType, RecurrenceStatusType, Service } from "@prisma/client"
+import { EventPurposeType, EventSourceType, EventStatusType, RecurrenceStatusType } from "@prisma/client"
 import { RecurrenceRuleUpdate } from "../../recurrence-rule/types"
+import { Service } from "../../../../models/rabbitmq/getCateroiesAndServicesResponse";
 
 
 
@@ -49,14 +50,32 @@ export interface EventForBackend {
         isEditableByClient?: boolean
         numberUpdates?: number | null
         eventStatusType?: EventStatusType,
-        idCalendarFk: string,
-        service?: Service,
+        // idCalendarFk: string,
+        idWorkspaceFk: string,
+        idCompanyFk: string,
+        idServiceFk?: string | null
+        // Se puede meter service, pero vendria del MS-BookingPage
+        service?: {
+            id: string,
+            name: string,
+            duration: number,
+            price: number,
+            discount: number,
+            serviceType: string | null,
+            color: string,
+            image?: string | null
+        },
 
 
         serviceNameSnapshot?: string | null
         servicePriceSnapshot?: number | null
         serviceDiscountSnapshot?: number | null
         serviceDurationSnapshot?: number | null // duración en minutos
+
+
+
+        createdDate?: Date
+        updatedDate?: Date
     },
     // recurrenceRule?: Prisma.RecurrenceRuleCreateInput | null
     recurrenceRule?: {

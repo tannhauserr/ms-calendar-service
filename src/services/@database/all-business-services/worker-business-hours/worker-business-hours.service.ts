@@ -424,12 +424,12 @@ export class WorkerBusinessHourService {
         const workerHoursStrategy = new WorkerHoursStrategy();
 
         // Intentar Redis en bulk primero
-        // for (const userId of userIds) {
-        //     const workerHours = await workerHoursStrategy.getWorkerHours(idWorkspace, userId);
-        //     if (workerHours) {
-        //         workerHoursMap[userId] = workerHours;
-        //     }
-        // }
+        for (const userId of userIds) {
+            const workerHours = await workerHoursStrategy.getWorkerHours(idWorkspace, userId);
+            if (workerHours) {
+                workerHoursMap[userId] = workerHours;
+            }
+        }
 
         // Identificar cuáles faltan
         const missing = userIds.filter(u => !workerHoursMap[u]);

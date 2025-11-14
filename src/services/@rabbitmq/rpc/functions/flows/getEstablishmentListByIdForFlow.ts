@@ -25,7 +25,6 @@ export async function getEstablishmentListByIdForFlow(
 
             } as ActionPayloads['requestGetWorkspaceBySearch'],
             correlationId,
-            true,
             TIME_MILLISECONDS.SECOND * 8
         );
 
@@ -58,7 +57,6 @@ export async function getEstablishmentByIdForFlow(
                 idWorkspace
             } as ActionPayloads['requestGetWorkspaceBySearch'],
             correlationId,
-            true,
             TIME_MILLISECONDS.SECOND * 8
         );
 

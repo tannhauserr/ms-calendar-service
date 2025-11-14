@@ -20,7 +20,25 @@ export type GetAvailableDaysInput = {
 
 
 
-export type DayFlag = { date: string; hasSlots: boolean, capacity?: number };
+export type DayAvailabilityStatus = "available" | "completed" | "dayoff";
+
+export type DayStatus =
+    | "available"
+    | "dayoff"        // nadie trabaja ese día
+    | "completed"     // trabajan pero no queda hueco válido
+    | "past"          // día en el pasado
+    | "out_of_window" // fuera de bookingWindow
+    | "no_staff"      // no hay profesionales válidos
+    | "no_services";  // input sin servicios
+
+export type DayFlag = {
+    date: string;
+    hasSlots: boolean;
+    capacity: number; // 0..1 (ratio de capacidad libre)
+    status: DayAvailabilityStatus;
+};
+
+
 
 export type EventRow = {
     id: string | number;

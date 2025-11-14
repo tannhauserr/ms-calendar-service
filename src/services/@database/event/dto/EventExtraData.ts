@@ -1,10 +1,12 @@
-import { EventStatusType, RecurrenceStatusType, ServiceType } from "@prisma/client";
+import { EventStatusType, RecurrenceStatusType } from "@prisma/client";
 
 /**
  * DTO para los datos extra de un evento.
  */
 export interface EventExtraData {
     id: string;
+    idServiceFk?: string | null;
+    description?: string | null;
     serviceNameSnapshot?: string;
     servicePriceSnapshot?: number;
     serviceDiscountSnapshot?: number;
@@ -36,7 +38,7 @@ export interface EventExtraData {
         duration: number;
         price: number;
         discount: number;
-        serviceType: ServiceType | null;
+        serviceType: any;
         color: string;
     };
 }

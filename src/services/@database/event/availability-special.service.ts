@@ -6,10 +6,12 @@ import moment from "moment-timezone";
 import prisma from "../../../lib/prisma";
 import { HoursRangeInput } from "../all-business-services/interfaces";
 import { OnlineBookingConfig } from "../../@redis/cache/interfaces/models/booking-config";
-
+// ────────────────────────────────────────────────────────────
+// QPS cacheable: quién puede hacer un servicio (opcional cache)
+import { getServiceByIds } from "../../@service-token-client/api-ms/bookingPage.ms";
 // ────────────────────────────────────────────────────────────
 // Tipos mínimos (autónomos para no depender de tus modelos)
-type Weekday =
+export type Weekday =
     | "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY"
     | "FRIDAY" | "SATURDAY" | "SUNDAY";
 
@@ -80,35 +82,50 @@ export function toIdxRange_SPECIAL(
     return [i0, i1] as const;
 }
 
-// ────────────────────────────────────────────────────────────
-// Eventos (robusto con YYYY-MM-DD o ISO completo; select mínimo; sin cast numérico)
+// Eventos (robusto con YYYY-MM-DD o ISO completo; select mínimo; usa workspace)
 export async function getEventsOverlappingRange_SPECIAL(
+    idWorkspace: string,
     userIds: string[],
     startISOOrDay: string,
     endISOOrDay: string,
     excludeEventId?: string
 ) {
+    // Evitar query inútil
+    if (!userIds || userIds.length === 0) return [];
 
     const parseStart = (s: string) =>
-        s.length > 10 ? moment.utc(s) : moment.utc(s, "YYYY-MM-DD").startOf("day");
+        s.length > 10
+            ? moment.utc(s)
+            : moment.utc(s, "YYYY-MM-DD").startOf("day");
     const parseEnd = (s: string) =>
-        s.length > 10 ? moment.utc(s) : moment.utc(s, "YYYY-MM-DD").endOf("day");
+        s.length > 10
+            ? moment.utc(s)
+            : moment.utc(s, "YYYY-MM-DD").endOf("day");
 
     const start = parseStart(startISOOrDay).toDate();
     const end = parseEnd(endISOOrDay).toDate();
 
     const where: any = {
+        idWorkspaceFk: idWorkspace,          // 🔹 clave para filtrar bien
         idUserPlatformFk: { in: userIds },
-        // deletedDate: null,
-        // TODO: Poner en el futuro los estados de un evento que no se quiere que sí se lean / o los que no sean
         startDate: { lt: end },
         endDate: { gt: start },
+        // Cuando quieras cerrarlo más:
+        // deletedDate: null,
+        // eventStatusType: { in: ["PENDING", "CONFIRMED"] },
     };
+
     if (excludeEventId) where.id = { not: excludeEventId };
 
     const events = await prisma.event.findMany({
         where,
-        select: { id: true, idUserPlatformFk: true, startDate: true, endDate: true },
+        select: {
+            id: true,
+            idUserPlatformFk: true,
+            startDate: true,
+            endDate: true,
+        },
+        orderBy: { startDate: "asc" }, // ayuda a los cálculos posteriores
     });
 
     return events as {
@@ -119,8 +136,8 @@ export async function getEventsOverlappingRange_SPECIAL(
     }[];
 }
 
-// ────────────────────────────────────────────────────────────
-// QPS cacheable: quién puede hacer un servicio (opcional cache)
+
+
 export async function getUsersWhoCanPerformService_SPECIAL(
     idWorkspace: string,
     idService: string,
@@ -134,31 +151,31 @@ export async function getUsersWhoCanPerformService_SPECIAL(
         if (cached) return cached;
     }
 
-    const result = await prisma.category.findMany({
-        where: { id: idCategory ?? undefined, idWorkspaceFk: idWorkspace },
-        select: {
-            categoryServices: {
-                where: {
-                    deletedDate: null,
-                    service: {
-                        deletedDate: null,
-                        id: idService,
-                        userServices: { some: {} },
-                    },
-                },
-                select: { service: { select: { userServices: { select: { idUserFk: true } } } } },
-            },
-        },
-    });
+    try {
+        // Obtener el servicio del microservicio para ver qué usuarios pueden realizarlo
+        const services = await getServiceByIds([idService], idWorkspace);
 
-    const users = Array.from(
-        new Set(
-            result.flatMap((ce) => ce.categoryServices.flatMap((cs) => cs.service.userServices.map((us) => us.idUserFk)))
-        )
-    );
+        if (services.length === 0) {
+            console.warn(`[getUsersWhoCanPerformService_SPECIAL] Servicio ${idService} no encontrado`);
+            const users: string[] = [];
+            if (cache) await cache.set(cacheKey, users, ttlSec);
+            return users;
+        }
 
-    if (cache) await cache.set(cacheKey, users, ttlSec);
-    return users;
+        const service = services[0];
+
+        // Extraer los userIds de userServices
+        const users = Array.from(
+            new Set(service.userServices?.map(us => us.idUserFk).filter(Boolean) || [])
+        );
+
+        if (cache) await cache.set(cacheKey, users, ttlSec);
+        return users;
+    } catch (error: any) {
+        console.error(`[getUsersWhoCanPerformService_SPECIAL] Error:`, error);
+        // En caso de error, devolver array vacío y no cachear
+        return [];
+    }
 }
 
 // ────────────────────────────────────────────────────────────
@@ -292,6 +309,149 @@ export function assignSequentially_SPECIAL(ctx: AssignCtxSpecial): boolean {
 }
 
 
+// export function computeSlotConfig(params: {
+//     intervalMinutes: number;
+//     timeZoneWorkspace: string;
+//     dayStartLocal: moment.Moment;
+// }) {
+//     const { intervalMinutes, timeZoneWorkspace, dayStartLocal } = params;
+
+//     let stepMinutes = intervalMinutes;
+
+//     if (!Number.isFinite(stepMinutes) || stepMinutes <= 0) stepMinutes = intervalMinutes;
+
+//     const slotsPerDay = Math.ceil((24 * 60) / stepMinutes);
+
+//     const nowLocal = moment.tz(timeZoneWorkspace).seconds(0).milliseconds(0);
+//     const isToday = dayStartLocal.isSame(nowLocal, "day");
+
+//     // Redondea "ahora" hacia arriba al múltiplo de stepMinutes solo si es hoy
+//     const roundedNow = (() => {
+//         if (!isToday) return nowLocal;
+//         const n = nowLocal.clone();
+//         const rem = n.minute() % stepMinutes;
+//         if (rem !== 0) n.add(stepMinutes - rem, "minutes");
+//         return n;
+//     })();
+
+//     return { stepMinutes, slotsPerDay, roundedNow, isToday };
+// }
+
+
+// ────────────────────────────────────────────────────────────
+// HELPERS NUEVOS / RETOCADOS
+// ────────────────────────────────────────────────────────────
+
+/**
+ * QUÉ HACE:
+ * Construye los turnos por usuario para un día concreto,
+ * respetando la prioridad (temporales > worker > negocio).
+ * Permite activar/desactivar el fallback al horario de negocio.
+ *
+ * DÓNDE SE USA:
+ * Bloque (4) de publicGetAvailableTimeSlots_SPECIAL.
+ */
+export function buildShiftsByUser_SPECIAL(params: {
+    userIds: string[];
+    date: string;
+    timeZoneWorkspace: string;
+    weekDay: Weekday;
+    businessHours: BusinessHoursType;
+    workerHoursMap: WorkerHoursMapType;
+    temporaryHoursMap: TemporaryHoursMapType;
+    useBizFallback?: boolean; // ← por defecto TRUE
+}): Record<string, Array<{ start: moment.Moment; end: moment.Moment }>> {
+    const {
+        userIds,
+        date,
+        timeZoneWorkspace,
+        weekDay,
+        businessHours,
+        workerHoursMap,
+        temporaryHoursMap,
+        useBizFallback = true, // ← default alineado con getAvailableDays
+    } = params;
+
+    const bizShifts: string[][] = (() => {
+        const biz = (businessHours as any)?.[weekDay];
+        return biz === null ? [] : Array.isArray(biz) ? biz : [];
+    })();
+
+    const out: Record<string, Array<{ start: moment.Moment; end: moment.Moment }>> = {};
+
+    for (const uid of userIds) {
+        let workShifts: string[][] = [];
+        const tmp = (temporaryHoursMap as any)?.[uid]?.[date];
+
+        if (tmp === null) workShifts = [];
+        else if (Array.isArray(tmp) && tmp.length > 0) workShifts = tmp;
+        else {
+            const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
+            if (workerDay === null) workShifts = [];
+            else if (Array.isArray(workerDay) && workerDay.length > 0) workShifts = workerDay;
+            else workShifts = useBizFallback ? bizShifts : []; // ← control explícito
+        }
+
+        out[uid] = (workShifts || []).map(([s, e]) => ({
+            start: moment.tz(`${date}T${s}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
+            end: moment.tz(`${date}T${e}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
+        }));
+    }
+
+    return out;
+}
+
+/**
+ * QUÉ HACE:
+ * Alinea hacia arriba un instante a la rejilla global del día
+ * (múltiplos de `stepMinutes` respecto a `gridOrigin`).
+ *
+ * DÓNDE SE USA:
+ * Generación de slots en single-service y multi-service.
+ */
+export function alignToGridCeil_SPECIAL(
+    m: moment.Moment,
+    stepMinutes: number,
+    gridOrigin: moment.Moment
+): moment.Moment {
+    const ref = gridOrigin.clone().seconds(0).milliseconds(0);
+    const diffMs = m.valueOf() - ref.valueOf();
+    const diffMin = Math.max(0, Math.floor(diffMs / 60000));
+    const rem = diffMin % stepMinutes;
+    return m
+        .clone()
+        .add(rem === 0 ? 0 : stepMinutes - rem, "minutes")
+        .seconds(0)
+        .milliseconds(0);
+}
+
+/**
+ * QUÉ HACE:
+ * Elimina duplicados de time slots (misma ventana)
+ * y devuelve el array ordenado por inicio.
+ *
+ * DÓNDE SE USA:
+ * Justo antes de retornar en single-service y multi-service.
+ */
+export function dedupeAndSortSlots_SPECIAL(slots: TimeSlotSpecial[]): TimeSlotSpecial[] {
+    const map = new Map<string, TimeSlotSpecial>();
+    for (const s of slots) {
+        const key = `${s.startLocalISO}|${s.endLocalISO}`;
+        if (!map.has(key)) map.set(key, s);
+    }
+    return Array.from(map.values()).sort((a, b) =>
+        a.startLocalISO < b.startLocalISO ? -1 : a.startLocalISO > b.startLocalISO ? 1 : 0
+    );
+}
+
+/**
+ * QUÉ HACE:
+ * Calcula `stepMinutes` robusto (con fallback 30 si viene vacío/NaN/≤0),
+ * detecta si el día es hoy y devuelve "now" redondeado al múltiplo de step.
+ *
+ * DÓNDE SE USA:
+ * Al inicio de la función, para configurar rejilla y clamp de "hoy".
+ */
 export function computeSlotConfig(params: {
     intervalMinutes: number;
     timeZoneWorkspace: string;
@@ -299,9 +459,9 @@ export function computeSlotConfig(params: {
 }) {
     const { intervalMinutes, timeZoneWorkspace, dayStartLocal } = params;
 
-    let stepMinutes = intervalMinutes;
-
-    if (!Number.isFinite(stepMinutes) || stepMinutes <= 0) stepMinutes = intervalMinutes;
+    // Fallback robusto por si viene undefined/0/NaN
+    const stepMinutes =
+        Number.isFinite(intervalMinutes) && intervalMinutes > 0 ? intervalMinutes : 30;
 
     const slotsPerDay = Math.ceil((24 * 60) / stepMinutes);
 
@@ -319,15 +479,3 @@ export function computeSlotConfig(params: {
 
     return { stepMinutes, slotsPerDay, roundedNow, isToday };
 }
-
-
-
-
-
-
-
-
-
-
-
-

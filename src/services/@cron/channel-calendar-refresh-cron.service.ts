@@ -5,7 +5,7 @@ import CustomError from "../../models/custom-error/CustomError";
 import { UtilGeneral } from "../../utils/util-general";
 import { TIME_MILLISECONDS } from "../../constant/time"; // Define los milisegundos de una semana
 import { CONSOLE_COLOR } from "../../constant/console-color";
-import { CalendarService } from "../@database/calendar/calendar.service";
+// import { CalendarService } from "../@database/calendar/calendar.service";
 import { CalendarGoogleApiService } from "../caledar-googleapi/calendar-googleapi.service";
 import { Pagination } from "../../models/pagination";
 import { ChannelCalendarGoogleApiService } from "../caledar-googleapi/channel-calendar/channel-calendar-googleapi.service";
@@ -21,13 +21,13 @@ export class CalendarChannelRefreshCronService {
 
     private static _instance: CalendarChannelRefreshCronService;
     public job: schedule.Job | any;
-    private calendarService: CalendarService;
+    // private calendarService: CalendarService;
     private channelCalGoogleaApiService: ChannelCalendarGoogleApiService;
 
 
 
     private constructor() {
-        this.calendarService = new CalendarService();
+        // this.calendarService = new CalendarService();
         this.channelCalGoogleaApiService = new ChannelCalendarGoogleApiService();
     }
 

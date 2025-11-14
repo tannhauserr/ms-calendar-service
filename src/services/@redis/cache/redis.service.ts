@@ -91,4 +91,67 @@ export class RedisCacheService {
     public async clear(): Promise<void> {
         await this.redisClient.flushAll();
     }
+
+    /**
+     * Crea un pipeline para operaciones en lote
+     * Útil para múltiples operaciones SET/DEL que se pueden ejecutar juntas
+     * Retorna un wrapper que soporta operaciones condicionales
+     */
+    public pipeline() {
+        const pipeline = this.redisClient.multi();
+        
+        const wrapper = {
+            set: (key: string, value: string, ttl?: number, condition: boolean = true) => {
+                if (condition) {
+                    if (ttl) {
+                        pipeline.set(key, value, { EX: ttl });
+                    } else {
+                        pipeline.set(key, value);
+                    }
+                }
+                return wrapper; // retorna el wrapper para chaining
+            },
+            del: (key: string, condition: boolean = true) => {
+                if (condition && key !== "_") { // evita operaciones no-op con "_"
+                    pipeline.del(key);
+                }
+                return wrapper; // retorna el wrapper para chaining  
+            },
+            exec: () => pipeline.exec()
+        };
+        
+        return wrapper;
+    }
+
+    /**
+     * Ejecuta múltiples operaciones SET en un pipeline
+     * @param operations Array de operaciones {key, value, ttl?}
+     */
+    public async batchSet(operations: Array<{key: string, value: string, ttl?: number}>): Promise<void> {
+        if (operations.length === 0) return;
+
+        const pipeline = this.redisClient.multi();
+        
+        for (const op of operations) {
+            if (op.ttl) {
+                pipeline.set(op.key, op.value, { EX: op.ttl });
+            } else {
+                pipeline.set(op.key, op.value);
+            }
+        }
+
+        await pipeline.exec();
+    }
+
+    /**
+     * Ejecuta múltiples operaciones DELETE en un pipeline
+     * @param keys Array de keys a eliminar
+     */
+    public async batchDelete(keys: string[]): Promise<void> {
+        if (keys.length === 0) return;
+
+        const pipeline = this.redisClient.multi();
+        keys.forEach(key => pipeline.del(key));
+        await pipeline.exec();
+    }
 }
