@@ -7,6 +7,14 @@ import { EventV2Service } from "../../services/@database/event/eventv2.service";
 import { CONSOLE_COLOR } from "../../constant/console-color";
 import * as RPC from "../../services/@rabbitmq/rpc/functions";
 import { JWTService } from "../../services/jwt/jwt.service";
+import { getBookingPageByIds, getServiceByIds } from "../../services/@service-token-client/api-ms/bookingPage.ms";
+import { getWorkspacesByIds } from "../../services/@service-token-client/api-ms/auth.ms";
+import { EventForBackend } from "../../services/@database/event/dto/EventForBackend";
+import { _publishForAction } from "../../models/notification/util/trigger/for-action";
+import { Event } from "@prisma/client";
+import { getClientWorkspacesByIds } from "../../services/@service-token-client/api-ms/client.ms";
+import { buildIcs, IcsMeta } from "../../services/@database/event/util/build-ics";
+import { deleteRecordsRoutingKeys, publishDeleteRecordsMessage } from "../../services/@rabbitmq/pubsub/functions";
 
 export class EventController {
     public eventService: EventV2Service;
@@ -21,16 +29,20 @@ export class EventController {
         this.eventService = new EventV2Service();
     }
 
+
     public add = async (req: any, res: any, next: any) => {
         try {
-            const body = req.body;
+            const body: EventForBackend = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
             const result = await this.eventService.addEventV2(body);
 
-            // TODO: Usad el send de RabbitMQ para crear notificación en su Microservicio
-            // Por hacer
+
+
+
+
+
 
             res.status(200).json(Response.build("Evento creado", 200, true, result));
         } catch (err: any) {
@@ -205,7 +217,7 @@ export class EventController {
             // deps para el caso de uso
             const deps = {
                 timeZoneWorkspace: ctx.timeZoneWorkspace,
-                
+
                 businessHoursService: this.businessHoursService,
                 workerHoursService: this.workerHoursService,
                 temporaryHoursService: this.temporaryHoursService,
@@ -241,6 +253,8 @@ export class EventController {
                 ok = false;   // para que el front no trate como creación
                 message = "Ya estabas inscrito en este evento";
             }
+
+            console.log("result de addFromWeb", result);
 
             return res.status(status).json(Response.build(message, status, ok, result));
         } catch (err: any) {
@@ -309,25 +323,49 @@ export class EventController {
             // 2) Datos “crudos” (participantes, recurrenceRule, servicio)
             const events = await this.eventService.getEventExtraData(idList);
 
-            console.log("Eventos encontrados:", events);
+            // 2.1) Enriquecer con datos adicionales (si es necesario)
+
+            // console.log("Eventos encontrados:", events);
 
             // 3) Colecciona todos los ids de cliente
             const allClientIds = events
-                .flatMap(ev => ev.eventParticipant.map(p => p.idClientFk))
+                .flatMap(ev => ev.eventParticipant.map(p => p.idClientWorkspaceFk))
                 .filter((id): id is string => !!id);                  // quita null/undefined
 
             const uniqueClientIds = [...new Set(allClientIds)];
 
+            // 3.1) Colecciona todos los ids de servicios
+            const allServiceIds = events
+                .map(ev => ev.idServiceFk)
+                .filter((id): id is string => !!id);                  // quita null/undefined
+
+            const uniqueServiceIds = [...new Set(allServiceIds)];
+
             // 4) Pide a MS-clientes vía RPC -> devuelve nombre, avatar, etc.
-            const clientWorkspaceRPCList =
-                await RPC.getClientstByIdClientAndIdWorkspace(
-                    idWorkspace,
-                    uniqueClientIds,
-                );
+            const clientWorkspaceList = await getClientWorkspacesByIds(uniqueClientIds, idWorkspace);
+
+            // console.log("mira que es clientWorkspace", clientWorkspaceList)
+
+
+            // const clientWorkspaceRPCList =
+            //     await RPC.getClientstByIdClientAndIdWorkspace(
+            //         idWorkspace,
+            //         uniqueClientIds,
+            //     );
+
+            // 4.1) Obtiene servicios usando getServiceByIds
+            const services = uniqueServiceIds.length > 0
+                ? await getServiceByIds(uniqueServiceIds, idWorkspace)
+                : [];
 
             // 5) Mapea a Map para lookup O(1)
             const clientMap = new Map(
-                clientWorkspaceRPCList.map(c => [c.idClientFk, c]),
+                clientWorkspaceList.map(c => [c.id, c]),
+            );
+
+            // 5.1) Mapea servicios para lookup O(1)
+            const serviceMap = new Map(
+                services.map(s => [s.id, s]),
             );
 
             // 6) Enriquecemos cada evento
@@ -340,11 +378,11 @@ export class EventController {
             // }));
 
             // 6) Enriquecemos cada evento, pero recortando el objeto client
-            const eventsWithClients = events.map(ev => ({
+            const eventsWithClientsAndServices = events.map(ev => ({
                 ...ev,
                 eventParticipant: ev.eventParticipant.map(p => {
                     // busca el objeto completo
-                    const fullClient = clientMap.get(p.idClientFk) ?? null;
+                    const fullClient = clientMap.get(p.idClientWorkspaceFk) ?? null;
 
                     // recórtalo al shape que quieres
                     const client = fullClient
@@ -361,6 +399,20 @@ export class EventController {
                         client,
                     };
                 }),
+                // Agregar el servicio si existe, pero solo con los campos necesarios
+                service: ev.idServiceFk ? (() => {
+                    const fullService = serviceMap.get(ev.idServiceFk);
+                    return fullService ? {
+                        id: fullService.id,
+                        name: fullService.name,
+                        duration: fullService.duration,
+                        price: fullService.price,
+                        discount: fullService.discount,
+                        serviceType: fullService.serviceType,
+                        color: fullService.color,
+                        image: fullService.image,
+                    } : null;
+                })() : null,
             }));
 
 
@@ -371,7 +423,7 @@ export class EventController {
                         'Datos extra de eventos encontrados',
                         200,
                         true,
-                        eventsWithClients,
+                        eventsWithClientsAndServices,
                     ),
                 );
         } catch (err: any) {
@@ -379,7 +431,98 @@ export class EventController {
         }
     };
 
+    //  public getEventExtraData = async (req: any, res: any, _next: any) => {
+    //         try {
 
+    //             console.log("getEventExtraData called");
+    //             const { idList } = req.body;           // ⬅️ asegúrate de mandar el id del local
+    //             const { idCompany, idWorkspace } = req.params;
+
+    //             if (!Array.isArray(idList) || idList.length === 0) {
+    //                 return res.status(400).json({ message: 'Faltan ids de evento' });
+    //             }
+    //             if (!idWorkspace) {
+    //                 return res.status(400).json({ message: 'Falta el id del establecimiento' });
+    //             }
+
+    //             // 1) Seguridad JWT
+    //             const token = req.token;
+    //             await this.jwtService.verify(token);
+
+    //             // 2) Datos “crudos” (participantes, recurrenceRule, servicio)
+    //             const events = await this.eventService.getEventExtraData(idList);
+
+    //             // 2.1) Enriquecer con datos adicionales (si es necesario)
+
+    //             console.log("Eventos encontrados:", events);
+
+    //             // 3) Colecciona todos los ids de cliente
+    //             const allClientIds = events
+    //                 .flatMap(ev => ev.eventParticipant.map(p => p.idClientFk))
+    //                 .filter((id): id is string => !!id);                  // quita null/undefined
+
+    //             const uniqueClientIds = [...new Set(allClientIds)];
+
+    //             // 4) Pide a MS-clientes vía RPC -> devuelve nombre, avatar, etc.
+    //             const clientWorkspaceRPCList =
+    //                 await RPC.getClientstByIdClientAndIdWorkspace(
+    //                     idWorkspace,
+    //                     uniqueClientIds,
+    //                 );
+
+    //             // 5) Mapea a Map para lookup O(1)
+    //             const clientMap = new Map(
+    //                 clientWorkspaceRPCList.map(c => [c.idClientFk, c]),
+    //             );
+
+    //             // 6) Enriquecemos cada evento
+    //             // const eventsWithClients = events.map(ev => ({
+    //             //     ...ev,
+    //             //     eventParticipant: ev.eventParticipant.map(p => ({
+    //             //         ...p,
+    //             //         client: clientMap.get(p.idClientFk) ?? null,        // ⬅️ aquí queda el objeto cliente
+    //             //     })),
+    //             // }));
+
+    //             // 6) Enriquecemos cada evento, pero recortando el objeto client
+    //             const eventsWithClients = events.map(ev => ({
+    //                 ...ev,
+    //                 eventParticipant: ev.eventParticipant.map(p => {
+    //                     // busca el objeto completo
+    //                     const fullClient = clientMap.get(p.idClientFk) ?? null;
+
+    //                     // recórtalo al shape que quieres
+    //                     const client = fullClient
+    //                         ? {
+    //                             name: fullClient.name,
+    //                             surname1: fullClient.surname1,
+    //                             surname2: fullClient.surname2,
+    //                             image: fullClient.image,
+    //                         }
+    //                         : null;
+
+    //                     return {
+    //                         ...p,
+    //                         client,
+    //                     };
+    //                 }),
+    //             }));
+
+
+    //             // 7) Respuesta
+    //             res.status(200)
+    //                 .json(
+    //                     Response.build(
+    //                         'Datos extra de eventos encontrados',
+    //                         200,
+    //                         true,
+    //                         eventsWithClients,
+    //                     ),
+    //                 );
+    //         } catch (err: any) {
+    //             res.status(500).json({ message: err.message });
+    //         }
+    //     };
 
     /**
      * Se devuelve los cancelados y los activos
@@ -407,6 +550,16 @@ export class EventController {
             await this.jwtService.verify(token);
 
             const result = await this.eventService.getEventById(id);
+
+            if (result) {
+                let service = await getServiceByIds([result.idServiceFk], result.idWorkspaceFk);
+                result.service = service[0] ?? null;
+            }
+
+            if (!result) {
+                return res.status(404).json(Response.build("Evento no encontrado", 404, false));
+            }
+
             res.status(200).json(Response.build("Evento encontrado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -424,6 +577,13 @@ export class EventController {
 
             // Luego, elimina el evento de la base de datos
             const result = await this.eventService.deleteEventsV2(idList);
+
+
+            // Borramos las notificaciones relacionadas
+            publishDeleteRecordsMessage({
+                table: 'calendarEvents',
+                ids: idList,
+            }, deleteRecordsRoutingKeys.notification); 
 
 
             res.status(200).json(Response.build("Evento eliminado exitosamente", 200, true, result));
@@ -464,4 +624,41 @@ export class EventController {
             res.status(500).json({ message: err.message });
         }
     }
+
+
+
+
+
+
+    // Entre microservicios
+
+    getEventDataById = async (req: any, res: any) => {
+        try {
+            console.log(`${CONSOLE_COLOR.FgYellow} /event/data called ${CONSOLE_COLOR.Reset}`);
+            const { id, idWorkspace } = req.body;
+
+            console.log("id", id);
+            console.log("idWorkspace", idWorkspace);
+            if (!id) {
+                return res.status(400).json({ ok: false, message: "id (string) is required" });
+            }
+            if (!idWorkspace) {
+                return res.status(400).json({ ok: false, message: "idWorkspace (string) is required" });
+            }
+
+            const { item, count } = await this.eventService.getEventDataById(id, idWorkspace);
+
+            console.log("voy a devolver esto", item, count);
+            console.log(`${CONSOLE_COLOR.FgGreen} /event/data completed ${CONSOLE_COLOR.Reset}`, { count });
+            return res.status(200).json({ ok: true, item, count });
+        } catch (err: any) {
+            console.error(err);
+            return res.status(500).json({ ok: false, message: err?.message || "Internal error" });
+        }
+    };
+
+
+
+
+
 }

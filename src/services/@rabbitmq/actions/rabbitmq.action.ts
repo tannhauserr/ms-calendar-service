@@ -1,4 +1,4 @@
-import { Service } from "@prisma/client";
+// import { Service } from "@prisma/client";
 import { RoleType } from "../../../models/interfaces/role-type";
 import { EventForBackend } from "../../@database/event/dto/EventForBackend";
 import { SendLogPayload } from "../interfaces";
@@ -130,7 +130,9 @@ export interface ActionPayloads {
         | 'users'
         | 'clientWorkspaces'
         | 'userWorkspaces-byWorkspace'
-        | 'userWorkspaces-byUser';
+        | 'userWorkspaces-byUser'
+        | 'calendarEvents'
+        ;
         ids: string[]; // Array de IDs a borrar
         idRelation?: string; // ID de la relación si es necesario
     };
@@ -143,7 +145,7 @@ export interface ActionPayloads {
         idRecurrence?: string; // opcional para SPLIT_FUTURE/SPLIT_ALL
     };
 
-    // Usado solo en MS-Calendar
+    // // Usado solo en MS-Calendar y MS-BookingPage
     requestUpdateServiceInEvent: {
         payload: ServiceForEvent
     }
@@ -198,7 +200,7 @@ export const SubscriberActions = {
     // Usado solo en MS-Calendar
     requestRecurrenceJob: "requestRecurrenceJob",
 
-    // Usado solo en MS-Calendar
+    // // Usado solo en MS-Calendar y MS-BookingPage
     requestUpdateServiceInEvent: "requestUpdateServiceInEvent",
 
     // Usado en MS-Login - MS-Calendar - MS-Chat

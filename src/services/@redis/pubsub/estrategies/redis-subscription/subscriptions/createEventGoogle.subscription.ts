@@ -1,6 +1,5 @@
 import { TIME_SECONDS } from "../../../../../../constant/time";
 import CustomError from "../../../../../../models/custom-error/CustomError";
-import { EventService } from "../../../../../@database/event/event.service";
 import { EventCalendarGoogleService } from "../../../../../caledar-googleapi/event-calendar-googleapi.service";
 import { CalendarValidationRequest } from "../../../../../caledar-googleapi/validator/pattern-validator/interface/calendar-validation-request";
 import { ResponseValidator } from "../../../../../caledar-googleapi/validator/pattern-validator/interface/response-validation";
@@ -56,7 +55,7 @@ export const createEventGoogleSubscription = () => {
                 // avoidSameEventStrategy.setEventFromGoogle(googleEvent.id, TIME_SECONDS.MINUTE);
 
                 // Finalmente, actualiza tu evento en la base de datos con el ID del evento de Google
-                const eventService = new EventService();
+                // const eventService = new EventService();
                 // await eventService.updateEvent({ id: idRowEventDB, idGoogleEvent: googleEvent.id });
 
 

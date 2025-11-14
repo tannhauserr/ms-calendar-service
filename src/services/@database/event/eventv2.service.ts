@@ -1,28 +1,49 @@
-import { Prisma, Event, EventStatusType, $Enums, EventParticipant, ServiceType, RecurrenceStatusType, PrismaClient, EventSourceType, EventPurposeType } from "@prisma/client";
+import { Event, EventParticipant, EventStatusType, Prisma, PrismaClient, ActionSectionType } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
 import { Pagination } from "../../../models/pagination";
 import { getGenericSpecialEvent2 } from "../../../utils/get-genetic/calendar-event/getGenericSpecialEvent2";
-import { EventForBackend } from "./dto/EventForBackend";
-import { EventExtraData } from "./dto/EventExtraData";
 import { RecurrenceStrategyFactory } from "../recurrence-rule/strategy/factory";
-import { buildNestedUpdates, toPrismaEventScalars, toPrismaEventUpdate } from "./util/toPrismaEventUpdate";
-import { RRule, rrulestr } from "rrule";
 import { NewStrategy } from "../recurrence-rule/strategy/new.strategy";
+import { EventExtraData } from "./dto/EventExtraData";
+import { EventForBackend } from "./dto/EventForBackend";
+import { buildNestedUpdates, toPrismaEventUpdate } from "./util/toPrismaEventUpdate";
 
-import * as RabbitPUBSUB from "../../../services/@rabbitmq/pubsub/functions";
 import moment from "moment";
-import { DEFAULT_RECURRENCE_COUNT, MAX_RECURRENCE_COUNT } from "../recurrence-rule/strategy/type";
-import { RecurrenceRule } from "node-schedule";
-import { skip } from "@prisma/client/runtime/library";
+import { CONSOLE_COLOR } from "../../../constant/console-color";
+import * as RabbitPUBSUB from "../../../services/@rabbitmq/pubsub/functions";
+import { getServiceByIds } from "../../@service-token-client/api-ms/bookingPage.ms";
 import { BusinessHourService } from "../all-business-services/business-hours/business-hours.service";
 import { TemporaryBusinessHourService } from "../all-business-services/temporary-business-hour/temporary-business-hour.service";
 import { WorkerBusinessHourService } from "../all-business-services/worker-business-hours/worker-business-hours.service";
-import { GetAvailableDaysInput, DayFlag } from "./types";
-import { getUsersWhoCanPerformService, enumerateDays, getEventsOverlappingRange, hasAnySlotForDayWithCapacity } from "./util/event-availability";
-import { CONSOLE_COLOR } from "../../../constant/console-color";
+import { DEFAULT_RECURRENCE_COUNT, MAX_RECURRENCE_COUNT } from "../recurrence-rule/strategy/type";
+import { DayAvailabilityStatus, DayFlag } from "./types";
+import { enumerateDays, getEventsOverlappingRange, getUsersWhoCanPerformService } from "./util/event-availability";
 
+import {
+    assignSequentially_SPECIAL,
+    computeSlotConfig,
+    getEventsOverlappingRange_SPECIAL,
+    getUsersWhoCanPerformService_SPECIAL,
+    groupEventsByUser_SPECIAL,
+    mergeTouchingWindows_SPECIAL,
+    subtractBusyFromShift_SPECIAL,
+    Weekday,
+    type AvailabilityDepsSpecial,
+    type BusinessHoursType,
+    type GetTimeSlotsInputSpecial,
+    type TemporaryHoursMapType,
+    type WorkerHoursMapType
+} from "../event/availability-special.service"; // <-- ajusta la ruta
 
+import { TIME_SECONDS } from "../../../constant/time";
+import { IRedisRoundRobinStrategy } from "../../@redis/cache/interfaces/interfaces";
+import { OnlineBookingConfig } from "../../@redis/cache/interfaces/models/booking-config";
+import { ServiceBrief } from "../../@redis/cache/interfaces/models/service-brief";
+import { RedisStrategyFactory } from "../../@redis/cache/strategies/redisStrategyFactory";
+import { getServiceByUserIds } from "../../@service-token-client/api-ms/bookingPage.ms";
+import { _getServicesSnapshotById } from "./util/getInfoServices";
+import { createNotification } from "../../../models/notification/util/trigger/for-action";
 
 
 type ParticipantAction = "accept" | "cancel";
@@ -36,6 +57,7 @@ const PARTICIPANT_ALLOWED: Record<EventStatusType, EventStatusType[]> = {
     CANCELLED_BY_CLIENT: [],
     CANCELLED_BY_CLIENT_REMOVED: [],
     PAID: [],
+    NO_SHOW: [],
 };
 
 // 1) Define tus reglas de transición
@@ -61,6 +83,7 @@ const ALLOWED: Record<EventStatusType, EventStatusType[]> = {
         EventStatusType.CANCELLED,
     ],
     PAID: [],
+    NO_SHOW: [],
 
     // Cancelaciones no transitan a nada (salvo el “removed” si lo quieres)
     CANCELLED: [],
@@ -68,6 +91,7 @@ const ALLOWED: Record<EventStatusType, EventStatusType[]> = {
         // Sólo si quieres un paso extra “removido”:
         EventStatusType.CANCELLED_BY_CLIENT_REMOVED,
     ],
+    // Este estado es cuando es del cliente y el usuario lo elimina 
     CANCELLED_BY_CLIENT_REMOVED: [],
 };
 
@@ -75,30 +99,7 @@ const ALLOWED: Record<EventStatusType, EventStatusType[]> = {
 // Add
 
 
-import {
-    getUsersWhoCanPerformService_SPECIAL,
-    getEventsOverlappingRange_SPECIAL,
-    groupEventsByUser_SPECIAL,
-    subtractBusyFromShift_SPECIAL,
-    mergeTouchingWindows_SPECIAL,
-    assignSequentially_SPECIAL,
-    computeSlotConfig,
-    type GetTimeSlotsInputSpecial,
-    type ServiceAttendeeSpecial,
-    type AvailabilityDepsSpecial,
-    type BusinessHoursType,
-    type WorkerHoursMapType,
-    type TemporaryHoursMapType,
-} from "../event/availability-special.service"; // <-- ajusta la ruta
 
-import { z } from "zod";
-import { toPrismaEventCreate } from "./util/toPrismaEventCreate";
-import e from "express";
-import { _getServicesSnapshotById } from "./util/getInfoServices";
-import { RedisStrategyFactory } from "../../@redis/cache/strategies/redisStrategyFactory";
-import { IRedisRoundRobinStrategy } from "../../@redis/cache/interfaces/interfaces";
-import { TIME_SECONDS } from "../../../constant/time";
-import { OnlineBookingConfig } from "../../@redis/cache/interfaces/models/booking-config";
 
 
 type AddFromWebInput = {
@@ -172,6 +173,22 @@ export class EventV2Service {
             ? new Date(event.endDate)
             : event.endDate;
 
+        let service: ServiceBrief | ServiceBrief[] = await getServiceByUserIds(
+            [event.idServiceFk],
+            event.idWorkspaceFk
+        );
+        service = service.length > 0 ? service[0] : null;
+
+        console.log("mira que es esto en addEventV2", service);
+
+        // event.service = service;
+        // payload.event.service = service;
+
+        if (!event.idServiceFk) event.idServiceFk = event?.service?.id ?? null;
+
+
+        // console.log("mirta que es service en addEventV2", event?.service);
+
         let createdEvent = { ...event };
         if (!skipMainEvent) {
             // 1) Crear el primer evento (+ regla inline + participantes) en una tx
@@ -189,16 +206,16 @@ export class EventV2Service {
                         isEditableByClient: event.isEditableByClient,
                         numberUpdates: event.numberUpdates,
                         eventStatusType: event.eventStatusType,
-                        service: event.service?.id
-                            ? { connect: { id: event.service.id } }
-                            : undefined,
+                        idServiceFk: event.service?.id ?? undefined,
 
-                        serviceNameSnapshot: event?.service?.name ?? null,
-                        servicePriceSnapshot: event?.service?.price ?? null,
-                        serviceDiscountSnapshot: event?.service?.discount ?? null,
-                        serviceDurationSnapshot: event?.service?.duration ?? null,
+                        serviceNameSnapshot: event.service?.name ?? null,
+                        servicePriceSnapshot: event.service?.price ?? null,
+                        serviceDiscountSnapshot: event.service?.discount ?? null,
+                        serviceDurationSnapshot: event.service?.duration ?? null,
 
-                        calendar: { connect: { id: event.idCalendarFk } },
+                        // calendar: { connect: { id: event.idCalendarFk } },
+                        idWorkspaceFk: event.idWorkspaceFk,
+                        idCompanyFk: event.idCompanyFk,
 
                         // Si hay regla, créala INLINE
                         // recurrenceRule: recurrenceRule
@@ -235,14 +252,23 @@ export class EventV2Service {
                                 })),
                             }
                             : undefined,
+
+
                     },
                     include: {
-                        service: true,
                         recurrenceRule: true,
                         eventParticipant: true,
                     },
                 })
             );
+        }
+
+        if (createdEvent?.id) {
+            // Crear el plan de notificación para el evento
+            createNotification(createdEvent as any,
+                {
+                    actionSectionType: "add",
+                });
         }
 
 
@@ -261,7 +287,8 @@ export class EventV2Service {
                             : [],
                     tzid: recurrenceRule.tzid,
                     recurrenceStatusType: recurrenceRule.recurrenceStatusType,
-                    calendar: { connect: { id: event.idCalendarFk } },
+                    // calendar: { connect: { id: event.idCalendarFk } },
+                    idWorkspaceFk: event.idWorkspaceFk,
                 },
             });
         }
@@ -278,7 +305,6 @@ export class EventV2Service {
                 include: {
                     recurrenceRule: true,
                     eventParticipant: true,
-                    service: true,
                 },
             });
         }
@@ -329,9 +355,26 @@ export class EventV2Service {
             );
         }
 
-        // 3) Devolver el primer evento con sus relaciones
-        return skipMainEvent ? undefined : createdEvent;
+        // 3) Enriquecer con datos del servicio si existe idServiceFk
+        let enrichedEvent = createdEvent;
+        if (!skipMainEvent && (createdEvent as any)?.idServiceFk && event.idWorkspaceFk) {
+            try {
+                const services = await getServiceByIds([(createdEvent as any).idServiceFk], event.idWorkspaceFk);
+                const service = services.length > 0 ? services[0] : null;
+                enrichedEvent = {
+                    ...createdEvent,
+                    service
+                } as any;
+            } catch (serviceError) {
+                console.warn(`[addEventV2] No se pudo obtener el servicio ${(createdEvent as any).idServiceFk}:`, serviceError);
+                // Continuamos sin el servicio, no es un error crítico
+            }
+        }
+
+        // 4) Devolver el primer evento con sus relaciones enriquecidas
+        return skipMainEvent ? undefined : enrichedEvent;
     }
+
 
     async updateEventV2(payload: EventForBackend) {
         try {
@@ -347,6 +390,29 @@ export class EventV2Service {
             if (!event.id) {
                 throw new Error("Para actualizar necesitas el id del evento");
             }
+
+            // Obtener el evento actual antes de la actualización para comparar cambios
+            const currentEvent = await prisma.event.findUnique({
+                where: { id: event.id },
+                select: {
+                    eventStatusType: true,
+                    startDate: true,
+                    endDate: true
+                }
+            });
+
+            if (!currentEvent) {
+                throw new Error("Evento no encontrado");
+            }
+
+            let service: ServiceBrief | ServiceBrief[] = await getServiceByUserIds
+                ([event.idServiceFk], event.idWorkspaceFk);
+            service = service.length > 0 ? service[0] : null;
+
+            event.service = service as any;
+
+            if (!event.idServiceFk) event.idServiceFk = event?.service?.id ?? null;
+
 
             // Determino el alcance de la actualización de la regla
             const scope = recurrenceRuleUpdate
@@ -364,7 +430,7 @@ export class EventV2Service {
                         await strat.handleImmediate(payload, tx as PrismaClient);
                         return tx.event.findUnique({
                             where: { id: event.id },
-                            include: { recurrenceRule: true, eventParticipant: true, service: true },
+                            include: { recurrenceRule: true, eventParticipant: true },
                         });
                     }
                     // FUTURE / ALL => genero una regla nueva
@@ -388,7 +454,7 @@ export class EventV2Service {
                                 recurrenceRule: { connect: { id: newRuleId } },
                                 ...buildNestedUpdates(event, eventParticipant, eventParticipantDelete),
                             },
-                            include: { recurrenceRule: true, eventParticipant: true, service: true },
+                            include: { recurrenceRule: true, eventParticipant: true },
                         });
                     }
                 }
@@ -409,7 +475,7 @@ export class EventV2Service {
 
                     return tx.event.findUnique({
                         where: { id: event.id },
-                        include: { recurrenceRule: true, eventParticipant: true, service: true },
+                        include: { recurrenceRule: true, eventParticipant: true },
                     });
                 }
 
@@ -420,11 +486,80 @@ export class EventV2Service {
                         ...toPrismaEventUpdate(event),
                         ...buildNestedUpdates(event, eventParticipant, eventParticipantDelete),
                     },
-                    include: { recurrenceRule: true, eventParticipant: true, service: true },
+                    include: { recurrenceRule: true, eventParticipant: true },
                 });
             });
 
-            // 2) Disparo el job de Rabbit solo si no salté el main y hay regla nueva/actualizada
+
+            console.log(CONSOLE_COLOR.FgCyan, `[EventV2Service][updateEventV2] ${JSON.stringify(updated)}`, CONSOLE_COLOR.Reset);
+
+            /**
+             * NOTIFICACIONES\
+             * 1) Decidir si se notifica o no según cambios relevantes
+             * 2) Si se notifica, decidir acción (aceptación, cancelación, no-show, actualización)
+             * 3) Disparar la notificación
+             */
+            if (updated?.id) {
+                const prev = currentEvent;
+                // 1) Resolver acción según transición de estado
+                const resolveAction = (
+                    oldS: EventStatusType,
+                    newS: EventStatusType): ActionSectionType => {
+                    // cancelaciones siempre => "cancel"
+                    if (newS === "CANCELLED" || newS === "CANCELLED_BY_CLIENT" || newS === "CANCELLED_BY_CLIENT_REMOVED") {
+                        return "cancel";
+                    }
+                    // no-show explícito
+                    if (newS === "NO_SHOW") return "markNoShow";
+
+                    // transición típica de solicitud → aceptada
+                    if (oldS === "PENDING" && newS === "ACCEPTED") return "acceptRequest";
+
+                    // por defecto, actualización normal
+                    return "update";
+                };
+
+                // 2) Detectar cambios relevantes
+                const startOldMs = prev?.startDate ? new Date(prev.startDate).getTime() : null;
+                const endOldMs = prev?.endDate ? new Date(prev.endDate).getTime() : null;
+                const startNewMs = new Date(updated.startDate).getTime();
+                const endNewMs = new Date(updated.endDate).getTime();
+
+                const durationOld = (endOldMs !== null && startOldMs !== null) ? (endOldMs - startOldMs) : null;
+                const durationNew = endNewMs - startNewMs;
+
+                const timeChanged =
+                    (startOldMs !== null && startOldMs !== startNewMs) ||
+                    (durationOld !== null && durationOld !== durationNew);
+
+                const statusChanged = prev?.eventStatusType !== updated.eventStatusType;
+
+                const stateChanged = timeChanged || statusChanged;
+
+                // 3) Notificar solo si cambió algo relevante
+                if (stateChanged) {
+                    const action = resolveAction(prev?.eventStatusType as EventStatusType | undefined, updated.eventStatusType as EventStatusType);
+                    createNotification(updated, { actionSectionType: action });
+                }
+            }
+
+            // 2) Enriquecer con datos del servicio si existe idServiceFk
+            let enrichedEvent = updated;
+            if (updated && !skipMainEvent && (updated as any).idServiceFk && event.idWorkspaceFk) {
+                try {
+                    const services = await getServiceByIds([(updated as any).idServiceFk], event.idWorkspaceFk);
+                    const service = services.length > 0 ? services[0] : null;
+                    enrichedEvent = {
+                        ...updated,
+                        service
+                    } as any;
+                } catch (serviceError) {
+                    console.warn(`[updateEventV2] No se pudo obtener el servicio ${(updated as any).idServiceFk}:`, serviceError);
+                    // Continuamos sin el servicio, no es un error crítico
+                }
+            }
+
+            // 3) Disparo el job de Rabbit solo si no salté el main y hay regla nueva/actualizada
             if (
                 scope &&
                 scope !== 'THIS'
@@ -438,6 +573,8 @@ export class EventV2Service {
                 const count = Math.min(MAX_RECURRENCE_COUNT, DEFAULT_RECURRENCE_COUNT);
                 const countFixed = Number.isFinite(count) ? count : 15;
 
+                payload.event.service = enrichedEvent?.service;
+
                 console.log(
                     `${moment().format('HH:mm:ss')} [API] ▶ Enviando job ${scope} para event ${event.id}`
                 );
@@ -449,14 +586,136 @@ export class EventV2Service {
                 );
             }
 
-            // 3) Si skipMainEvent => devuelvo undefined, si no => devolución normal
-            return skipMainEvent ? { id: event.id } : updated!;
+            // 4) Si skipMainEvent => devuelvo undefined, si no => devolución normal enriquecida
+            return skipMainEvent ? { id: event.id } : enrichedEvent!;
         } catch (err: any) {
             throw new CustomError('EventV2Service.updateEventV2', err);
         }
     }
 
 
+    // async updateEventV2(payload: EventForBackend) {
+    //     try {
+    //         const {
+    //             skipMainEvent,
+    //             event,
+    //             recurrenceRule,
+    //             recurrenceRuleUpdate,
+    //             eventParticipant,
+    //             eventParticipantDelete,
+    //         } = payload;
+
+    //         if (!event.id) {
+    //             throw new Error("Para actualizar necesitas el id del evento");
+    //         }
+
+    //         // Determino el alcance de la actualización de la regla
+    //         const scope = recurrenceRuleUpdate
+    //             ? recurrenceRuleUpdate.scope
+    //             : (recurrenceRule && !recurrenceRule.id ? 'NEW' : null);
+
+    //         // 1) Ejecutar toda la lógica en una transacción
+    //         const updated = await prisma.$transaction(async tx => {
+    //             // 1.a) Si hay una actualización de regla existente
+    //             if (recurrenceRuleUpdate) {
+    //                 const strat = RecurrenceStrategyFactory.get(scope ?? 'NEW');
+
+    //                 // THIS => modifico solo la instancia puntual
+    //                 if (scope === 'THIS') {
+    //                     await strat.handleImmediate(payload, tx as PrismaClient);
+    //                     return tx.event.findUnique({
+    //                         where: { id: event.id },
+    //                         include: { recurrenceRule: true, eventParticipant: true, service: true },
+    //                     });
+    //                 }
+    //                 // FUTURE / ALL => genero una regla nueva
+    //                 const newRuleId = await strat.handleImmediate(payload, tx as PrismaClient);
+
+    //                 if (skipMainEvent) {
+    //                     // elimino el evento principal
+    //                     await tx.event.delete({ where: { id: event.id } });
+    //                     // devuelvo un objeto mínimo (no se usará porque skipMainEvent => retornamos undefined al final)
+    //                     return {
+    //                         id: event.id,
+    //                         recurrenceRule: { id: newRuleId }
+    //                     } as any;
+    //                 } else {
+
+    //                     // actualizo el evento principal enlazando la nueva regla
+    //                     return tx.event.update({
+    //                         where: { id: event.id },
+    //                         data: {
+    //                             ...toPrismaEventUpdate(event),
+    //                             recurrenceRule: { connect: { id: newRuleId } },
+    //                             ...buildNestedUpdates(event, eventParticipant, eventParticipantDelete),
+    //                         },
+    //                         include: { recurrenceRule: true, eventParticipant: true, service: true },
+    //                     });
+    //                 }
+    //             }
+
+    //             // 1.b) Primera vez que añado recurrencia (NEW)
+    //             if (recurrenceRule && !recurrenceRule.id) {
+    //                 const newStrat = RecurrenceStrategyFactory.get('NEW') as NewStrategy;
+    //                 const newRuleId = await newStrat.handleImmediate(payload, tx as PrismaClient);
+
+    //                 await tx.event.update({
+    //                     where: { id: event.id },
+    //                     data: {
+    //                         ...toPrismaEventUpdate(event),
+    //                         recurrenceRule: { connect: { id: newRuleId } },
+    //                         ...buildNestedUpdates(event, eventParticipant, eventParticipantDelete),
+    //                     },
+    //                 });
+
+    //                 return tx.event.findUnique({
+    //                     where: { id: event.id },
+    //                     include: { recurrenceRule: true, eventParticipant: true, service: true },
+    //                 });
+    //             }
+
+    //             // 1.c) Sin recurrencia: solo actualizo el evento
+    //             return tx.event.update({
+    //                 where: { id: event.id },
+    //                 data: {
+    //                     ...toPrismaEventUpdate(event),
+    //                     ...buildNestedUpdates(event, eventParticipant, eventParticipantDelete),
+    //                 },
+    //                 include: { recurrenceRule: true, eventParticipant: true, service: true },
+    //             });
+    //         });
+
+    //         // 2) Disparo el job de Rabbit solo si no salté el main y hay regla nueva/actualizada
+    //         if (
+    //             scope &&
+    //             scope !== 'THIS'
+    //         ) {
+    //             let opType: 'CREATE_SERIES' | 'SPLIT_THIS' | 'SPLIT_FUTURE' | 'SPLIT_ALL';
+    //             if (scope === 'NEW') opType = 'CREATE_SERIES';
+    //             else if (scope === 'FUTURE') opType = 'SPLIT_FUTURE';
+    //             else if (scope === 'ALL') opType = 'SPLIT_ALL';
+    //             else opType = 'SPLIT_THIS';
+
+    //             const count = Math.min(MAX_RECURRENCE_COUNT, DEFAULT_RECURRENCE_COUNT);
+    //             const countFixed = Number.isFinite(count) ? count : 15;
+
+    //             console.log(
+    //                 `${moment().format('HH:mm:ss')} [API] ▶ Enviando job ${scope} para event ${event.id}`
+    //             );
+    //             await RabbitPUBSUB.sendRecurrenceWorkerJob(
+    //                 opType,
+    //                 payload,
+    //                 countFixed,
+    //                 updated.recurrenceRule.id
+    //             );
+    //         }
+
+    //         // 3) Si skipMainEvent => devuelvo undefined, si no => devolución normal
+    //         return skipMainEvent ? { id: event.id } : updated!;
+    //     } catch (err: any) {
+    //         throw new CustomError('EventV2Service.updateEventV2', err);
+    //     }
+    // }
 
     /**
      * Borra varios eventos y, si procede, también sus reglas de recurrencia huérfanas.
@@ -505,7 +764,7 @@ export class EventV2Service {
     }
 
 
-    // …
+
 
 
 
@@ -670,29 +929,7 @@ export class EventV2Service {
                     // eventSourceType: true,
                     idServiceFk: true,
                     allDay: true,
-                    // service: {
-                    //     select: {
-                    //         id: true,
-                    //         name: true,
-                    //         description: true,
-                    //     }
-                    // },
 
-                    // eventParticipant: {
-                    //     select: {
-                    //         id: true,
-                    //         idClientFk: true,
-                    //         idClientWorkspaceFk: true,
-                    //         eventStatusType: true,
-
-                    //     }
-                    // }
-
-                    // Calendar: {
-                    //     select: {
-                    //         id: true,
-                    //     }
-                    // }
                 };
 
                 pagination = pagination || {
@@ -722,13 +959,15 @@ export class EventV2Service {
                     eventSourceType: true,
                     allDay: true,
 
-                    service: {
-                        select: {
-                            id: true,
-                            name: true,
-                            description: true,
-                        }
-                    },
+
+                    // TODO: El servicio debe de venir del ms de booking page
+                    // service: {
+                    //     select: {
+                    //         id: true,
+                    //         name: true,
+                    //         description: true,
+                    //     }
+                    // },
 
                     eventParticipant: {
                         select: {
@@ -785,6 +1024,8 @@ export class EventV2Service {
                 select: {
                     id: true,
                     title: true,
+                    idServiceFk: true,
+                    description: true,
 
                     serviceNameSnapshot: true,
                     servicePriceSnapshot: true,
@@ -819,18 +1060,18 @@ export class EventV2Service {
                     },
 
                     // SERVICIO
-                    service: {
-                        select: {
-                            id: true,
-                            name: true,
-                            duration: true,
-                            price: true,
-                            discount: true,
-                            serviceType: true,
-                            color: true,
-                            image: true, // si quieres incluir la imagen
-                        },
-                    },
+                    // service: {
+                    //     select: {
+                    //         id: true,
+                    //         name: true,
+                    //         duration: true,
+                    //         price: true,
+                    //         discount: true,
+                    //         serviceType: true,
+                    //         color: true,
+                    //         image: true, // si quieres incluir la imagen
+                    //     },
+                    // },
                 },
             });
 
@@ -838,22 +1079,26 @@ export class EventV2Service {
             return events.map(
                 ({
                     id,
+                    idServiceFk,
+                    description,
                     serviceNameSnapshot,
                     servicePriceSnapshot,
                     serviceDiscountSnapshot,
                     serviceDurationSnapshot,
                     eventParticipant,
                     recurrenceRule,
-                    service,
+                    // service,
                 }): EventExtraData => ({
                     id,
+                    idServiceFk: idServiceFk ?? undefined,
+                    description: description ?? undefined,
                     serviceNameSnapshot: serviceNameSnapshot ?? undefined,
                     servicePriceSnapshot: servicePriceSnapshot ?? undefined,
                     serviceDiscountSnapshot: serviceDiscountSnapshot ?? undefined,
                     serviceDurationSnapshot: serviceDurationSnapshot ?? undefined,
                     eventParticipant: eventParticipant ?? [],
                     recurrenceRule: recurrenceRule as any ?? undefined,
-                    service: service ?? undefined,
+                    // service: service ?? undefined,
                 }),
             );
         } catch (error: any) {
@@ -877,6 +1122,8 @@ export class EventV2Service {
                     description: true,
                     startDate: true,
                     endDate: true,
+                    idCompanyFk: true,
+                    idWorkspaceFk: true,
                     // idClientFk: true,
                     // idClientWorkspaceFk: true,
                     idUserPlatformFk: true,
@@ -886,13 +1133,14 @@ export class EventV2Service {
                     eventStatusType: true,
                     allDay: true,
 
-                    service: {
-                        select: {
-                            id: true,
-                            name: true,
-                            description: true,
-                        }
-                    },
+
+                    // service: {
+                    //     select: {
+                    //         id: true,
+                    //         name: true,
+                    //         description: true,
+                    //     }
+                    // },
 
                     eventParticipant: {
                         select: {
@@ -920,18 +1168,11 @@ export class EventV2Service {
 
 
 
-    // GetAvailableDaysInput
-    // public async publicGetAvailableDays(input: GetTimeSlotsInputSpecial, deps: AvailabilityDepsSpecial): Promise<{ days: DayFlag[] }> {
+    // public async publicGetAvailableDays_OLD(
+    //     input: GetTimeSlotsInputSpecial,
+    //     deps: AvailabilityDepsSpecial
+    // ): Promise<{ days: DayFlag[] }> {
     //     try {
-    //         // const {
-    //         //     idCompany,
-    //         //     idWorkspace,
-    //         //     timezone,
-    //         //     range: { start, end },
-    //         //     attendees,
-    //         //     excludeEventId,
-    //         //     idClient, // opcional
-    //         // } = input;
     //         const {
     //             idCompany,
     //             idWorkspace,
@@ -947,42 +1188,57 @@ export class EventV2Service {
     //             businessHoursService,
     //             workerHoursService,
     //             temporaryHoursService,
-
     //         } = deps;
+
+    //         const date = new Date();
+    //         console.log("[publicGetAvailableDays_SPECIAL] called", {
+    //             date,
+    //             attendees: attendees.map(a => a.serviceId),
+    //         });
 
     //         const BOOKING_PAGE_CONFIG: OnlineBookingConfig = bookingConfig;
 
-    //         const alignMode: "clock" | "service" = BOOKING_PAGE_CONFIG.slot?.alignMode === "service" ? "service" : "clock";
+    //         // 🆕 bookingWindow
+    //         const { maxAdvanceDays = 60, minLeadTimeMin = 60 } =
+    //             BOOKING_PAGE_CONFIG.bookingWindow ?? {};
+
+    //         const alignMode: "clock" | "service" =
+    //             BOOKING_PAGE_CONFIG.slot?.alignMode === "service" ? "service" : "clock";
     //         const intervalMinutes =
     //             alignMode === "service"
     //                 ? attendees?.reduce((acc, a) => acc + (a.durationMin ?? 0), 0)
     //                 : BOOKING_PAGE_CONFIG?.slot?.stepMinutes;
 
-    //         const professionalAllowed = BOOKING_PAGE_CONFIG?.resources?.ids
-    //             ?.map(r => Array.isArray(r) ? r?.[0] : r) ?? [];
-
+    //         const professionalAllowed =
+    //             BOOKING_PAGE_CONFIG?.resources?.ids?.map((r) =>
+    //                 Array.isArray(r) ? r?.[0] : r
+    //             ) ?? [];
 
     //         if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany o idWorkspace");
     //         if (!start || !end) throw new Error("Faltan fechas de rango (start/end)");
-    //         if (typeof intervalMinutes !== "number" || isNaN(intervalMinutes) || intervalMinutes <= 0) {
+    //         if (
+    //             typeof intervalMinutes !== "number" ||
+    //             isNaN(intervalMinutes) ||
+    //             intervalMinutes <= 0
+    //         ) {
     //             throw new Error("El intervalo de minutos debe ser un número positivo");
     //         }
     //         if (!Array.isArray(attendees) || attendees.length === 0) return { days: [] };
-    //         if (professionalAllowed.length === 0) return { days: [] }
-
-
+    //         if (professionalAllowed.length === 0) return { days: [] };
 
     //         // Paso base de enumeración de inicios
     //         const STEP_MINUTES = intervalMinutes;
 
     //         // Helpers locales
     //         type Range = { start: moment.Moment; end: moment.Moment };
-    //         const toLocal = (d: Date | string) => moment(d).tz(timeZoneClient).seconds(0).milliseconds(0);
+    //         const TZ = timeZoneClient; // 🆕 si prefieres el TZ del negocio, cámbialo aquí
+    //         const toLocal = (d: Date | string) =>
+    //             moment(d).tz(TZ).seconds(0).milliseconds(0);
 
     //         const mergeRanges = (rs: Range[]) => {
     //             const arr = rs
-    //                 .map(r => ({ start: r.start.clone(), end: r.end.clone() }))
-    //                 .filter(r => r.start.isBefore(r.end))
+    //                 .map((r) => ({ start: r.start.clone(), end: r.end.clone() }))
+    //                 .filter((r) => r.start.isBefore(r.end))
     //                 .sort((a, b) => a.start.valueOf() - b.start.valueOf());
     //             if (!arr.length) return arr;
     //             const out: Range[] = [];
@@ -1014,11 +1270,16 @@ export class EventV2Service {
     //                 if (!cursor.isBefore(shift.end)) break;
     //             }
     //             if (cursor.isBefore(shift.end)) free.push({ start: cursor, end: shift.end.clone() });
-    //             return free.filter(r => r.start.isBefore(r.end));
+    //             return free.filter((r) => r.start.isBefore(r.end));
     //         };
 
     //         // cuenta inicios posibles dentro de ventanas, usando ceil relativo al comienzo de la ventana
-    //         const countStartsInWindows = (wins: Range[], durMin: number, stepMin: number, clampFrom?: moment.Moment) => {
+    //         const countStartsInWindows = (
+    //             wins: Range[],
+    //             durMin: number,
+    //             stepMin: number,
+    //             clampFrom?: moment.Moment
+    //         ) => {
     //             let total = 0;
     //             for (const w of wins) {
     //                 const wStart = clampFrom ? moment.max(w.start, clampFrom) : w.start;
@@ -1026,11 +1287,21 @@ export class EventV2Service {
     //                 if (wStart.isAfter(latestStart)) continue;
 
     //                 // ceil relativo a w.start
-    //                 const offsetMin = Math.max(0, Math.floor((wStart.valueOf() - w.start.valueOf()) / 60000));
+    //                 const offsetMin = Math.max(
+    //                     0,
+    //                     Math.floor((wStart.valueOf() - w.start.valueOf()) / 60000)
+    //                 );
     //                 const rem = offsetMin % stepMin;
-    //                 const cur = wStart.clone().add(rem === 0 ? 0 : (stepMin - rem), "minutes").seconds(0).milliseconds(0);
+    //                 const cur = wStart
+    //                     .clone()
+    //                     .add(rem === 0 ? 0 : stepMin - rem, "minutes")
+    //                     .seconds(0)
+    //                     .milliseconds(0);
 
-    //                 const spanMin = Math.max(0, Math.floor((latestStart.valueOf() - cur.valueOf()) / 60000));
+    //                 const spanMin = Math.max(
+    //                     0,
+    //                     Math.floor((latestStart.valueOf() - cur.valueOf()) / 60000)
+    //                 );
     //                 const cnt = 1 + Math.floor(spanMin / stepMin);
     //                 if (cnt > 0) total += cnt;
     //             }
@@ -1039,49 +1310,88 @@ export class EventV2Service {
 
     //         // 1) Elegibles por servicio
     //         const withinAllowed = (ids: string[]) =>
-    //             ids.filter(id => professionalAllowed.includes(id));
+    //             ids.filter((id) => professionalAllowed.includes(id));
 
     //         const userIdsByService = new Map<string, string[]>();
     //         for (const a of attendees) {
-    //             // if (a.staffId) userIdsByService.set(a.serviceId, [a.staffId]);
-    //             // else {
-    //             //     const users = await getUsersWhoCanPerformService(idWorkspace, a.serviceId, a.categoryId);
-    //             //     userIdsByService.set(a.serviceId, users);
-    //             // }
     //             if (a.staffId) {
     //                 const elig = professionalAllowed.includes(a.staffId) ? [a.staffId] : [];
     //                 userIdsByService.set(a.serviceId, elig);
     //             } else {
-    //                 const users = await getUsersWhoCanPerformService(idWorkspace, a.serviceId, a.categoryId);
+    //                 const users = await getUsersWhoCanPerformService(
+    //                     idWorkspace,
+    //                     a.serviceId,
+    //                     a.categoryId
+    //                 );
     //                 userIdsByService.set(a.serviceId, withinAllowed(users));
     //             }
     //         }
-    //         const allUserIds = Array.from(new Set(Array.from(userIdsByService.values()).flat()));
+    //         const allUserIds = Array.from(
+    //             new Set(Array.from(userIdsByService.values()).flat())
+    //         );
     //         if (!allUserIds.length) {
-    //             const days = enumerateDays(start, end).map(d => ({ date: d, hasSlots: false, capacity: 0 }));
+    //             const days = enumerateDays(start, end).map((d) => ({
+    //                 date: d,
+    //                 hasSlots: false,
+    //                 capacity: 0,
+    //             }));
     //             return { days };
     //         }
 
     //         // 2) Calendar y reglas
-    //         const calendar = await prisma.calendar.findFirst({
-    //             where: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace, deletedDate: null },
-    //             select: { id: true },
-    //         });
+    //         // const calendar = await prisma.calendar.findFirst({
+    //         //     where: {
+    //         //         idCompanyFk: idCompany,
+    //         //         idWorkspaceFk: idWorkspace,
+    //         //         deletedDate: null,
+    //         //     },
+    //         //     select: { id: true },
+    //         // });
 
-    //         const businessHours = await businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace);
-    //         const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(allUserIds, idWorkspace);
-    //         const temporaryHoursMap = await temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idWorkspace, { start, end });
-    //         const events = await getEventsOverlappingRange(allUserIds, start, end, excludeEventId);
+    //         const businessHours = await businessHoursService.getBusinessHoursFromRedis(
+    //             idCompany,
+    //             idWorkspace
+    //         );
+    //         const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(
+    //             allUserIds,
+    //             idWorkspace
+    //         );
+    //         const temporaryHoursMap =
+    //             await temporaryHoursService.getTemporaryHoursFromRedis(
+    //                 allUserIds,
+    //                 idWorkspace,
+    //                 { start, end }
+    //             );
+    //         const events = await getEventsOverlappingRange(
+    //             allUserIds,
+    //             start,
+    //             end,
+    //             excludeEventId
+    //         );
 
     //         // 3) Capacidad por servicio (para detectar grupales)
-    //         const serviceCaps = await prisma.service.findMany({
-    //             where: { id: { in: attendees.map(a => a.serviceId) } },
-    //             select: { id: true, maxParticipants: true },
-    //         });
-    //         const capByService = new Map(serviceCaps.map(s => [s.id, Math.max(1, s.maxParticipants ?? 1)]));
+    //         // const serviceCaps = await prisma.service.findMany({
+    //         //     where: { id: { in: attendees.map((a) => a.serviceId) } },
+    //         //     select: { id: true, maxParticipants: true },
+    //         // });
+    //         // const capByService = new Map(
+    //         //     serviceCaps.map((s) => [s.id, Math.max(1, s.maxParticipants ?? 1)])
+    //         // );
+
+    //         // Obtenemos el servicio de su microservicio
+    //         const serviceCaps: ServiceBrief[] = await getServiceByUserIds(allUserIds, idWorkspace);
+    //         const capByService = new Map<string, number>();
+    //         for (const sc of serviceCaps) {
+    //             if (!capByService.has(sc.id)) {
+    //                 capByService.set(sc.id, Math.max(1, sc.maxParticipants ?? 1));
+    //             }
+    //         }
 
     //         // Agrupa eventos por user para acelerar
-    //         const eventsByUser = new Map<string, Array<{ startDate: Date; endDate: Date }>>();
+    //         const eventsByUser = new Map<
+    //             string,
+    //             Array<{ startDate: Date; endDate: Date }>
+    //         >();
     //         for (const ev of events) {
     //             const uid = (ev as any).idUserPlatformFk as string | null;
     //             if (!uid) continue;
@@ -1090,40 +1400,66 @@ export class EventV2Service {
     //             eventsByUser.set(uid, arr);
     //         }
 
-    //         // Helper para obtener turnos de un user en un día (ya respetando worker=null y temporary)
+    //         // Helper para obtener turnos de un user en un día
     //         const getShiftsFor = (uid: string, dateISO: string): Range[] => {
-    //             const weekDay = moment.tz(`${dateISO}T00:00:00`, "YYYY-MM-DDTHH:mm:ss", timeZoneClient)
-    //                 .format("dddd").toUpperCase() as any;
+    //             const weekDay = moment
+    //                 .tz(`${dateISO}T00:00:00`, "YYYY-MM-DDTHH:mm:ss", TZ)
+    //                 .format("dddd")
+    //                 .toUpperCase() as any;
 
-    //             // Si workerHours es null explícito, no trabaja
     //             const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
     //             const tempDay = (temporaryHoursMap as any)?.[uid]?.[dateISO];
 
     //             let slots: string[][] = [];
-    //             if (tempDay === null) slots = [];                  // cierre temporal (no trabaja)
+    //             if (tempDay === null) slots = [];
     //             else if (Array.isArray(tempDay) && tempDay.length) slots = tempDay;
-    //             else if (workerDay === null) slots = [];           // no trabaja ese weekday
+    //             else if (workerDay === null) slots = [];
     //             else if (Array.isArray(workerDay) && workerDay.length) slots = workerDay;
     //             else {
     //                 const biz = (businessHours as any)?.[weekDay];
-    //                 slots = biz === null ? [] : (Array.isArray(biz) ? biz : []);
+    //                 slots = biz === null ? [] : Array.isArray(biz) ? biz : [];
     //             }
 
     //             return (slots || []).map(([s, e]) => ({
-    //                 start: moment.tz(`${dateISO}T${s}`, "YYYY-MM-DDTHH:mm:ss", timeZoneClient),
-    //                 end: moment.tz(`${dateISO}T${e}`, "YYYY-MM-DDTHH:mm:ss", timeZoneClient),
+    //                 start: moment.tz(`${dateISO}T${s}`, "YYYY-MM-DDTHH:mm:ss", TZ),
+    //                 end: moment.tz(`${dateISO}T${e}`, "YYYY-MM-DDTHH:mm:ss", TZ),
     //             }));
     //         };
+
+    //         // 🆕 Ventana absoluta permitida (TZ = TZ)
+    //         const nowRef = moment.tz(TZ);
+    //         const earliestAllowed = nowRef
+    //             .clone()
+    //             .add(minLeadTimeMin, "minutes")
+    //             .seconds(0)
+    //             .milliseconds(0);
+    //         const latestAllowedEnd = nowRef.clone().add(maxAdvanceDays, "days").endOf("day");
 
     //         const days: DayFlag[] = [];
 
     //         for (const dateISO of enumerateDays(start, end)) {
-    //             const dayStart = moment.tz(`${dateISO}T00:00:00`, "YYYY-MM-DDTHH:mm:ss", timeZoneClient);
+    //             const dayStart = moment.tz(
+    //                 `${dateISO}T00:00:00`,
+    //                 "YYYY-MM-DDTHH:mm:ss",
+    //                 TZ
+    //             );
     //             const dayEnd = dayStart.clone().endOf("day");
     //             const dayStartUTC = dayStart.clone().utc().toDate();
     //             const dayEndUTC = dayEnd.clone().utc().toDate();
-    //             const isToday = dateISO === moment().tz(timeZoneClient).format("YYYY-MM-DD");
-    //             const nowLocal = moment().tz(timeZoneClient).seconds(0).milliseconds(0);
+
+    //             // 🆕 Cortes rápidos por día completo
+    //             if (dayEnd.isBefore(earliestAllowed)) {
+    //                 days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+    //                 continue;
+    //             }
+    //             if (dayStart.isAfter(latestAllowedEnd)) {
+    //                 days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+    //                 continue;
+    //             }
+
+    //             // 🆕 Si es el día del lead, clamp desde earliestAllowed
+    //             const isLeadDay = dayStart.isSame(earliestAllowed, "day");
+    //             const clampFrom = isLeadDay ? earliestAllowed : undefined;
 
     //             // ---- Caso: 1 servicio
     //             if (attendees.length === 1) {
@@ -1137,30 +1473,33 @@ export class EventV2Service {
     //                 const svcCap = capByService.get(a.serviceId) ?? 1;
     //                 const isGroup = svcCap > 1;
 
-    //                 // 3.1) Denominador: inicios posibles por turnos (sin busy), sumados en todos los elegibles
+    //                 // Denominador: inicios posibles por turnos (sin busy), sumados en todos los elegibles
     //                 let denomStarts = 0;
     //                 for (const uid of elig) {
     //                     const shifts = getShiftsFor(uid, dateISO);
     //                     const mergedShifts = mergeRanges(shifts);
-    //                     // si es hoy, no cuentes pasado
-    //                     const clamp = isToday ? nowLocal : undefined;
-    //                     denomStarts += countStartsInWindows(mergedShifts, a.durationMin, STEP_MINUTES, clamp);
+    //                     denomStarts += countStartsInWindows(
+    //                         mergedShifts,
+    //                         a.durationMin,
+    //                         STEP_MINUTES,
+    //                         clampFrom // 🆕 clamp por lead
+    //                     );
     //                 }
     //                 const denomSeats = denomStarts * (isGroup ? svcCap : 1);
 
-    //                 // Si ni siquiera hay posibilidad teórica, el día no tiene slots
     //                 if (denomSeats <= 0) {
     //                     days.push({ date: dateISO, hasSlots: false, capacity: 0 });
     //                     continue;
     //                 }
 
-    //                 // 3.2) Numerador:
-    //                 // (A) plazas libres en clases existentes de este servicio (solo de pros elegibles)
+    //                 // Numerador:
+    //                 // (A) plazas libres en clases existentes de este servicio (solo pros elegibles)
     //                 let seatsFromExisting = 0;
-    //                 if (calendar && isGroup) {
+    //                 if (isGroup) {
     //                     const groupEvents = await prisma.event.findMany({
     //                         where: {
-    //                             idCalendarFk: calendar.id,
+    //                             // idCalendarFk: calendar.id,
+    //                             idWorkspaceFk: idWorkspace,
     //                             idServiceFk: a.serviceId,
     //                             idUserPlatformFk: { in: elig },
     //                             startDate: { lt: dayEndUTC },
@@ -1170,6 +1509,7 @@ export class EventV2Service {
     //                         },
     //                         select: {
     //                             id: true,
+    //                             startDate: true, // 🆕 necesitaremos el start para filtrar lead
     //                             eventParticipant: {
     //                                 where: { deletedDate: null },
     //                                 select: { idClientFk: true, idClientWorkspaceFk: true },
@@ -1178,52 +1518,70 @@ export class EventV2Service {
     //                     });
 
     //                     for (const ev of groupEvents) {
+    //                         // 🆕 si es día de lead, ignora clases que empiezan antes del earliestAllowed
+    //                         if (isLeadDay) {
+    //                             const evStartLocal = toLocal(ev.startDate);
+    //                             if (evStartLocal.isBefore(earliestAllowed)) continue;
+    //                         }
+
     //                         const booked = ev.eventParticipant.length;
-    //                         const alreadyIn = !!(idClient && ev.eventParticipant.some(p =>
-    //                             p.idClientFk === idClient || p.idClientWorkspaceFk === idClient
-    //                         ));
+    //                         const alreadyIn = !!(
+    //                             idClient &&
+    //                             ev.eventParticipant.some(
+    //                                 (p) => p.idClientFk === idClient || p.idClientWorkspaceFk === idClient
+    //                             )
+    //                         );
     //                         const left = Math.max(0, svcCap - booked);
     //                         seatsFromExisting += alreadyIn ? 0 : left;
     //                     }
     //                 }
 
-    //                 // (B) plazas potenciales por crear nuevas clases (libres tras busy)
+    //                 // (B) plazas potenciales por nuevas clases (libres tras busy)
     //                 let startsCreatable = 0;
     //                 for (const uid of elig) {
     //                     const shifts = getShiftsFor(uid, dateISO);
 
-    //                     // busy del user en ese día
     //                     const busy: Range[] = (eventsByUser.get(uid) || [])
-    //                         .filter(ev => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
-    //                         .map(ev => ({ start: toLocal(ev.startDate), end: toLocal(ev.endDate) }));
+    //                         .filter((ev) => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
+    //                         .map((ev) => ({ start: toLocal(ev.startDate), end: toLocal(ev.endDate) }));
 
-    //                     // free windows = turnos - busy (clamp si hoy)
     //                     const freeWins: Range[] = [];
     //                     for (const sh of shifts) {
-    //                         const shStart = isToday ? moment.max(sh.start, nowLocal) : sh.start;
+    //                         const shStart = clampFrom ? moment.max(sh.start, clampFrom) : sh.start; // 🆕 clamp lead
     //                         if (!shStart.isBefore(sh.end)) continue;
     //                         freeWins.push(...subtractBusy({ start: shStart, end: sh.end }, busy));
     //                     }
     //                     const mergedFree = mergeRanges(freeWins);
 
-    //                     startsCreatable += countStartsInWindows(mergedFree, a.durationMin, STEP_MINUTES);
+    //                     startsCreatable += countStartsInWindows(
+    //                         mergedFree,
+    //                         a.durationMin,
+    //                         STEP_MINUTES,
+    //                         clampFrom // 🆕 clamp lead
+    //                     );
     //                 }
     //                 const seatsFromNew = startsCreatable * (isGroup ? svcCap : 1);
 
     //                 const numeratorSeats = seatsFromExisting + seatsFromNew;
     //                 const ratio = Math.max(0, Math.min(1, numeratorSeats / denomSeats));
 
-    //                 days.push({ date: dateISO, hasSlots: ratio > 0, capacity: Number(ratio.toFixed(2)) });
+    //                 days.push({
+    //                     date: dateISO,
+    //                     hasSlots: ratio > 0,
+    //                     capacity: Number(ratio.toFixed(2)),
+    //                 });
     //                 continue;
     //             }
 
     //             // ---- Caso: >1 servicio (sin grupos mezclados)
     //             let anyGroup = false;
     //             for (const a of attendees) {
-    //                 if ((capByService.get(a.serviceId) ?? 1) > 1) { anyGroup = true; break; }
+    //                 if ((capByService.get(a.serviceId) ?? 1) > 1) {
+    //                     anyGroup = true;
+    //                     break;
+    //                 }
     //             }
     //             if (anyGroup) {
-    //                 // si quieres soportar multi-servicio con grupales, aquí tendríamos que hacer otra lógica
     //                 days.push({ date: dateISO, hasSlots: false, capacity: 0 });
     //                 continue;
     //             }
@@ -1232,40 +1590,59 @@ export class EventV2Service {
     //             const ratios: number[] = [];
     //             for (const a of attendees) {
     //                 const elig = userIdsByService.get(a.serviceId) ?? [];
-    //                 if (!elig.length) { ratios.push(0); continue; }
+    //                 if (!elig.length) {
+    //                     ratios.push(0);
+    //                     continue;
+    //                 }
 
     //                 // denom
     //                 let denomStarts = 0;
     //                 for (const uid of elig) {
     //                     const shifts = getShiftsFor(uid, dateISO);
     //                     const mergedShifts = mergeRanges(shifts);
-    //                     const clamp = isToday ? nowLocal : undefined;
-    //                     denomStarts += countStartsInWindows(mergedShifts, a.durationMin, STEP_MINUTES, clamp);
+    //                     denomStarts += countStartsInWindows(
+    //                         mergedShifts,
+    //                         a.durationMin,
+    //                         STEP_MINUTES,
+    //                         clampFrom // 🆕 clamp lead
+    //                     );
     //                 }
-    //                 if (denomStarts <= 0) { ratios.push(0); continue; }
+    //                 if (denomStarts <= 0) {
+    //                     ratios.push(0);
+    //                     continue;
+    //                 }
 
     //                 // numerador (libres tras busy)
     //                 let freeStarts = 0;
     //                 for (const uid of elig) {
     //                     const shifts = getShiftsFor(uid, dateISO);
     //                     const busy: Range[] = (eventsByUser.get(uid) || [])
-    //                         .filter(ev => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
-    //                         .map(ev => ({ start: toLocal(ev.startDate), end: toLocal(ev.endDate) }));
+    //                         .filter((ev) => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
+    //                         .map((ev) => ({ start: toLocal(ev.startDate), end: toLocal(ev.endDate) }));
 
     //                     const freeWins: Range[] = [];
     //                     for (const sh of shifts) {
-    //                         const shStart = isToday ? moment.max(sh.start, nowLocal) : sh.start;
+    //                         const shStart = clampFrom ? moment.max(sh.start, clampFrom) : sh.start; // 🆕 clamp lead
     //                         if (!shStart.isBefore(sh.end)) continue;
     //                         freeWins.push(...subtractBusy({ start: shStart, end: sh.end }, busy));
     //                     }
     //                     const mergedFree = mergeRanges(freeWins);
-    //                     freeStarts += countStartsInWindows(mergedFree, a.durationMin, STEP_MINUTES);
+    //                     freeStarts += countStartsInWindows(
+    //                         mergedFree,
+    //                         a.durationMin,
+    //                         STEP_MINUTES,
+    //                         clampFrom // 🆕 clamp lead
+    //                     );
     //                 }
     //                 ratios.push(Math.max(0, Math.min(1, freeStarts / denomStarts)));
     //             }
 
     //             const minRatio = ratios.length ? Math.min(...ratios) : 0;
-    //             days.push({ date: dateISO, hasSlots: minRatio > 0, capacity: Number(minRatio.toFixed(2)) });
+    //             days.push({
+    //                 date: dateISO,
+    //                 hasSlots: minRatio > 0,
+    //                 capacity: Number(minRatio.toFixed(2)),
+    //             });
     //         }
 
     //         return { days };
@@ -1273,6 +1650,7 @@ export class EventV2Service {
     //         throw new CustomError("EventService.getAvailableDays", error);
     //     }
     // }
+
 
 
     public async publicGetAvailableDays(
@@ -1283,71 +1661,99 @@ export class EventV2Service {
             const {
                 idCompany,
                 idWorkspace,
-                timeZoneClient,
-                range: { start, end },
+                timeZoneWorkspace,
+                range,
                 attendees,
                 excludeEventId,
-                idClient, // opcional
+                idClient,
             } = input;
+
+            if (!range) throw new Error("Faltan fechas de rango (start/end)");
+            const { start, end } = range;
 
             const {
                 bookingConfig,
                 businessHoursService,
                 workerHoursService,
                 temporaryHoursService,
+                cache,
             } = deps;
 
             const BOOKING_PAGE_CONFIG: OnlineBookingConfig = bookingConfig;
 
-            // 🆕 bookingWindow
+            // bookingWindow
             const { maxAdvanceDays = 60, minLeadTimeMin = 60 } =
                 BOOKING_PAGE_CONFIG.bookingWindow ?? {};
 
             const alignMode: "clock" | "service" =
                 BOOKING_PAGE_CONFIG.slot?.alignMode === "service" ? "service" : "clock";
+
             const intervalMinutes =
                 alignMode === "service"
                     ? attendees?.reduce((acc, a) => acc + (a.durationMin ?? 0), 0)
                     : BOOKING_PAGE_CONFIG?.slot?.stepMinutes;
 
             const professionalAllowed =
-                BOOKING_PAGE_CONFIG?.resources?.ids?.map((r) =>
-                    Array.isArray(r) ? r?.[0] : r
-                ) ?? [];
+                BOOKING_PAGE_CONFIG?.resources?.ids
+                    ?.map((r) => (Array.isArray(r) ? r?.[0] : r)) ?? [];
 
-            if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany o idWorkspace");
+            // Validaciones rápidas
+            if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany / idWorkspace");
+            if (!timeZoneWorkspace) throw new Error("Falta timeZoneWorkspace");
             if (!start || !end) throw new Error("Faltan fechas de rango (start/end)");
+
+            const dayList = enumerateDays(start, end);
+
+            if (!Array.isArray(attendees) || attendees.length === 0) {
+                return {
+                    days: dayList.map((d) => ({
+                        date: d,
+                        hasSlots: false,
+                        capacity: 0,
+                        status: "dayoff",
+                    })),
+                };
+            }
+            if (professionalAllowed.length === 0) {
+                return {
+                    days: dayList.map((d) => ({
+                        date: d,
+                        hasSlots: false,
+                        capacity: 0,
+                        status: "dayoff",
+                    })),
+                };
+            }
             if (
                 typeof intervalMinutes !== "number" ||
-                isNaN(intervalMinutes) ||
+                !Number.isFinite(intervalMinutes) ||
                 intervalMinutes <= 0
             ) {
                 throw new Error("El intervalo de minutos debe ser un número positivo");
             }
-            if (!Array.isArray(attendees) || attendees.length === 0) return { days: [] };
-            if (professionalAllowed.length === 0) return { days: [] };
 
-            // Paso base de enumeración de inicios
             const STEP_MINUTES = intervalMinutes;
+            const TZ_WS = timeZoneWorkspace;
 
-            // Helpers locales
+            // Helpers comunes ------------------------------------
+
             type Range = { start: moment.Moment; end: moment.Moment };
-            const TZ = timeZoneClient; // 🆕 si prefieres el TZ del negocio, cámbialo aquí
-            const toLocal = (d: Date | string) =>
-                moment(d).tz(TZ).seconds(0).milliseconds(0);
 
-            const mergeRanges = (rs: Range[]) => {
+            const mergeRanges = (rs: Range[]): Range[] => {
+                if (!rs.length) return [];
                 const arr = rs
-                    .map((r) => ({ start: r.start.clone(), end: r.end.clone() }))
+                    .map((r) => ({
+                        start: r.start.clone().seconds(0).milliseconds(0),
+                        end: r.end.clone().seconds(0).milliseconds(0),
+                    }))
                     .filter((r) => r.start.isBefore(r.end))
                     .sort((a, b) => a.start.valueOf() - b.start.valueOf());
-                if (!arr.length) return arr;
                 const out: Range[] = [];
                 let cur = arr[0];
                 for (let i = 1; i < arr.length; i++) {
                     const r = arr[i];
-                    if (r.start.isSameOrBefore(cur.end)) {
-                        if (r.end.isAfter(cur.end)) cur.end = r.end.clone();
+                    if (!r.start.isAfter(cur.end)) {
+                        if (r.end.isAfter(cur.end)) cur.end = r.end;
                     } else {
                         out.push(cur);
                         cur = r;
@@ -1357,12 +1763,13 @@ export class EventV2Service {
                 return out;
             };
 
-            // resta [busy] a [shift] -> free[]
-            const subtractBusy = (shift: Range, busy: Range[]) => {
-                const merged = mergeRanges(busy);
-                let cursor = shift.start.clone();
+            const subtractBusy = (shift: Range, busy: Range[]): Range[] => {
+                if (!busy.length) return [shift];
+                const mergedBusy = mergeRanges(busy);
                 const free: Range[] = [];
-                for (const b of merged) {
+                let cursor = shift.start.clone();
+
+                for (const b of mergedBusy) {
                     if (b.end.isSameOrBefore(cursor) || b.start.isSameOrAfter(shift.end)) continue;
                     if (b.start.isAfter(cursor)) {
                         free.push({ start: cursor.clone(), end: moment.min(b.start, shift.end) });
@@ -1371,133 +1778,248 @@ export class EventV2Service {
                     if (!cursor.isBefore(shift.end)) break;
                 }
                 if (cursor.isBefore(shift.end)) free.push({ start: cursor, end: shift.end.clone() });
-                return free.filter((r) => r.start.isBefore(r.end));
+                return free;
             };
 
-            // cuenta inicios posibles dentro de ventanas, usando ceil relativo al comienzo de la ventana
             const countStartsInWindows = (
                 wins: Range[],
                 durMin: number,
                 stepMin: number,
                 clampFrom?: moment.Moment
-            ) => {
+            ): number => {
+                if (!wins.length) return 0;
                 let total = 0;
-                for (const w of wins) {
-                    const wStart = clampFrom ? moment.max(w.start, clampFrom) : w.start;
-                    const latestStart = w.end.clone().subtract(durMin, "minutes");
-                    if (wStart.isAfter(latestStart)) continue;
 
-                    // ceil relativo a w.start
-                    const offsetMin = Math.max(
+                for (const w of wins) {
+                    const start = clampFrom ? moment.max(w.start, clampFrom) : w.start;
+                    const latestStart = w.end.clone().subtract(durMin, "minutes");
+                    if (start.isAfter(latestStart)) continue;
+
+                    const origin = w.start;
+                    const diffMin = Math.max(
                         0,
-                        Math.floor((wStart.valueOf() - w.start.valueOf()) / 60000)
+                        Math.floor((start.valueOf() - origin.valueOf()) / 60000)
                     );
-                    const rem = offsetMin % stepMin;
-                    const cur = wStart
+                    const rem = diffMin % stepMin;
+                    const first = start
                         .clone()
                         .add(rem === 0 ? 0 : stepMin - rem, "minutes")
                         .seconds(0)
                         .milliseconds(0);
 
-                    const spanMin = Math.max(
-                        0,
-                        Math.floor((latestStart.valueOf() - cur.valueOf()) / 60000)
+                    if (first.isAfter(latestStart)) continue;
+
+                    const spanMin = Math.floor(
+                        (latestStart.valueOf() - first.valueOf()) / 60000
                     );
                     const cnt = 1 + Math.floor(spanMin / stepMin);
                     if (cnt > 0) total += cnt;
                 }
+
                 return total;
             };
 
-            // 1) Elegibles por servicio
-            const withinAllowed = (ids: string[]) =>
-                ids.filter((id) => professionalAllowed.includes(id));
+            // 1) Snapshot de servicios (1 llamada al ms)
+            const wantedServiceIds = Array.from(
+                new Set(attendees.map((a) => a.serviceId).filter(Boolean))
+            ) as string[];
+         
+            const services =
+                wantedServiceIds.length > 0
+                    ? await getServiceByIds(wantedServiceIds, idWorkspace)
+                    : [];
+
+            const svcById: Record<string, { durationMin: number; maxParticipants: number }> = {};
+            for (const s of services) {
+                const duration = typeof s.duration === "number" ? s.duration : 60;
+                const maxP = Math.max(1, typeof s.maxParticipants === "number" ? s.maxParticipants : 1);
+                svcById[s.id] = {
+                    durationMin: duration,
+                    maxParticipants: maxP,
+                };
+            }
+
+            const getSvcDur = (svcId: string, fallback: number) =>
+                svcById[svcId]?.durationMin ?? fallback;
+
+            const getSvcCap = (svcId: string) =>
+                Math.max(1, svcById[svcId]?.maxParticipants ?? 1);
+
+            // 2) Usuarios elegibles por servicio (paralelo)
+            const userIdsByServiceEntries = await Promise.all(
+                attendees.map(async (a) => {
+                    const svcId = a.serviceId;
+                    if (!svcId) return [null, []] as const;
+
+                    if (a.staffId) {
+                        const elig = professionalAllowed.includes(a.staffId)
+                            ? [a.staffId]
+                            : [];
+                        return [svcId, elig] as const;
+                    }
+
+                    const users = await getUsersWhoCanPerformService_SPECIAL(
+                        idWorkspace,
+                        svcId,
+                        a.categoryId ?? null,
+                        cache
+                    );
+                    const elig = users.filter((id) => professionalAllowed.includes(id));
+                    return [svcId, elig] as const;
+                })
+            );
 
             const userIdsByService = new Map<string, string[]>();
-            for (const a of attendees) {
-                if (a.staffId) {
-                    const elig = professionalAllowed.includes(a.staffId) ? [a.staffId] : [];
-                    userIdsByService.set(a.serviceId, elig);
-                } else {
-                    const users = await getUsersWhoCanPerformService(
-                        idWorkspace,
-                        a.serviceId,
-                        a.categoryId
-                    );
-                    userIdsByService.set(a.serviceId, withinAllowed(users));
-                }
+            for (const [svcId, ids] of userIdsByServiceEntries) {
+                if (svcId) userIdsByService.set(svcId, ids as any);
             }
+
             const allUserIds = Array.from(
                 new Set(Array.from(userIdsByService.values()).flat())
             );
+
             if (!allUserIds.length) {
-                const days = enumerateDays(start, end).map((d) => ({
-                    date: d,
-                    hasSlots: false,
-                    capacity: 0,
-                }));
-                return { days };
+                return {
+                    days: dayList.map((d) => ({
+                        date: d,
+                        hasSlots: false,
+                        capacity: 0,
+                        status: "dayoff",
+                    })),
+                };
             }
 
-            // 2) Calendar y reglas
-            const calendar = await prisma.calendar.findFirst({
-                where: {
-                    idCompanyFk: idCompany,
-                    idWorkspaceFk: idWorkspace,
-                    deletedDate: null,
-                },
-                select: { id: true },
-            });
+            // 3) Datos comunes del rango
+            const [businessHours, workerHoursMap, temporaryHoursMap, events] =
+                await Promise.all([
+                    businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace),
+                    workerHoursService.getWorkerHoursFromRedis(allUserIds, idWorkspace),
+                    temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idWorkspace, {
+                        start,
+                        end,
+                    }),
+                    getEventsOverlappingRange_SPECIAL(idWorkspace, allUserIds, start, end, excludeEventId),
+                ]);
 
-            const businessHours = await businessHoursService.getBusinessHoursFromRedis(
-                idCompany,
-                idWorkspace
-            );
-            const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(
-                allUserIds,
-                idWorkspace
-            );
-            const temporaryHoursMap =
-                await temporaryHoursService.getTemporaryHoursFromRedis(
-                    allUserIds,
-                    idWorkspace,
-                    { start, end }
-                );
-            const events = await getEventsOverlappingRange(
-                allUserIds,
-                start,
-                end,
-                excludeEventId
-            );
-
-            // 3) Capacidad por servicio (para detectar grupales)
-            const serviceCaps = await prisma.service.findMany({
-                where: { id: { in: attendees.map((a) => a.serviceId) } },
-                select: { id: true, maxParticipants: true },
-            });
-            const capByService = new Map(
-                serviceCaps.map((s) => [s.id, Math.max(1, s.maxParticipants ?? 1)])
-            );
-
-            // Agrupa eventos por user para acelerar
+            // Eventos por usuario
             const eventsByUser = new Map<
                 string,
                 Array<{ startDate: Date; endDate: Date }>
             >();
             for (const ev of events) {
-                const uid = (ev as any).idUserPlatformFk as string | null;
+                const uid = ev.idUserPlatformFk;
                 if (!uid) continue;
-                const arr = eventsByUser.get(uid) || [];
+                let arr = eventsByUser.get(uid);
+                if (!arr) {
+                    arr = [];
+                    eventsByUser.set(uid, arr);
+                }
                 arr.push({ startDate: ev.startDate, endDate: ev.endDate });
-                eventsByUser.set(uid, arr);
             }
 
-            // Helper para obtener turnos de un user en un día
+            // 4) bookingWindow absoluto (TZ negocio)
+            const nowWS = moment.tz(TZ_WS);
+            const earliestAllowed = nowWS
+                .clone()
+                .add(minLeadTimeMin, "minutes")
+                .seconds(0)
+                .milliseconds(0);
+            const latestAllowedEnd = nowWS
+                .clone()
+                .add(maxAdvanceDays, "days")
+                .endOf("day");
+
+            const withinBookingWindowDay = (dayStart: moment.Moment, dayEnd: moment.Moment) => {
+                if (dayEnd.isBefore(earliestAllowed)) return false;
+                if (dayStart.isAfter(latestAllowedEnd)) return false;
+                return true;
+            };
+
+            // 5) Info single-service / group
+            const isSingleService = attendees.length === 1;
+            const singleAttendee = isSingleService ? attendees[0] : null;
+            const singleSvcId = singleAttendee?.serviceId || null;
+            const singleSvcCap = singleSvcId ? getSvcCap(singleSvcId) : 1;
+            const singleIsGroup = isSingleService && singleSvcCap > 1;
+            const singleElig =
+                singleSvcId && userIdsByService.has(singleSvcId)
+                    ? userIdsByService.get(singleSvcId) || []
+                    : [];
+
+            // 6) Eventos grupales (solo si 1 servicio grupal) para TODO el rango
+            let groupEvents: Array<{
+                idUserPlatformFk: string | null;
+                startDate: Date;
+                endDate: Date;
+                participantsCount: number;
+                participantClientIds: string[];
+                participantClientWorkspaceIds: string[];
+            }> = [];
+
+            if (singleIsGroup && singleSvcId && singleElig.length) {
+                const startRange = moment
+                    .tz(`${start}T00:00:00`, "YYYY-MM-DDTHH:mm:ss", TZ_WS)
+                    .toDate();
+                const endRange = moment
+                    .tz(`${end}T23:59:59`, "YYYY-MM-DDTHH:mm:ss", TZ_WS)
+                    .toDate();
+
+                const rows = await prisma.event.findMany({
+                    where: {
+                        idWorkspaceFk: idWorkspace,
+                        idServiceFk: singleSvcId,
+                        idUserPlatformFk: { in: singleElig },
+                        deletedDate: null,
+                        startDate: { lt: endRange },
+                        endDate: { gt: startRange },
+                        ...(excludeEventId ? { id: { not: excludeEventId } } : {}),
+                    },
+                    select: {
+                        idUserPlatformFk: true,
+                        startDate: true,
+                        endDate: true,
+                        eventParticipant: {
+                            where: { deletedDate: null },
+                            select: {
+                                idClientFk: true,
+                                idClientWorkspaceFk: true,
+                            },
+                        },
+                    },
+                });
+
+                groupEvents = rows.map((r) => ({
+                    idUserPlatformFk: r.idUserPlatformFk,
+                    startDate: r.startDate,
+                    endDate: r.endDate,
+                    participantsCount: r.eventParticipant.length,
+                    participantClientIds: r.eventParticipant
+                        .map((p) => p.idClientFk)
+                        .filter(Boolean) as string[],
+                    participantClientWorkspaceIds: r.eventParticipant
+                        .map((p) => p.idClientWorkspaceFk)
+                        .filter(Boolean) as string[],
+                }));
+            }
+
+            const groupEventsByDay = new Map<string, typeof groupEvents>();
+            if (groupEvents.length) {
+                for (const ev of groupEvents) {
+                    const dayISO = moment(ev.startDate).tz(TZ_WS).format("YYYY-MM-DD");
+                    const arr = groupEventsByDay.get(dayISO) || [];
+                    arr.push(ev);
+                    groupEventsByDay.set(dayISO, arr);
+                }
+            }
+
+            // Helper: turnos por user/día (business/worker/tmp)
             const getShiftsFor = (uid: string, dateISO: string): Range[] => {
-                const weekDay = moment
-                    .tz(`${dateISO}T00:00:00`, "YYYY-MM-DDTHH:mm:ss", TZ)
-                    .format("dddd")
-                    .toUpperCase() as any;
+                const dayStart = moment.tz(
+                    `${dateISO}T00:00:00`,
+                    "YYYY-MM-DDTHH:mm:ss",
+                    TZ_WS
+                );
+                const weekDay = dayStart.format("dddd").toUpperCase() as Weekday;
 
                 const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
                 const tempDay = (temporaryHoursMap as any)?.[uid]?.[dateISO];
@@ -1513,236 +2035,301 @@ export class EventV2Service {
                 }
 
                 return (slots || []).map(([s, e]) => ({
-                    start: moment.tz(`${dateISO}T${s}`, "YYYY-MM-DDTHH:mm:ss", TZ),
-                    end: moment.tz(`${dateISO}T${e}`, "YYYY-MM-DDTHH:mm:ss", TZ),
+                    start: moment.tz(
+                        `${dateISO}T${s}`,
+                        "YYYY-MM-DDTHH:mm:ss",
+                        TZ_WS
+                    ),
+                    end: moment.tz(
+                        `${dateISO}T${e}`,
+                        "YYYY-MM-DDTHH:mm:ss",
+                        TZ_WS
+                    ),
                 }));
             };
 
-            // 🆕 Ventana absoluta permitida (TZ = TZ)
-            const nowRef = moment.tz(TZ);
-            const earliestAllowed = nowRef
-                .clone()
-                .add(minLeadTimeMin, "minutes")
-                .seconds(0)
-                .milliseconds(0);
-            const latestAllowedEnd = nowRef.clone().add(maxAdvanceDays, "days").endOf("day");
+            // LOOP DÍAS ------------------------------------------
 
             const days: DayFlag[] = [];
 
-            for (const dateISO of enumerateDays(start, end)) {
+            for (const dateISO of dayList) {
                 const dayStart = moment.tz(
                     `${dateISO}T00:00:00`,
                     "YYYY-MM-DDTHH:mm:ss",
-                    TZ
+                    TZ_WS
                 );
                 const dayEnd = dayStart.clone().endOf("day");
-                const dayStartUTC = dayStart.clone().utc().toDate();
-                const dayEndUTC = dayEnd.clone().utc().toDate();
 
-                // 🆕 Cortes rápidos por día completo
-                if (dayEnd.isBefore(earliestAllowed)) {
-                    days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+                // Fuera de ventana → dayoff
+                if (!withinBookingWindowDay(dayStart, dayEnd)) {
+                    days.push({
+                        date: dateISO,
+                        hasSlots: false,
+                        capacity: 0,
+                        status: "dayoff",
+                    });
                     continue;
                 }
-                if (dayStart.isAfter(latestAllowedEnd)) {
-                    days.push({ date: dateISO, hasSlots: false, capacity: 0 });
-                    continue;
-                }
 
-                // 🆕 Si es el día del lead, clamp desde earliestAllowed
                 const isLeadDay = dayStart.isSame(earliestAllowed, "day");
                 const clampFrom = isLeadDay ? earliestAllowed : undefined;
 
-                // ---- Caso: 1 servicio
-                if (attendees.length === 1) {
-                    const a = attendees[0];
-                    const elig = userIdsByService.get(a.serviceId) ?? [];
-                    if (!elig.length) {
-                        days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+                const dayStartUTC = dayStart.clone().utc().toDate();
+                const dayEndUTC = dayEnd.clone().utc().toDate();
+
+                // ---- SINGLE SERVICE
+                if (isSingleService && singleSvcId && singleAttendee) {
+                    const a = singleAttendee;
+                    const elig = singleElig;
+                    const durMin = getSvcDur(singleSvcId, a.durationMin);
+                    const svcCap = singleSvcCap;
+                    const isGroup = singleIsGroup;
+
+                    if (!elig.length || durMin <= 0) {
+                        days.push({
+                            date: dateISO,
+                            hasSlots: false,
+                            capacity: 0,
+                            status: "dayoff",
+                        });
                         continue;
                     }
 
-                    const svcCap = capByService.get(a.serviceId) ?? 1;
-                    const isGroup = svcCap > 1;
-
-                    // Denominador: inicios posibles por turnos (sin busy), sumados en todos los elegibles
+                    // Denominador teórico
                     let denomStarts = 0;
                     for (const uid of elig) {
-                        const shifts = getShiftsFor(uid, dateISO);
-                        const mergedShifts = mergeRanges(shifts);
+                        const shifts = mergeRanges(getShiftsFor(uid, dateISO));
                         denomStarts += countStartsInWindows(
-                            mergedShifts,
-                            a.durationMin,
+                            shifts,
+                            durMin,
                             STEP_MINUTES,
-                            clampFrom // 🆕 clamp por lead
+                            clampFrom
                         );
                     }
                     const denomSeats = denomStarts * (isGroup ? svcCap : 1);
 
                     if (denomSeats <= 0) {
-                        days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+                        days.push({
+                            date: dateISO,
+                            hasSlots: false,
+                            capacity: 0,
+                            status: "dayoff",
+                        });
                         continue;
                     }
 
                     // Numerador:
-                    // (A) plazas libres en clases existentes de este servicio (solo pros elegibles)
+                    // (A) plazas libres en clases existentes (solo grupal)
                     let seatsFromExisting = 0;
-                    if (calendar && isGroup) {
-                        const groupEvents = await prisma.event.findMany({
-                            where: {
-                                idCalendarFk: calendar.id,
-                                idServiceFk: a.serviceId,
-                                idUserPlatformFk: { in: elig },
-                                startDate: { lt: dayEndUTC },
-                                endDate: { gt: dayStartUTC },
-                                ...(excludeEventId ? { id: { not: excludeEventId } } : {}),
-                                deletedDate: null,
-                            },
-                            select: {
-                                id: true,
-                                startDate: true, // 🆕 necesitaremos el start para filtrar lead
-                                eventParticipant: {
-                                    where: { deletedDate: null },
-                                    select: { idClientFk: true, idClientWorkspaceFk: true },
-                                },
-                            },
-                        });
+                    if (isGroup && groupEventsByDay.has(dateISO)) {
+                        for (const ev of groupEventsByDay.get(dateISO)!) {
+                            const startLocal = moment(ev.startDate)
+                                .tz(TZ_WS)
+                                .seconds(0)
+                                .milliseconds(0);
+                            if (clampFrom && startLocal.isBefore(clampFrom)) continue;
 
-                        for (const ev of groupEvents) {
-                            // 🆕 si es día de lead, ignora clases que empiezan antes del earliestAllowed
-                            if (isLeadDay) {
-                                const evStartLocal = toLocal(ev.startDate);
-                                if (evStartLocal.isBefore(earliestAllowed)) continue;
-                            }
-
-                            const booked = ev.eventParticipant.length;
-                            const alreadyIn = !!(
-                                idClient &&
-                                ev.eventParticipant.some(
-                                    (p) => p.idClientFk === idClient || p.idClientWorkspaceFk === idClient
-                                )
-                            );
+                            const booked = ev.participantsCount;
                             const left = Math.max(0, svcCap - booked);
-                            seatsFromExisting += alreadyIn ? 0 : left;
+                            if (left <= 0) continue;
+
+                            const alreadyIn =
+                                !!idClient &&
+                                (ev.participantClientIds.includes(idClient) ||
+                                    ev.participantClientWorkspaceIds.includes(idClient));
+
+                            if (!alreadyIn) seatsFromExisting += left;
                         }
                     }
 
-                    // (B) plazas potenciales por nuevas clases (libres tras busy)
+                    // (B) plazas potenciales en slots nuevos
                     let startsCreatable = 0;
                     for (const uid of elig) {
                         const shifts = getShiftsFor(uid, dateISO);
+                        if (!shifts.length) continue;
 
                         const busy: Range[] = (eventsByUser.get(uid) || [])
-                            .filter((ev) => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
-                            .map((ev) => ({ start: toLocal(ev.startDate), end: toLocal(ev.endDate) }));
+                            .filter(
+                                (ev) =>
+                                    ev.startDate < dayEndUTC &&
+                                    ev.endDate > dayStartUTC
+                            )
+                            .map((ev) => ({
+                                start: moment(ev.startDate).tz(TZ_WS),
+                                end: moment(ev.endDate).tz(TZ_WS),
+                            }));
 
                         const freeWins: Range[] = [];
                         for (const sh of shifts) {
-                            const shStart = clampFrom ? moment.max(sh.start, clampFrom) : sh.start; // 🆕 clamp lead
+                            const shStart = clampFrom
+                                ? moment.max(sh.start, clampFrom)
+                                : sh.start;
                             if (!shStart.isBefore(sh.end)) continue;
                             freeWins.push(...subtractBusy({ start: shStart, end: sh.end }, busy));
                         }
-                        const mergedFree = mergeRanges(freeWins);
 
+                        const mergedFree = mergeRanges(freeWins);
                         startsCreatable += countStartsInWindows(
                             mergedFree,
-                            a.durationMin,
+                            durMin,
                             STEP_MINUTES,
-                            clampFrom // 🆕 clamp lead
+                            clampFrom
                         );
                     }
-                    const seatsFromNew = startsCreatable * (isGroup ? svcCap : 1);
 
+                    const seatsFromNew = startsCreatable * (isGroup ? svcCap : 1);
                     const numeratorSeats = seatsFromExisting + seatsFromNew;
-                    const ratio = Math.max(0, Math.min(1, numeratorSeats / denomSeats));
+
+                    const ratioRaw = numeratorSeats / denomSeats;
+                    const capacity = Math.max(
+                        0,
+                        Math.min(1, Number(ratioRaw.toFixed(2)))
+                    );
+                    const hasSlots = capacity > 0;
+                    const status: DayAvailabilityStatus =
+                        !hasSlots ? "completed" : "available";
 
                     days.push({
                         date: dateISO,
-                        hasSlots: ratio > 0,
-                        capacity: Number(ratio.toFixed(2)),
+                        hasSlots,
+                        capacity,
+                        status,
                     });
                     continue;
                 }
 
-                // ---- Caso: >1 servicio (sin grupos mezclados)
+                // ---- MULTI-SERVICIO (sin grupales)
                 let anyGroup = false;
                 for (const a of attendees) {
-                    if ((capByService.get(a.serviceId) ?? 1) > 1) {
+                    if (getSvcCap(a.serviceId) > 1) {
                         anyGroup = true;
                         break;
                     }
                 }
                 if (anyGroup) {
-                    days.push({ date: dateISO, hasSlots: false, capacity: 0 });
+                    // sin soporte combos grupales aquí
+                    days.push({
+                        date: dateISO,
+                        hasSlots: false,
+                        capacity: 0,
+                        status: "dayoff",
+                    });
                     continue;
                 }
 
-                // Para cada servicio individual: ratio = (#starts libres) / (#starts posibles)
                 const ratios: number[] = [];
+                const denoms: number[] = [];
+
                 for (const a of attendees) {
-                    const elig = userIdsByService.get(a.serviceId) ?? [];
-                    if (!elig.length) {
+                    const svcId = a.serviceId;
+                    const elig = userIdsByService.get(svcId) ?? [];
+                    const durMin = getSvcDur(svcId, a.durationMin);
+
+                    if (!elig.length || durMin <= 0) {
                         ratios.push(0);
+                        denoms.push(0);
                         continue;
                     }
 
-                    // denom
+                    // Denominador servicio
                     let denomStarts = 0;
                     for (const uid of elig) {
-                        const shifts = getShiftsFor(uid, dateISO);
-                        const mergedShifts = mergeRanges(shifts);
+                        const shifts = mergeRanges(getShiftsFor(uid, dateISO));
                         denomStarts += countStartsInWindows(
-                            mergedShifts,
-                            a.durationMin,
+                            shifts,
+                            durMin,
                             STEP_MINUTES,
-                            clampFrom // 🆕 clamp lead
+                            clampFrom
                         );
                     }
+
                     if (denomStarts <= 0) {
                         ratios.push(0);
+                        denoms.push(0);
                         continue;
                     }
 
-                    // numerador (libres tras busy)
+                    // Numerador (libre tras busy)
                     let freeStarts = 0;
                     for (const uid of elig) {
                         const shifts = getShiftsFor(uid, dateISO);
+                        if (!shifts.length) continue;
+
                         const busy: Range[] = (eventsByUser.get(uid) || [])
-                            .filter((ev) => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
-                            .map((ev) => ({ start: toLocal(ev.startDate), end: toLocal(ev.endDate) }));
+                            .filter(
+                                (ev) =>
+                                    ev.startDate < dayEndUTC &&
+                                    ev.endDate > dayStartUTC
+                            )
+                            .map((ev) => ({
+                                start: moment(ev.startDate).tz(TZ_WS),
+                                end: moment(ev.endDate).tz(TZ_WS),
+                            }));
 
                         const freeWins: Range[] = [];
                         for (const sh of shifts) {
-                            const shStart = clampFrom ? moment.max(sh.start, clampFrom) : sh.start; // 🆕 clamp lead
+                            const shStart = clampFrom
+                                ? moment.max(sh.start, clampFrom)
+                                : sh.start;
                             if (!shStart.isBefore(sh.end)) continue;
                             freeWins.push(...subtractBusy({ start: shStart, end: sh.end }, busy));
                         }
+
                         const mergedFree = mergeRanges(freeWins);
                         freeStarts += countStartsInWindows(
                             mergedFree,
-                            a.durationMin,
+                            durMin,
                             STEP_MINUTES,
-                            clampFrom // 🆕 clamp lead
+                            clampFrom
                         );
                     }
-                    ratios.push(Math.max(0, Math.min(1, freeStarts / denomStarts)));
+
+                    const ratio = Math.max(0, Math.min(1, freeStarts / denomStarts));
+                    ratios.push(ratio);
+                    denoms.push(denomStarts);
                 }
 
-                const minRatio = ratios.length ? Math.min(...ratios) : 0;
+                const allDenomZero = denoms.every((d) => d <= 0);
+                if (allDenomZero) {
+                    days.push({
+                        date: dateISO,
+                        hasSlots: false,
+                        capacity: 0,
+                        status: "dayoff",
+                    });
+                    continue;
+                }
+
+                const minRatio =
+                    ratios.length > 0
+                        ? Math.max(
+                            0,
+                            Math.min(
+                                1,
+                                Number(Math.min(...ratios).toFixed(2))
+                            )
+                        )
+                        : 0;
+
+                const hasSlots = minRatio > 0;
+                const status: DayAvailabilityStatus =
+                    !hasSlots ? "completed" : "available";
+
                 days.push({
                     date: dateISO,
-                    hasSlots: minRatio > 0,
-                    capacity: Number(minRatio.toFixed(2)),
+                    hasSlots,
+                    capacity: minRatio,
+                    status,
                 });
             }
 
+            console.log("Available days:", days);
+
             return { days };
         } catch (error: any) {
-            throw new CustomError("EventService.getAvailableDays", error);
+            throw new CustomError("EventService.publicGetAvailableDays", error);
         }
     }
-
-
 
 
 
@@ -1750,7 +2337,8 @@ export class EventV2Service {
     async createOrJoinGroupEvent(
         tx: Prisma.TransactionClient,
         params: {
-            calendarId: string;
+            idCompany: string;
+            idWorkspace: string;
             seg: { serviceId: string; userId: string; start: moment.Moment; end: moment.Moment };
             svc: {
                 id: string;
@@ -1765,7 +2353,7 @@ export class EventV2Service {
             customer: { id: string; idClientWorkspace: string };
         }
     ): Promise<{ event: Event; action: "created" | "joined" | "already-in" }> {
-        const { calendarId, seg, svc, timeZoneWorkspace, note, customer } = params;
+        const { idWorkspace, idCompany, seg, svc, timeZoneWorkspace, note, customer } = params;
         const startDate = seg.start.toDate();
         const endDate = seg.end.toDate();
         const capacity = Math.max(1, svc.maxParticipants ?? 1);
@@ -1781,7 +2369,7 @@ export class EventV2Service {
         // ¿ya existe ese evento exacto?
         const existing = await tx.event.findFirst({
             where: {
-                idCalendarFk: calendarId,
+                idWorkspaceFk: idWorkspace,
                 idServiceFk: seg.serviceId,
                 idUserPlatformFk: seg.userId,
                 startDate,
@@ -1849,8 +2437,10 @@ export class EventV2Service {
         // Crear evento
         const ev = await tx.event.create({
             data: {
-                calendar: { connect: { id: calendarId } },
-                service: { connect: { id: seg.serviceId } },
+                idCompanyFk: idCompany,
+                idWorkspaceFk: idWorkspace,
+                // service: { connect: { id: seg.serviceId } },
+                idServiceFk: seg.serviceId,
                 idUserPlatformFk: seg.userId,
                 startDate,
                 endDate,
@@ -1945,7 +2535,7 @@ export class EventV2Service {
             const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(allUserIds, idWorkspace);
             const temporaryHoursMap = await temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idWorkspace, { date: dateWS });
 
-            const events = await getEventsOverlappingRange_SPECIAL(allUserIds, dateWS, dateWS, excludeEventId);
+            const events = await getEventsOverlappingRange_SPECIAL(idWorkspace, allUserIds, dateWS, dateWS, excludeEventId);
             const eventsByUser = groupEventsByUser_SPECIAL(events);
 
             type MM = { start: moment.Moment; end: moment.Moment };
@@ -2017,15 +2607,19 @@ export class EventV2Service {
                 const elig = userIdsByService.get(svcReq.serviceId) ?? [];
 
                 // 1) intentar UNIRSE a un evento existente por solape
-                const calendar = await prisma.calendar.findFirst({
-                    where: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace, deletedDate: null },
-                    select: { id: true },
-                });
+                // const calendar = await prisma.calendar.findFirst({
+                //     where: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace, deletedDate: null },
+                //     select: { id: true },
+                // });
 
-                if (calendar && elig.length) {
+
+                // if (calendar && elig.length) {
+                // 
+                if (elig.length) {
                     const overlappingEvents = await prisma.event.findMany({
                         where: {
-                            idCalendarFk: calendar.id,
+                            // idCalendarFk: calendar.id,
+                            idWorkspaceFk: idWorkspace,
                             idServiceFk: svcReq.serviceId,
                             idUserPlatformFk: { in: elig },
                             startDate: { lt: endWS.toDate() },
@@ -2117,6 +2711,7 @@ export class EventV2Service {
                         (freeWindowsByUser[uid] ?? []).some(w => startWS.isSameOrAfter(w.start) && endWS.isSameOrBefore(w.end))
                     );
 
+                    // TODO: Buscar el idBookingPage, se intentará que llegue desde el front client al hacer la reserva
                     const chosen = await this.chooseStaffWithRR(
                         idWorkspace,
                         undefined, // idBookingPage (no lo tenemos aquí)
@@ -2168,6 +2763,7 @@ export class EventV2Service {
                         usedByUserAt: [],
                         assignment: _assignment,
                     });
+
                     if (!ok) {
                         console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] El inicio elegido ya no está disponible (cambió la disponibilidad).", CONSOLE_COLOR.Reset);
                         return { ok: false };
@@ -2181,11 +2777,14 @@ export class EventV2Service {
             const endWS = startWS.clone().add(totalDuration, "minutes");
 
             // 6) Calendar & transacción (group-aware)
-            const calendar = await prisma.calendar.upsert({
-                where: { idCompanyFk_idWorkspaceFk: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace } },
-                update: {},
-                create: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace },
-            });
+            // const calendar = await prisma.calendar.upsert({
+            //     where: { idCompanyFk_idWorkspaceFk: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace } },
+            //     update: {},
+            //     create: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace },
+            // });
+
+
+
 
             const created = await prisma.$transaction(async (tx) => {
                 const events = [];
@@ -2193,7 +2792,8 @@ export class EventV2Service {
                     const svc = serviceById[seg.serviceId];
                     if (!svc) throw new Error("Servicio no disponible o no pertenece a este workspace.");
                     const ev = await this.createOrJoinGroupEvent(tx, {
-                        calendarId: calendar.id,
+                        idWorkspace,
+                        idCompany,
                         seg,
                         svc,
                         timeZoneWorkspace,
@@ -2298,6 +2898,54 @@ export class EventV2Service {
 
 
 
+    // internal
+
+    getEventDataById = async (idEvent: string, idWorkspace: string) => {
+        try {
+            const event = await prisma.event.findFirst({
+                where: { id: idEvent, idWorkspaceFk: idWorkspace, deletedDate: null },
+                select: {
+                    // Campos específicos del evento que quieres devolver
+                    id: true,
+                    title: true,
+                    description: true,
+                    startDate: true,
+                    endDate: true,
+                    idUserPlatformFk: true,
+                    idServiceFk: true,
+                    eventPurposeType: true,
+                    eventSourceType: true,
+                    eventStatusType: true,
+                    allDay: true,
+                    // timeZone: true,
+                    serviceNameSnapshot: true,
+                    servicePriceSnapshot: true,
+                    serviceDiscountSnapshot: true,
+                    serviceDurationSnapshot: true,
+
+                    // Relaciones con select específico
+                    eventParticipant: {
+                        where: { deletedDate: null },
+                        select: {
+                            id: true,
+                            idClientFk: true,
+                            idClientWorkspaceFk: true,
+                            eventStatusType: true,
+                        },
+                    },
 
 
+                },
+            });
+
+            console.log("Fetched event:", event);
+
+            return {
+                item: event,
+                count: event ? 1 : 0
+            };
+        } catch (error: any) {
+            throw new CustomError("EventService.getEventDataById", error);
+        }
+    }
 }

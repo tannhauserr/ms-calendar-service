@@ -622,94 +622,98 @@ export class TemporaryBusinessHourService {
         idWorkspace: string,
         range?: HoursRangeInput
     ): Promise<TemporaryHoursMapType> => {
-        const temporaryHoursMap: TemporaryHoursMapType = {};
-        const temporaryHoursStrategy = new TemporaryHoursStrategy();
+        try {
+            const temporaryHoursMap: TemporaryHoursMapType = {};
+            const temporaryHoursStrategy = new TemporaryHoursStrategy();
 
-        const { start, end } = normalizeRange(range);
-        const wantedDays = listDaysInclusive(start, end);
-        const startDate = moment(start, "YYYY-MM-DD").toDate();
-        const endDate = moment(end, "YYYY-MM-DD").toDate();
+            const { start, end } = normalizeRange(range);
+            const wantedDays = listDaysInclusive(start, end);
+            const startDate = moment(start, "YYYY-MM-DD").toDate();
+            const endDate = moment(end, "YYYY-MM-DD").toDate();
 
-        for (const userId of userIds) {
-            // 1) Leer cache maestra
-            const cached =
-                (await temporaryHoursStrategy.getTemporaryHours(idWorkspace, userId)) || {};
-            const covered = new Set(Object.keys(cached));
-            const missingDays = wantedDays.filter((d) => !covered.has(d));
+            for (const userId of userIds) {
+                // 1) Leer cache maestra
+                const cached =
+                    (await temporaryHoursStrategy.getTemporaryHours(idWorkspace, userId)) || {};
+                const covered = new Set(Object.keys(cached));
+                const missingDays = wantedDays.filter((d) => !covered.has(d));
 
-            // ⭐  Muta en lugar de copiar, para menos GC
-            const merged: { [date: string]: string[][] | null } = { ...cached };
+                // ⭐  Muta en lugar de copiar, para menos GC
+                const merged: { [date: string]: string[][] | null } = { ...cached };
 
-            if (missingDays.length > 0) {
-                // 2) DB SOLO lo que falta
-                let records: any[] = [];
+                if (missingDays.length > 0) {
+                    // 2) DB SOLO lo que falta
+                    let records: any[] = [];
 
-                // ⭐ cambio: según nº de días faltantes decides BETWEEN vs IN
-                const THRESHOLD_IN = 6;
-                if (missingDays.length <= THRESHOLD_IN) {
-                    records = await prisma.temporaryBusinessHour.findMany({
-                        where: {
-                            idWorkspaceFk: idWorkspace,
-                            idUserFk: userId,
-                            deletedDate: null,
-                            date: { in: missingDays.map((d) => new Date(d)) },
-                        },
-                    });
-                } else {
-                    records = await prisma.temporaryBusinessHour.findMany({
-                        where: {
-                            idWorkspaceFk: idWorkspace,
-                            idUserFk: userId,
-                            deletedDate: null,
-                            date: { gte: startDate, lte: endDate },
-                        },
-                    });
-                }
-
-                // 3) Construir patch
-                const patch: { [date: string]: string[][] | null } = {};
-                for (const record of records) {
-                    const dateStr = moment(record.date).format("YYYY-MM-DD");
-                    if (!isWithin(dateStr, start, end)) continue;
-
-                    if (record?.closed) {
-                        patch[dateStr] = null;
-                        continue;
-                    }
-                    if (!record.startTime || !record.endTime) continue;
-
-                    const startTime = record.startTime as unknown as string;
-                    const endTime = record.endTime as unknown as string;
-
-                    if (!patch[dateStr]) patch[dateStr] = [];
-                    (patch[dateStr] as string[][]).push([startTime, endTime]);
-                }
-
-                // 4) MERGE solo si hay cambios
-                if (Object.keys(patch).length > 0) {   // ⭐ evitar save innecesario
-                    for (const [k, v] of Object.entries(patch)) {
-                        merged[k] = v; // muta directamente
+                    // ⭐ cambio: según nº de días faltantes decides BETWEEN vs IN
+                    const THRESHOLD_IN = 6;
+                    if (missingDays.length <= THRESHOLD_IN) {
+                        records = await prisma.temporaryBusinessHour.findMany({
+                            where: {
+                                idWorkspaceFk: idWorkspace,
+                                idUserFk: userId,
+                                deletedDate: null,
+                                date: { in: missingDays.map((d) => new Date(d)) },
+                            },
+                        });
+                    } else {
+                        records = await prisma.temporaryBusinessHour.findMany({
+                            where: {
+                                idWorkspaceFk: idWorkspace,
+                                idUserFk: userId,
+                                deletedDate: null,
+                                date: { gte: startDate, lte: endDate },
+                            },
+                        });
                     }
 
-                    await temporaryHoursStrategy.saveTemporaryHours(
-                        idWorkspace,
-                        userId,
-                        merged,
-                        TIME_SECONDS.HOUR
-                    );
+                    // 3) Construir patch
+                    const patch: { [date: string]: string[][] | null } = {};
+                    for (const record of records) {
+                        const dateStr = moment(record.date).format("YYYY-MM-DD");
+                        if (!isWithin(dateStr, start, end)) continue;
+
+                        if (record?.closed) {
+                            patch[dateStr] = null;
+                            continue;
+                        }
+                        if (!record.startTime || !record.endTime) continue;
+
+                        const startTime = record.startTime as unknown as string;
+                        const endTime = record.endTime as unknown as string;
+
+                        if (!patch[dateStr]) patch[dateStr] = [];
+                        (patch[dateStr] as string[][]).push([startTime, endTime]);
+                    }
+
+                    // 4) MERGE solo si hay cambios
+                    if (Object.keys(patch).length > 0) {   // ⭐ evitar save innecesario
+                        for (const [k, v] of Object.entries(patch)) {
+                            merged[k] = v; // muta directamente
+                        }
+
+                        await temporaryHoursStrategy.saveTemporaryHours(
+                            idWorkspace,
+                            userId,
+                            merged,
+                            TIME_SECONDS.HOUR
+                        );
+                    }
                 }
+
+                // 5) Devolver SOLO el rango
+                const filtered: { [date: string]: string[][] | null } = {};
+                for (const d of wantedDays) {
+                    if (d in merged) filtered[d] = merged[d];
+                }
+
+                temporaryHoursMap[userId] = filtered;
             }
 
-            // 5) Devolver SOLO el rango
-            const filtered: { [date: string]: string[][] | null } = {};
-            for (const d of wantedDays) {
-                if (d in merged) filtered[d] = merged[d];
-            }
-
-            temporaryHoursMap[userId] = filtered;
+            return temporaryHoursMap;
+        } catch (error: any) {
+            throw new CustomError('TemporaryBusinessHour.getTemporaryHoursFromRedis', error);
         }
-
-        return temporaryHoursMap;
     };
 
 

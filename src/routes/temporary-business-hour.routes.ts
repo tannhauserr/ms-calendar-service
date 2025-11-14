@@ -61,6 +61,10 @@ router.post('/temporary-business-hours/delete', [
 router.post('/temporary-business-hours/autocomplete', JWTService.authCookieOrBearer, controller.autocomplete);
 
 
-router.post('/temporary-business-hours/r-temporary-business-hours', [ JWTService.authCookieOrBearer, OnlyAdminMiddleware.accessOnlyAdminOrManagerOrUser, ], controller.getTemporaryHoursFromRedis);
+router.post('/temporary-business-hours/r-temporary-business-hours',
+    [
+        JWTService.authCookieOrBearer,
+        OnlyAdminMiddleware.accessOnlyAdminOrManagerOrUser
+    ], controller.getTemporaryHoursFromRedis);
 
 module.exports = router;

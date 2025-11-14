@@ -8,11 +8,16 @@ import {
     groupEventsByUser_SPECIAL,
     subtractBusyFromShift_SPECIAL,
     mergeTouchingWindows_SPECIAL,
-    assignSequentially_SPECIAL
+    assignSequentially_SPECIAL,
+    alignToGridCeil_SPECIAL,
+    buildShiftsByUser_SPECIAL,
+    dedupeAndSortSlots_SPECIAL
 } from "./availability-special.service";
 import CustomError from "../../../models/custom-error/CustomError";
 import { OnlineBookingConfig } from "../../@redis/cache/interfaces/models/booking-config";
 import { a } from "@react-spring/web";
+import { DayStatus } from "./types";
+import { CONSOLE_COLOR } from "../../../constant/console-color";
 
 /* ────────────────────────────────────────────────────────────
    Tipos
@@ -118,11 +123,11 @@ export class EventTimesService {
         participantClientWorkspaceIds: string[]; // idClientWorkspaceFk
         participantsCount: number;
     }>> {
-        const calendar = await prisma.calendar.findFirst({
-            where: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace, deletedDate: null },
-            select: { id: true },
-        });
-        if (!calendar) return [];
+        // const calendar = await prisma.calendar.findFirst({
+        //     where: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace, deletedDate: null },
+        //     select: { id: true },
+        // });
+        // if (!calendar) return [];
 
         const parseStart = (s: string) =>
             s.length > 10 ? moment.utc(s) : moment.utc(s, "YYYY-MM-DD").startOf("day");
@@ -134,7 +139,8 @@ export class EventTimesService {
 
         const events = await prisma.event.findMany({
             where: {
-                idCalendarFk: calendar.id,
+                // idCalendarFk: calendar.id,
+                idWorkspaceFk: idWorkspace,
                 idServiceFk: idService,
                 startDate: { lt: end },
                 endDate: { gt: start },
@@ -164,412 +170,14 @@ export class EventTimesService {
         }));
     }
 
-    /* ────────────────────────────────────────────────────────────
-       FUNCIÓN PRINCIPAL: ahora con soporte grupal real
-    ────────────────────────────────────────────────────────────── */
-    // async publicGetAvailableTimeSlots_SPECIAL(
-    //     input: GetTimeSlotsInputSpecial,
-    //     deps: AvailabilityDepsSpecial
-    // ): Promise<{ timeSlots: TimeSlotSpecial[] }> {
-    //     const {
-    //         idCompany,
-    //         idWorkspace,
-    //         timeZoneWorkspace,
-    //         timeZoneClient,
-    //         date,
-    //         attendees,
 
-    //         excludeEventId,
-    //         idClient,
-    //     } = input;
-
-    //     try {
-
-    //         const BOOKING_PAGE_CONFIG: OnlineBookingConfig = deps.bookingConfig;
-
-    //         const { maxAdvanceDays = 60, minLeadTimeMin = 60 } = BOOKING_PAGE_CONFIG.bookingWindow;
-
-    //         const alignMode: "clock" | "service" = BOOKING_PAGE_CONFIG.slot?.alignMode === "service" ? "service" : "clock";
-    //         const intervalMinutes =
-    //             alignMode === "service"
-    //                 ? attendees?.reduce((acc, a) => acc + (a.durationMin ?? 0), 0)
-    //                 : BOOKING_PAGE_CONFIG?.slot?.stepMinutes;
-
-    //         const professionalAllowed = BOOKING_PAGE_CONFIG?.resources?.ids
-    //             ?.map(r => Array.isArray(r) ? r?.[0] : r) ?? [];
-
-    //         console.log("que es intervalMinutes", intervalMinutes)
-
-
-    //         if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany / idWorkspace");
-    //         if (!timeZoneWorkspace) throw new Error("Falta timeZoneWorkspace");
-    //         if (!timeZoneClient) throw new Error("Falta timeZoneClient");
-    //         if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("date inválido");
-    //         if (!Array.isArray(attendees) || attendees.length === 0) return { timeSlots: [] };
-    //         if (professionalAllowed.length === 0) return { timeSlots: [] };
-
-
-    //         // Snapshot servicios (duración/capacidad)
-    //         const servicesSnapshot = await deps.servicesSnapshot.getServicesSnapshotById({
-    //             idCompany,
-    //             idWorkspace,
-    //             attendees: attendees.map(a => ({ serviceId: a.serviceId })),
-    //             requireAll: true,
-    //         });
-
-
-    //         // No permitir combinar grupales con otros servicios
-    //         const hasGroupService = attendees.some(a => {
-    //             const s = servicesSnapshot[a.serviceId];
-    //             return s && s.maxParticipants > 1;
-    //         });
-    //         if (hasGroupService && attendees.length > 1) {
-    //             throw new Error("Los servicios grupales no se pueden combinar con otros en la misma reserva.");
-    //         }
-
-
-
-    //         // Step / HOY
-    //         // const alignMode: "service" = "service";
-    //         // const alignMode: "clock" | "service" = bookingConfig.slot?.alignMode === "service" ? "service" : "clock";
-    //         const dayStartLocal = moment.tz(`${date}T00:00:00`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace);
-    //         const { stepMinutes, roundedNow, isToday } = computeSlotConfig({
-    //             intervalMinutes,
-    //             timeZoneWorkspace,
-    //             dayStartLocal,
-    //         });
-
-    //         // Día pasado (en TZ negocio) → vacío
-    //         const todayLocal = moment().tz(timeZoneWorkspace).startOf("day");
-    //         if (dayStartLocal.clone().startOf("day").isBefore(todayLocal, "day")) {
-    //             return { timeSlots: [] };
-    //         }
-    //         const dayEndLocal = dayStartLocal.clone().endOf("day");
-
-    //         // Filtrado de profesionales permitidos (si viene idClient)
-    //         const withinAllowed = (ids: string[]) =>
-    //             ids.filter(id => professionalAllowed.includes(id));
-
-    //         // Elegibles por servicio
-    //         const userIdsByService = new Map<string, string[]>();
-    //         for (const a of attendees) {
-    //             if (a.staffId) {
-    //                 const elig = professionalAllowed.includes(a.staffId) ? [a.staffId] : [];
-    //                 userIdsByService.set(a.serviceId, elig);
-    //                 // userIdsByService.set(a.serviceId, [a.staffId]);
-    //             } else {
-    //                 const users = await getUsersWhoCanPerformService_SPECIAL(
-    //                     idWorkspace,
-    //                     a.serviceId,
-    //                     a.categoryId,
-    //                     deps.cache
-    //                 );
-    //                 // userIdsByService.set(a.serviceId, users);
-    //                 userIdsByService.set(a.serviceId, withinAllowed(users));
-    //             }
-    //         }
-    //         const allUserIds = Array.from(new Set(Array.from(userIdsByService.values()).flat()));
-    //         if (allUserIds.length === 0) return { timeSlots: [] };
-
-    //         // Reglas/turnos
-    //         const businessHours = await deps.businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace);
-    //         const workerHoursMap = await deps.workerHoursService.getWorkerHoursFromRedis(allUserIds, idWorkspace);
-    //         const temporaryHoursMap = await deps.temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idWorkspace, { date });
-
-    //         // Eventos del día (para ocupar ventanas)
-    //         const events = await getEventsOverlappingRange_SPECIAL(allUserIds, date, date, excludeEventId);
-
-    //         // Ventanas libres por usuario
-    //         const weekDay = dayStartLocal.format("dddd").toUpperCase() as Weekday;
-    //         const bizShifts: string[][] = (() => {
-    //             const biz = (businessHours as any)?.[weekDay];
-    //             return biz === null ? [] : Array.isArray(biz) ? biz : [];
-    //         })();
-
-    //         const shiftsByUserLocal: Record<string, Array<{ start: moment.Moment; end: moment.Moment }>> = {};
-    //         for (const uid of allUserIds) {
-    //             let workShifts: string[][] = [];
-    //             const tmp = (temporaryHoursMap as any)?.[uid]?.[date];
-
-    //             if (tmp === null) workShifts = [];
-    //             else if (Array.isArray(tmp) && tmp.length > 0) workShifts = tmp;
-    //             else {
-    //                 const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
-    //                 if (workerDay === null) workShifts = [];
-    //                 else if (Array.isArray(workerDay) && workerDay.length > 0) workShifts = workerDay;
-    //                 else workShifts = bizShifts;
-    //             }
-
-    //             shiftsByUserLocal[uid] = (workShifts || []).map(([s, e]) => ({
-    //                 start: moment.tz(`${date}T${s}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-    //                 end: moment.tz(`${date}T${e}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-    //             }));
-    //         }
-
-    //         const eventsByUser = groupEventsByUser_SPECIAL(events);
-    //         const freeWindowsByUser: Record<string, Array<{ start: moment.Moment; end: moment.Moment }>> = {};
-    //         for (const uid of allUserIds) {
-    //             const busy = (eventsByUser[uid] || []).map((ev) => ({
-    //                 start: moment(ev.startDate).tz(timeZoneWorkspace),
-    //                 end: moment(ev.endDate).tz(timeZoneWorkspace),
-    //             }));
-
-    //             const rawShifts = shiftsByUserLocal[uid] || [];
-    //             let free: Array<{ start: moment.Moment; end: moment.Moment }> = [];
-
-    //             for (const sh of rawShifts) {
-    //                 const startClamped = isToday ? moment.max(sh.start, roundedNow) : sh.start.clone();
-    //                 if (!startClamped.isBefore(sh.end)) continue;
-    //                 free.push(...subtractBusyFromShift_SPECIAL(startClamped, sh.end, busy));
-    //             }
-
-    //             free = mergeTouchingWindows_SPECIAL(free);
-    //             freeWindowsByUser[uid] = free;
-    //         }
-
-    //         // // Pruning simple por duración
-    //         // for (const a of attendees) {
-    //         //     const elig = userIdsByService.get(a.serviceId) ?? [];
-    //         //     const dur = servicesSnapshot[a.serviceId]?.durationMin ?? a.durationMin;
-    //         //     const algunoTieneHueco = elig.some((uid) =>
-    //         //         (freeWindowsByUser[uid] ?? []).some((w) => w.end.diff(w.start, "minutes") >= dur)
-    //         //     );
-    //         //     if (!algunoTieneHueco) return { timeSlots: [] };
-    //         // }
-
-    //         // Pruning simple por duración
-    //         // 👉 Solo aplica cuando hay MULTI-servicio.
-    //         // En single-servicio (incluye grupos) lo calculamos en el fast-path y
-    //         // no debemos cortar aquí porque los eventos grupales existentes se
-    //         // reinsertan más adelante.
-    //         if (attendees.length > 1) {
-    //             for (const a of attendees) {
-    //                 const elig = userIdsByService.get(a.serviceId) ?? [];
-    //                 const dur = servicesSnapshot[a.serviceId]?.durationMin ?? a.durationMin;
-    //                 const algunoTieneHueco = elig.some((uid) =>
-    //                     (freeWindowsByUser[uid] ?? []).some(
-    //                         (w) => w.end.diff(w.start, "minutes") >= dur
-    //                     )
-    //                 );
-    //                 if (!algunoTieneHueco) return { timeSlots: [] };
-    //             }
-    //         }
-
-    //         /* ────────────────────────────────────────────────────────
-    //            FAST-PATH: 1 servicio (soporta grupo)
-    //         ───────────────────────────────────────────────────────── */
-    //         if (attendees.length === 1) {
-    //             const svcReq = attendees[0];
-    //             const svcSnap = servicesSnapshot[svcReq.serviceId];
-    //             const svcDuration = svcSnap?.durationMin ?? svcReq.durationMin;
-    //             const capacity = Math.max(1, svcSnap?.maxParticipants ?? 1);
-    //             const isGroup = capacity > 1;
-
-    //             // Carga de eventos del servicio con conteo y miembros (para el día)
-    //             const groupEvents = isGroup
-    //                 ? await this.getGroupEventsWithCounts_SPECIAL(
-    //                     idCompany,
-    //                     idWorkspace,
-    //                     svcReq.serviceId,
-    //                     date,
-    //                     date,
-    //                     excludeEventId
-    //                 )
-    //                 : [];
-
-    //             // Indexamos por user las ventanas exactas de los eventos de grupo
-    //             const groupEventsByUser: Record<string, Array<{ start: moment.Moment; end: moment.Moment }>> = {};
-    //             for (const ev of groupEvents) {
-    //                 const u = ev.idUserPlatformFk ?? "";
-    //                 if (!u) continue; // si no hay user asignado, no podemos reinsertar en un staff concreto
-    //                 const s = moment(ev.startDate).tz(timeZoneWorkspace).seconds(0).milliseconds(0);
-    //                 const e = moment(ev.endDate).tz(timeZoneWorkspace).seconds(0).milliseconds(0);
-    //                 (groupEventsByUser[u] ||= []).push({ start: s, end: e });
-    //             }
-
-    //             // Índices de ocupación y miembros por slot exacto (user + start + end)
-    //             const countIndex = new Map<string, number>();
-    //             const membersIndex = new Map<string, Set<string>>();
-    //             const keyOf = (
-    //                 userId: string | null | undefined,
-    //                 start: moment.Moment,
-    //                 end: moment.Moment
-    //             ) => `${userId ?? ""}|${start.format("YYYY-MM-DDTHH:mm:ss")}|${end.format("YYYY-MM-DDTHH:mm:ss")}`;
-
-    //             for (const ev of groupEvents) {
-    //                 const s = moment(ev.startDate).tz(timeZoneWorkspace).seconds(0).milliseconds(0);
-    //                 const e = moment(ev.endDate).tz(timeZoneWorkspace).seconds(0).milliseconds(0);
-    //                 const k = keyOf(ev.idUserPlatformFk, s, e);
-    //                 countIndex.set(k, ev.participantsCount);
-    //                 const set = new Set<string>();
-    //                 ev.participantClientIds.forEach((id) => set.add(id));
-    //                 ev.participantClientWorkspaceIds.forEach((id) => set.add(id));
-    //                 membersIndex.set(k, set);
-    //             }
-
-    //             // Helper: ceil al step
-    //             // const ceilToStep = (m: moment.Moment, step: number) => {
-    //             //     const x = m.clone().seconds(0).milliseconds(0);
-    //             //     const r = x.minute() % step;
-    //             //     if (r !== 0) x.add(step - r, "minutes");
-    //             //     return x;
-    //             // };
-
-    //             const ceilToStep = (m: moment.Moment, step: number, origin: moment.Moment) => {
-    //                 const ref = origin.clone().seconds(0).milliseconds(0);
-    //                 const diffMin = Math.max(0, Math.floor((m.valueOf() - ref.valueOf()) / 60000)); // minutos desde origin
-    //                 const rem = diffMin % step;
-    //                 const add = rem === 0 ? 0 : step - rem;
-    //                 return m.clone().add(add, "minutes").seconds(0).milliseconds(0);
-    //             };
-
-    //             const eligible = userIdsByService.get(svcReq.serviceId) ?? [];
-    //             const timeSlots: TimeSlotSpecial[] = [];
-
-    //             for (const uid of eligible) {
-    //                 // Reinsertamos ventanas de los eventos grupales existentes para ese user
-    //                 const baseWins = freeWindowsByUser[uid] ?? [];
-    //                 const addWinsRaw = isGroup ? groupEventsByUser[uid] ?? [] : [];
-    //                 const addWins = addWinsRaw
-    //                     .map((w) => {
-    //                         const startClamped = isToday ? moment.max(w.start, roundedNow) : w.start;
-    //                         return startClamped.isBefore(w.end) ? { start: startClamped, end: w.end } : null;
-    //                     })
-    //                     .filter(Boolean) as Array<{ start: moment.Moment; end: moment.Moment }>;
-
-    //                 const wins =
-    //                     isGroup && addWins.length
-    //                         ? mergeTouchingWindows_SPECIAL([...baseWins, ...addWins])
-    //                         : baseWins;
-
-    //                 for (const w of wins) {
-    //                     const latestStart = w.end.clone().subtract(svcDuration, "minutes");
-    //                     // let cur = ceilToStep(moment.max(w.start, dayStartLocal.clone().startOf("day")), stepMinutes);
-    //                     let cur = ceilToStep(
-    //                         moment.max(w.start, dayStartLocal.clone().startOf("day")),
-    //                         stepMinutes,
-    //                         w.start // ← anclaje a la ventana, así 16:10 se mantiene en 16:10
-    //                     );
-
-    //                     while (cur.isSameOrBefore(latestStart)) {
-    //                         const end = cur.clone().add(svcDuration, "minutes");
-
-    //                         if (isGroup) {
-    //                             const k = keyOf(uid, cur, end);
-    //                             const booked = countIndex.get(k) ?? 0; // ya ocupadas
-    //                             const left = Math.max(0, capacity - booked);
-
-    //                             // Si viene idClient y ya está en este grupo/slot, ocultar
-    //                             const members = membersIndex.get(k);
-    //                             const clientAlreadyInGroup = !!(idClient && members && members.has(idClient));
-
-    //                             if (left > 0 && !clientAlreadyInGroup) {
-    //                                 timeSlots.push({
-    //                                     startLocalISO: cur.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-    //                                     endLocalISO: end.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-    //                                     label: cur.clone().tz(timeZoneClient).format("HH:mm"),
-    //                                     // mostramos "ocupados / capacidad"
-    //                                     labelParticipant: `${booked} / ${capacity}`,
-    //                                 });
-    //                             }
-    //                         } else {
-    //                             // Cita individual normal
-    //                             timeSlots.push({
-    //                                 startLocalISO: cur.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-    //                                 endLocalISO: end.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-    //                                 label: cur.clone().tz(timeZoneClient).format("HH:mm"),
-    //                                 labelParticipant: null,
-    //                             });
-    //                         }
-
-    //                         cur.add(stepMinutes, "minutes");
-    //                     }
-    //                 }
-    //             }
-
-    //             timeSlots.sort((a, b) =>
-    //                 a.startLocalISO < b.startLocalISO ? -1 : a.startLocalISO > b.startLocalISO ? 1 : 0
-    //             );
-    //             return { timeSlots };
-    //         }
-
-    //         /* ────────────────────────────────────────────────────────
-    //            Multi-servicio (solo si NINGUNO es grupal)
-    //         ───────────────────────────────────────────────────────── */
-    //         const totalDuration = attendees.reduce(
-    //             (acc, a) => acc + (servicesSnapshot[a.serviceId]?.durationMin ?? a.durationMin),
-    //             0
-    //         );
-    //         const seedService = attendees[0];
-    //         const seedElig = userIdsByService.get(seedService.serviceId) ?? [];
-    //         const candidateKeys = new Set<string>();
-    //         const latestStart = dayEndLocal.clone().subtract(totalDuration, "minutes");
-
-    //         for (const uid of seedElig) {
-    //             const wins = freeWindowsByUser[uid] ?? [];
-    //             for (const w of wins) {
-    //                 const s = moment.max(w.start, dayStartLocal).clone().seconds(0).milliseconds(0);
-    //                 const e = moment.min(w.end, latestStart).clone().seconds(0).milliseconds(0);
-    //                 if (!s.isBefore(e)) continue;
-
-    //                 let cur = s.clone().minute(Math.ceil(s.minute() / stepMinutes) * stepMinutes);
-    //                 while (!cur.isAfter(e)) {
-    //                     candidateKeys.add(cur.format("YYYY-MM-DDTHH:mm:ss"));
-    //                     cur.add(stepMinutes, "minutes");
-    //                 }
-    //             }
-    //         }
-
-    //         const candidates = Array.from(candidateKeys)
-    //             .map((k) => moment.tz(k, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace))
-    //             .sort((a, b) => a.valueOf() - b.valueOf());
-
-    //         const timeSlots: TimeSlotSpecial[] = [];
-    //         const eligibleUsersByService: Record<string, string[]> = {};
-    //         for (const a of attendees) eligibleUsersByService[a.serviceId] = userIdsByService.get(a.serviceId) ?? [];
-
-    //         for (const start of candidates) {
-    //             const assignment: Array<{ serviceId: string; userId: string; start: moment.Moment; end: moment.Moment }> = [];
-    //             const attendeesWithRealDur = attendees.map(a => ({
-    //                 serviceId: a.serviceId,
-    //                 durationMin: servicesSnapshot[a.serviceId]?.durationMin ?? a.durationMin
-    //             }));
-
-    //             const ok = assignSequentially_SPECIAL({
-    //                 idx: 0,
-    //                 start,
-    //                 attendees: attendeesWithRealDur,
-    //                 eligibleUsersByService,
-    //                 freeWindowsByUser,
-    //                 usedByUserAt: [],
-    //                 assignment,
-    //             });
-    //             if (ok) {
-    //                 const end = start.clone().add(totalDuration, "minutes");
-    //                 timeSlots.push({
-    //                     startLocalISO: start.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-    //                     endLocalISO: end.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-    //                     label: start.clone().tz(timeZoneClient).format("HH:mm"),
-    //                     labelParticipant: null,
-    //                 });
-    //             }
-    //         }
-
-    //         return { timeSlots };
-    //     } catch (error: any) {
-    //         throw new CustomError("EventTimesService.publicGetAvailableTimeSlots_SPECIAL", error);
-    //     }
-    // }
-
-
-
-    /* ────────────────────────────────────────────────────────────
-   FUNCIÓN PRINCIPAL: ahora con soporte grupal real + bookingWindow
-─────────────────────────────────────────────────────────────── */
+    // ────────────────────────────────────────────────────────────
+    // publicGetAvailableTimeSlots_SPECIAL (versión alineada con getAvailableDays)
+    // ────────────────────────────────────────────────────────────
     async publicGetAvailableTimeSlots_SPECIAL(
         input: GetTimeSlotsInputSpecial,
         deps: AvailabilityDepsSpecial
-    ): Promise<{ timeSlots: TimeSlotSpecial[] }> {
+    ): Promise<{ timeSlots: TimeSlotSpecial[]; dayStatus: DayStatus }> {
         const {
             idCompany,
             idWorkspace,
@@ -582,31 +190,71 @@ export class EventTimesService {
         } = input;
 
         try {
+            console.log("[publicGetAvailableTimeSlots_SPECIAL] called", {
+                date,
+                attendees: attendees.map((a) => a.serviceId),
+            });
+
             const BOOKING_PAGE_CONFIG: OnlineBookingConfig = deps.bookingConfig;
 
-            // 🆕 Booking window (con defaults seguros)
+            // Booking window (con defaults seguros)
             const { maxAdvanceDays = 60, minLeadTimeMin = 60 } =
                 BOOKING_PAGE_CONFIG.bookingWindow ?? {};
 
             const alignMode: "clock" | "service" =
                 BOOKING_PAGE_CONFIG.slot?.alignMode === "service" ? "service" : "clock";
+
             const intervalMinutes =
                 alignMode === "service"
                     ? attendees?.reduce((acc, a) => acc + (a.durationMin ?? 0), 0)
                     : BOOKING_PAGE_CONFIG?.slot?.stepMinutes;
 
             const professionalAllowed =
-                BOOKING_PAGE_CONFIG?.resources?.ids
-                    ?.map((r) => (Array.isArray(r) ? r?.[0] : r)) ?? [];
+                BOOKING_PAGE_CONFIG?.resources?.ids?.map((r) =>
+                    Array.isArray(r) ? r?.[0] : r
+                ) ?? [];
 
+            // Validaciones rápidas
             if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany / idWorkspace");
             if (!timeZoneWorkspace) throw new Error("Falta timeZoneWorkspace");
             if (!timeZoneClient) throw new Error("Falta timeZoneClient");
             if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("date inválido");
-            if (!Array.isArray(attendees) || attendees.length === 0) return { timeSlots: [] };
-            if (professionalAllowed.length === 0) return { timeSlots: [] };
+            if (!Array.isArray(attendees) || attendees.length === 0)
+                return { timeSlots: [], dayStatus: "no_services" };
+            if (professionalAllowed.length === 0) return { timeSlots: [], dayStatus: "no_staff" };
 
-            // Snapshot servicios (duración/capacidad)
+            // Día / ventana booking
+            const dayStartLocal = moment.tz(`${date}T00:00:00`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace);
+            const { stepMinutes, roundedNow, isToday } = computeSlotConfig({
+                intervalMinutes,
+                timeZoneWorkspace,
+                dayStartLocal,
+            });
+
+            // Día pasado (en TZ negocio) → vacío
+            const todayLocal = moment().tz(timeZoneWorkspace).startOf("day");
+            if (dayStartLocal.clone().startOf("day").isBefore(todayLocal, "day")) {
+                return { timeSlots: [], dayStatus: "past" };
+            }
+
+            const dayEndLocal = dayStartLocal.clone().endOf("day");
+            const gridOrigin = dayStartLocal.clone().startOf("day"); // Rejilla global del día
+
+            // Ventana absoluta permitida (TZ negocio)
+            const nowWS = moment.tz(timeZoneWorkspace);
+            const earliestAllowed = nowWS.clone().add(minLeadTimeMin, "minutes").seconds(0).milliseconds(0);
+            const latestAllowedEnd = nowWS.clone().add(maxAdvanceDays, "days").endOf("day");
+
+            // Cortes rápidos por día completo
+            if (dayStartLocal.isAfter(latestAllowedEnd)) return { timeSlots: [], dayStatus: "out_of_window" };
+            if (dayEndLocal.isBefore(earliestAllowed)) return { timeSlots: [], dayStatus: "out_of_window" };
+
+            const withinBookingWindow = (startWS: moment.Moment) =>
+                startWS.isSameOrAfter(earliestAllowed) && startWS.isSameOrBefore(latestAllowedEnd);
+
+            const withinAllowed = (ids: string[]) => ids.filter((id) => professionalAllowed.includes(id));
+
+            // 1) Snapshot servicios
             const servicesSnapshot = await deps.servicesSnapshot.getServicesSnapshotById({
                 idCompany,
                 idWorkspace,
@@ -620,133 +268,91 @@ export class EventTimesService {
                 return s && s.maxParticipants > 1;
             });
             if (hasGroupService && attendees.length > 1) {
-                throw new Error(
-                    "Los servicios grupales no se pueden combinar con otros en la misma reserva."
-                );
+                throw new Error("Los servicios grupales no se pueden combinar con otros en la misma reserva.");
             }
 
-            // Step / HOY
-            const dayStartLocal = moment.tz(
-                `${date}T00:00:00`,
-                "YYYY-MM-DDTHH:mm:ss",
-                timeZoneWorkspace
-            );
-            const { stepMinutes, roundedNow, isToday } = computeSlotConfig({
-                intervalMinutes,
-                timeZoneWorkspace,
-                dayStartLocal,
-            });
+            // 2) Usuarios elegibles por servicio (PARALELO por attendee)
+            const userIdsByServiceEntries = await Promise.all(
+                attendees.map(async (a) => {
+                    const svcId = a.serviceId;
+                    if (!svcId) return [null, []] as const;
 
-            // Día pasado (en TZ negocio) → vacío
-            const todayLocal = moment().tz(timeZoneWorkspace).startOf("day");
-            if (dayStartLocal.clone().startOf("day").isBefore(todayLocal, "day")) {
-                return { timeSlots: [] };
-            }
+                    if (a.staffId) {
+                        const elig = professionalAllowed.includes(a.staffId) ? [a.staffId] : [];
+                        return [svcId, elig] as const;
+                    }
 
-            const dayEndLocal = dayStartLocal.clone().endOf("day");
-
-            // 🆕 Calcular ventana absoluta permitida (en TZ del negocio)
-            const nowWS = moment.tz(timeZoneWorkspace);
-            const earliestAllowed = nowWS
-                .clone()
-                .add(minLeadTimeMin, "minutes")
-                .seconds(0)
-                .milliseconds(0);
-            const latestAllowedEnd = nowWS.clone().add(maxAdvanceDays, "days").endOf("day");
-
-            // 🆕 Cortes rápidos por día completo
-            if (dayStartLocal.isAfter(latestAllowedEnd)) return { timeSlots: [] };
-            if (dayEndLocal.isBefore(earliestAllowed)) return { timeSlots: [] };
-
-            // 🆕 Helper para validar cada slot
-            const withinBookingWindow = (startWS: moment.Moment) =>
-                startWS.isSameOrAfter(earliestAllowed) &&
-                startWS.isSameOrBefore(latestAllowedEnd);
-
-            // Filtrado de profesionales permitidos (si viene idClient)
-            const withinAllowed = (ids: string[]) =>
-                ids.filter((id) => professionalAllowed.includes(id));
-
-            // Elegibles por servicio
-            const userIdsByService = new Map<string, string[]>();
-            for (const a of attendees) {
-                if (a.staffId) {
-                    const elig = professionalAllowed.includes(a.staffId) ? [a.staffId] : [];
-                    userIdsByService.set(a.serviceId, elig);
-                } else {
                     const users = await getUsersWhoCanPerformService_SPECIAL(
                         idWorkspace,
-                        a.serviceId,
+                        svcId,
                         a.categoryId,
                         deps.cache
                     );
-                    userIdsByService.set(a.serviceId, withinAllowed(users));
-                }
+                    return [svcId, withinAllowed(users)] as const;
+                })
+            );
+
+            const userIdsByService = new Map<string, string[]>();
+            for (const [svcId, ids] of userIdsByServiceEntries) {
+                if (svcId) userIdsByService.set(svcId, ids as any);
             }
-            const allUserIds = Array.from(
-                new Set(Array.from(userIdsByService.values()).flat())
-            );
-            if (allUserIds.length === 0) return { timeSlots: [] };
 
-            // Reglas/turnos
-            const businessHours = await deps.businessHoursService.getBusinessHoursFromRedis(
-                idCompany,
-                idWorkspace
-            );
-            const workerHoursMap = await deps.workerHoursService.getWorkerHoursFromRedis(
-                allUserIds,
-                idWorkspace
-            );
-            const temporaryHoursMap =
-                await deps.temporaryHoursService.getTemporaryHoursFromRedis(
-                    allUserIds,
-                    idWorkspace,
-                    { date }
-                );
+            const allUserIds = Array.from(new Set(Array.from(userIdsByService.values()).flat()));
+            if (allUserIds.length === 0) return { timeSlots: [], dayStatus: "no_staff" };
 
-            // Eventos del día (para ocupar ventanas)
-            const events = await getEventsOverlappingRange_SPECIAL(
-                allUserIds,
-                date,
-                date,
-                excludeEventId
-            );
+            // 3) Horarios + eventos (+grupo opcional) EN PARALELO
+            const isSingleService = attendees.length === 1;
+            let shouldFetchGroupEvents = false;
 
-            // Ventanas libres por usuario
+            if (isSingleService) {
+                const svcReq = attendees[0];
+                const svcSnap = servicesSnapshot[svcReq.serviceId];
+                const capacity = Math.max(1, svcSnap?.maxParticipants ?? 1);
+                shouldFetchGroupEvents = capacity > 1;
+            }
+
+            const [
+                businessHours,
+                workerHoursMap,
+                temporaryHoursMap,
+                events,
+                groupEventsRaw,
+            ] = await Promise.all([
+                deps.businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace),
+                deps.workerHoursService.getWorkerHoursFromRedis(allUserIds, idWorkspace),
+                deps.temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idWorkspace, { date }),
+                getEventsOverlappingRange_SPECIAL(idWorkspace, allUserIds, date, date, excludeEventId),
+                shouldFetchGroupEvents
+                    ? this.getGroupEventsWithCounts_SPECIAL(
+                        idCompany,
+                        idWorkspace,
+                        attendees[0].serviceId as string,
+                        date,
+                        date,
+                        excludeEventId
+                    )
+                    : Promise.resolve([]),
+            ]);
+
+            // 4) Construir ventanas libres por usuario (USANDO HELPER con fallback por defecto = true)
             const weekDay = dayStartLocal.format("dddd").toUpperCase() as Weekday;
-            const bizShifts: string[][] = (() => {
-                const biz = (businessHours as any)?.[weekDay];
-                return biz === null ? [] : Array.isArray(biz) ? biz : [];
-            })();
+            const useBizFallback =
+                (BOOKING_PAGE_CONFIG as any)?.resources?.useBusinessHoursAsWorkerFallback ?? true;
 
-            const shiftsByUserLocal: Record<
-                string,
-                Array<{ start: moment.Moment; end: moment.Moment }>
-            > = {};
-            for (const uid of allUserIds) {
-                let workShifts: string[][] = [];
-                const tmp = (temporaryHoursMap as any)?.[uid]?.[date];
-
-                if (tmp === null) workShifts = [];
-                else if (Array.isArray(tmp) && tmp.length > 0) workShifts = tmp;
-                else {
-                    const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
-                    if (workerDay === null) workShifts = [];
-                    else if (Array.isArray(workerDay) && workerDay.length > 0) workShifts = workerDay;
-                    else workShifts = bizShifts;
-                }
-
-                shiftsByUserLocal[uid] = (workShifts || []).map(([s, e]) => ({
-                    start: moment.tz(`${date}T${s}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-                    end: moment.tz(`${date}T${e}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-                }));
-            }
+            const shiftsByUserLocal = buildShiftsByUser_SPECIAL({
+                userIds: allUserIds,
+                date,
+                timeZoneWorkspace,
+                weekDay,
+                businessHours,
+                workerHoursMap,
+                temporaryHoursMap,
+                useBizFallback, // ← default true para igualar getAvailableDays
+            });
 
             const eventsByUser = groupEventsByUser_SPECIAL(events);
-            const freeWindowsByUser: Record<
-                string,
-                Array<{ start: moment.Moment; end: moment.Moment }>
-            > = {};
+            const freeWindowsByUser: Record<string, Array<{ start: moment.Moment; end: moment.Moment }>> = {};
+
             for (const uid of allUserIds) {
                 const busy = (eventsByUser[uid] || []).map((ev) => ({
                     start: moment(ev.startDate).tz(timeZoneWorkspace),
@@ -766,23 +372,19 @@ export class EventTimesService {
                 freeWindowsByUser[uid] = free;
             }
 
-            // Pruning simple por duración (solo multi-servicio)
+            // 5) Multi-servicio: pruning rápido
             if (attendees.length > 1) {
                 for (const a of attendees) {
                     const elig = userIdsByService.get(a.serviceId) ?? [];
                     const dur = servicesSnapshot[a.serviceId]?.durationMin ?? a.durationMin;
                     const algunoTieneHueco = elig.some((uid) =>
-                        (freeWindowsByUser[uid] ?? []).some(
-                            (w) => w.end.diff(w.start, "minutes") >= dur
-                        )
+                        (freeWindowsByUser[uid] ?? []).some((w) => w.end.diff(w.start, "minutes") >= dur)
                     );
-                    if (!algunoTieneHueco) return { timeSlots: [] };
+                    if (!algunoTieneHueco) return { timeSlots: [], dayStatus: "no_services" };
                 }
             }
 
-            /* ────────────────────────────────────────────────────────
-               FAST-PATH: 1 servicio (soporta grupo)
-            ───────────────────────────────────────────────────────── */
+            // 6) FAST-PATH: 1 servicio (con soporte grupal)
             if (attendees.length === 1) {
                 const svcReq = attendees[0];
                 const svcSnap = servicesSnapshot[svcReq.serviceId];
@@ -790,21 +392,10 @@ export class EventTimesService {
                 const capacity = Math.max(1, svcSnap?.maxParticipants ?? 1);
                 const isGroup = capacity > 1;
 
-                const groupEvents = isGroup
-                    ? await this.getGroupEventsWithCounts_SPECIAL(
-                        idCompany,
-                        idWorkspace,
-                        svcReq.serviceId,
-                        date,
-                        date,
-                        excludeEventId
-                    )
-                    : [];
+                const groupEvents = isGroup ? groupEventsRaw : [];
 
-                const groupEventsByUser: Record<
-                    string,
-                    Array<{ start: moment.Moment; end: moment.Moment }>
-                > = {};
+                const groupEventsByUser: Record<string, Array<{ start: moment.Moment; end: moment.Moment }>> =
+                    {};
                 for (const ev of groupEvents) {
                     const u = ev.idUserPlatformFk ?? "";
                     if (!u) continue;
@@ -815,14 +406,8 @@ export class EventTimesService {
 
                 const countIndex = new Map<string, number>();
                 const membersIndex = new Map<string, Set<string>>();
-                const keyOf = (
-                    userId: string | null | undefined,
-                    start: moment.Moment,
-                    end: moment.Moment
-                ) =>
-                    `${userId ?? ""}|${start.format("YYYY-MM-DDTHH:mm:ss")}|${end.format(
-                        "YYYY-MM-DDTHH:mm:ss"
-                    )}`;
+                const keyOf = (userId: string | null | undefined, start: moment.Moment, end: moment.Moment) =>
+                    `${userId ?? ""}|${start.format("YYYY-MM-DDTHH:mm:ss")}|${end.format("YYYY-MM-DDTHH:mm:ss")}`;
 
                 for (const ev of groupEvents) {
                     const s = moment(ev.startDate).tz(timeZoneWorkspace).seconds(0).milliseconds(0);
@@ -835,19 +420,8 @@ export class EventTimesService {
                     membersIndex.set(k, set);
                 }
 
-                const ceilToStep = (m: moment.Moment, step: number, origin: moment.Moment) => {
-                    const ref = origin.clone().seconds(0).milliseconds(0);
-                    const diffMin = Math.max(
-                        0,
-                        Math.floor((m.valueOf() - ref.valueOf()) / 60000)
-                    );
-                    const rem = diffMin % step;
-                    const add = rem === 0 ? 0 : step - rem;
-                    return m.clone().add(add, "minutes").seconds(0).milliseconds(0);
-                };
-
                 const eligible = userIdsByService.get(svcReq.serviceId) ?? [];
-                const timeSlots: TimeSlotSpecial[] = [];
+                const rawSlots: TimeSlotSpecial[] = [];
 
                 for (const uid of eligible) {
                     const baseWins = freeWindowsByUser[uid] ?? [];
@@ -855,27 +429,21 @@ export class EventTimesService {
                     const addWins = addWinsRaw
                         .map((w) => {
                             const startClamped = isToday ? moment.max(w.start, roundedNow) : w.start;
-                            return startClamped.isBefore(w.end)
-                                ? { start: startClamped, end: w.end }
-                                : null;
+                            return startClamped.isBefore(w.end) ? { start: startClamped, end: w.end } : null;
                         })
                         .filter(Boolean) as Array<{ start: moment.Moment; end: moment.Moment }>;
 
-                    const wins =
-                        isGroup && addWins.length
-                            ? mergeTouchingWindows_SPECIAL([...baseWins, ...addWins])
-                            : baseWins;
+                    const wins = isGroup && addWins.length ? mergeTouchingWindows_SPECIAL([...baseWins, ...addWins]) : baseWins;
 
                     for (const w of wins) {
                         const latestStart = w.end.clone().subtract(svcDuration, "minutes");
-                        let cur = ceilToStep(
+                        let cur = alignToGridCeil_SPECIAL(
                             moment.max(w.start, dayStartLocal.clone().startOf("day")),
                             stepMinutes,
-                            w.start // anclaje a la ventana
+                            gridOrigin
                         );
 
                         while (cur.isSameOrBefore(latestStart)) {
-                            // 🆕 Enforzar bookingWindow por slot (TZ negocio)
                             if (!withinBookingWindow(cur)) {
                                 cur.add(stepMinutes, "minutes");
                                 continue;
@@ -889,36 +457,20 @@ export class EventTimesService {
                                 const left = Math.max(0, capacity - booked);
 
                                 const members = membersIndex.get(k);
-                                const clientAlreadyInGroup = !!(
-                                    idClient &&
-                                    members &&
-                                    members.has(idClient)
-                                );
+                                const clientAlreadyInGroup = !!(idClient && members && members.has(idClient));
 
                                 if (left > 0 && !clientAlreadyInGroup) {
-                                    timeSlots.push({
-                                        startLocalISO: cur
-                                            .clone()
-                                            .tz(timeZoneClient)
-                                            .format("YYYY-MM-DDTHH:mm:ss"),
-                                        endLocalISO: end
-                                            .clone()
-                                            .tz(timeZoneClient)
-                                            .format("YYYY-MM-DDTHH:mm:ss"),
+                                    rawSlots.push({
+                                        startLocalISO: cur.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+                                        endLocalISO: end.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
                                         label: cur.clone().tz(timeZoneClient).format("HH:mm"),
                                         labelParticipant: `${booked} / ${capacity}`,
                                     });
                                 }
                             } else {
-                                timeSlots.push({
-                                    startLocalISO: cur
-                                        .clone()
-                                        .tz(timeZoneClient)
-                                        .format("YYYY-MM-DDTHH:mm:ss"),
-                                    endLocalISO: end
-                                        .clone()
-                                        .tz(timeZoneClient)
-                                        .format("YYYY-MM-DDTHH:mm:ss"),
+                                rawSlots.push({
+                                    startLocalISO: cur.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+                                    endLocalISO: end.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
                                     label: cur.clone().tz(timeZoneClient).format("HH:mm"),
                                     labelParticipant: null,
                                 });
@@ -929,15 +481,11 @@ export class EventTimesService {
                     }
                 }
 
-                timeSlots.sort((a, b) =>
-                    a.startLocalISO < b.startLocalISO ? -1 : a.startLocalISO > b.startLocalISO ? 1 : 0
-                );
-                return { timeSlots };
+                const timeSlots = dedupeAndSortSlots_SPECIAL(rawSlots);
+                return { timeSlots, dayStatus: timeSlots.length > 0 ? "available" : "completed" };
             }
 
-            /* ────────────────────────────────────────────────────────
-               Multi-servicio (solo si NINGUNO es grupal)
-            ───────────────────────────────────────────────────────── */
+            // 7) Multi-servicio (igual que antes, usando freeWindowsByUser), con rejilla global y dedupe
             const totalDuration = attendees.reduce(
                 (acc, a) => acc + (servicesSnapshot[a.serviceId]?.durationMin ?? a.durationMin),
                 0
@@ -950,12 +498,12 @@ export class EventTimesService {
             for (const uid of seedElig) {
                 const wins = freeWindowsByUser[uid] ?? [];
                 for (const w of wins) {
-                    const s = moment.max(w.start, dayStartLocal).clone().seconds(0).milliseconds(0);
-                    const e = moment.min(w.end, latestStart).clone().seconds(0).milliseconds(0);
-                    if (!s.isBefore(e)) continue;
+                    const s0 = moment.max(w.start, dayStartLocal).clone().seconds(0).milliseconds(0);
+                    const e0 = moment.min(w.end, latestStart).clone().seconds(0).milliseconds(0);
+                    if (!s0.isBefore(e0)) continue;
 
-                    let cur = s.clone().minute(Math.ceil(s.minute() / stepMinutes) * stepMinutes);
-                    while (!cur.isAfter(e)) {
+                    let cur = alignToGridCeil_SPECIAL(s0, stepMinutes, gridOrigin);
+                    while (!cur.isAfter(e0)) {
                         candidateKeys.add(cur.format("YYYY-MM-DDTHH:mm:ss"));
                         cur.add(stepMinutes, "minutes");
                     }
@@ -966,13 +514,12 @@ export class EventTimesService {
                 .map((k) => moment.tz(k, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace))
                 .sort((a, b) => a.valueOf() - b.valueOf());
 
-            const timeSlots: TimeSlotSpecial[] = [];
+            const timeSlotsRaw: TimeSlotSpecial[] = [];
             const eligibleUsersByService: Record<string, string[]> = {};
             for (const a of attendees)
                 eligibleUsersByService[a.serviceId] = userIdsByService.get(a.serviceId) ?? [];
 
             for (const start of candidates) {
-                // 🆕 Enforzar bookingWindow antes del backtracking caro
                 if (!withinBookingWindow(start)) continue;
 
                 const assignment: Array<{
@@ -997,11 +544,8 @@ export class EventTimesService {
                 });
                 if (ok) {
                     const end = start.clone().add(totalDuration, "minutes");
-                    timeSlots.push({
-                        startLocalISO: start
-                            .clone()
-                            .tz(timeZoneClient)
-                            .format("YYYY-MM-DDTHH:mm:ss"),
+                    timeSlotsRaw.push({
+                        startLocalISO: start.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
                         endLocalISO: end.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
                         label: start.clone().tz(timeZoneClient).format("HH:mm"),
                         labelParticipant: null,
@@ -1009,13 +553,12 @@ export class EventTimesService {
                 }
             }
 
-            return { timeSlots };
+            const timeSlots = dedupeAndSortSlots_SPECIAL(timeSlotsRaw);
+            return { timeSlots, dayStatus: timeSlots.length > 0 ? "available" : "completed" };
         } catch (error: any) {
-            throw new CustomError(
-                "EventTimesService.publicGetAvailableTimeSlots_SPECIAL",
-                error
-            );
+            throw new CustomError("EventTimesService.publicGetAvailableTimeSlots_SPECIAL", error);
         }
     }
-
 }
+
+

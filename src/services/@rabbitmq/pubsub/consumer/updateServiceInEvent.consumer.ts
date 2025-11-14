@@ -1,4 +1,3 @@
-
 import { Channel, ConsumeMessage } from "amqplib";
 import { RecurrenceScope } from "../../../@database/recurrence-rule/types";
 import { RabbitMQKeys } from "../../keys/rabbitmq.keys";

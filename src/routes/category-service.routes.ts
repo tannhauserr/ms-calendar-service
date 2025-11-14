@@ -1,7 +1,7 @@
 import express from 'express';
 import { JWTService } from '../services/jwt/jwt.service';
 import { OnlyAdminMiddleware } from '../middlewares/only-admin.middleware';
-import { CategoryServiceController } from '../controllers/category-sercivice/category-service.controller';
+import { CategoryServiceController } from '../controllers/category-service/category-service.controller';
 
 
 const router = express.Router();
