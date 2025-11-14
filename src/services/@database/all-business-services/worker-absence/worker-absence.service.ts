@@ -50,32 +50,14 @@ export class WorkerAbsenceService {
         }
     }
 
-    async addWorkerAbsence(item: Prisma.WorkerAbsenceCreateInput): Promise<WorkerAbsence> {
+    async addWorkerAbsence(item: Prisma.WorkerAbsenceCreateInput): Promise<{ absence: WorkerAbsence; event: any }> {
         try {
             const result = await prisma.$transaction(async (tx) => {
                 // Buscar el calendario usando idCompanyFk e idWorkspaceFk
                 if (!item.idWorkspaceFk) {
                     throw new Error("El idWorkspaceFk es requerido para obtener el calendario");
                 }
-                const calendar = await tx.calendar.findFirst({
-                    where: {
-                        idCompanyFk: item.idCompanyFk,
-                        idWorkspaceFk: item.idWorkspaceFk,
-                        deletedDate: null,
-                    },
-                });
-
-                if (!calendar) {
-                    /**
-                     * El calendario se ha de crear cada vez que se genere un nuevo establecimiento
-                     * y no se puede eliminar, por lo que no debería pasar esto.
-                     * 
-                     * Solo se elimina si el usuario decide eliminar el establecimiento.
-                     * 
-                     */
-                    // Crear un LOG urgente si esto pasa
-                    throw new Error("No se encontró un calendario para el establecimiento y compañía indicados");
-                }
+             
 
                 const startDate = moment(item.startDate).startOf("day").toDate();
                 const endDate = moment(item.endDate).endOf("day").toDate();
@@ -87,7 +69,9 @@ export class WorkerAbsenceService {
                     startDate: startDate,
                     endDate: endDate,
                     idUserPlatformFk: item.idUserFk,
-                    calendar: { connect: { id: calendar.id } },
+                    // calendar: { connect: { id: calendar.id } },
+                    idWorkspaceFk: item.idWorkspaceFk!,
+                    idCompanyFk: item.idCompanyFk!,
                     eventPurposeType: item.eventPurposeType,
                     allDay: true
                     // Otros campos que sean necesarios en tu lógica
@@ -106,7 +90,10 @@ export class WorkerAbsenceService {
                     },
                 });
 
-                return createdAbsence;
+                return {
+                    absence: createdAbsence,
+                    event: createdEvent
+                };
             });
 
             return result;
@@ -197,40 +184,76 @@ export class WorkerAbsenceService {
     //     }
     // }
 
-    async updateWorkerAbsence(item: WorkerAbsence): Promise<WorkerAbsence> {
+    async updateWorkerAbsence(item: WorkerAbsence): Promise<{ absence: WorkerAbsence; event: any }> {
         try {
             const result = await prisma.$transaction(async (tx) => {
-                const absenceId = item.id as string;
+                let absenceId = item.id as string;
+                let eventId: string;
 
                 const startDate = moment(item.startDate).startOf("day").toDate();
                 const endDate = moment(item.endDate).endOf("day").toDate();
 
-                // Actualizar la ausencia
+                // Si viene idEventFk pero no id, buscar la ausencia por idEventFk
+                if (!absenceId && item.idEventFk) {
+                    const foundAbsence = await tx.workerAbsence.findFirst({
+                        where: { idEventFk: item.idEventFk },
+                        select: { id: true, idEventFk: true }
+                    });
+
+                    if (!foundAbsence) {
+                        // No se encontró ausencia con ese idEventFk, no hacer nada
+                        throw new Error("No se encontró ausencia asociada al evento especificado");
+                    }
+
+                    absenceId = foundAbsence.id;
+                    eventId = foundAbsence.idEventFk!;
+                } else if (absenceId) {
+                    // Si viene id, obtener la ausencia actual para obtener el idEventFk
+                    const currentAbsence = await tx.workerAbsence.findUnique({
+                        where: { id: absenceId },
+                        select: { idEventFk: true }
+                    });
+
+                    if (!currentAbsence?.idEventFk) {
+                        throw new Error("No se encontró el evento asociado a la ausencia");
+                    }
+
+                    eventId = currentAbsence.idEventFk;
+                } else {
+                    throw new Error("Debe proporcionar id o idEventFk para actualizar la ausencia");
+                }
+
+                // 1️⃣ Actualizar PRIMERO el evento asociado a la ausencia
+                const updatedEvent = await tx.event.update({
+                    where: { id: eventId },
+                    data: {
+                        title: item.title,
+                        description: item.description,
+                        startDate: startDate,
+                        endDate: endDate,
+                        eventPurposeType: item.eventPurposeType,
+                        updatedDate: new Date(),
+                        // Mantener allDay como true para ausencias
+                        allDay: true
+                    },
+                });
+
+                // 2️⃣ Luego actualizar la ausencia
                 const updatedAbsence = await tx.workerAbsence.update({
                     where: { id: absenceId },
                     data: {
                         ...item,
+                        id: absenceId, // Asegurar que el id está presente
                         startDate: startDate,
                         endDate: endDate,
                         updatedDate: new Date(),
                     },
                 });
 
-
-
-                // Actualizar el evento asociado a la ausencia
-                await tx.event.update({
-                    where: { id: updatedAbsence.idEventFk },
-                    data: {
-
-                        description: item.description,
-                        startDate: startDate,
-                        endDate: endDate,
-                        // Actualiza otros campos necesarios
-                    },
-                });
-
-                return updatedAbsence;
+                return {
+                    absence: updatedAbsence,
+                    event: updatedEvent
+                };
             });
 
             return result;

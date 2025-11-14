@@ -1,383 +1,804 @@
 
 
-import { RabbitPubSubService } from "../facade-pubsub/rabbit-pubsub.service";
-import { Channel, ConsumeMessage } from "amqplib";
 
-import prisma from "../../../../lib/prisma"; // Ajusta la ruta de tu instancia Prisma
+
+// // consumers/delete-records-consumer.calendar.ts
+// import { Channel, ConsumeMessage } from "amqplib";
+// import { RabbitPubSubService } from "../facade-pubsub/rabbit-pubsub.service";
+// import prisma from "../../../../lib/prisma";
+// import { RabbitMQKeys } from "../../keys/rabbitmq.keys";
+
+
+// export const deleteRecordsConsumers = {
+//   deleteRecordsConsumer,
+//   deleteRecordsDLQConsumer,
+// };
+
+
+// /* -------------------- Helpers -------------------- */
+// const CHUNK = Math.min(500, Number(process.env.DELETE_CHUNK_SIZE) || 300);
+// function chunkArray<T>(arr: T[], size: number): T[][] {
+//   const out: T[][] = [];
+//   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+//   return out;
+// }
+// function validateIdsAreStrings(ids: unknown): ids is string[] {
+//   if (!Array.isArray(ids) || ids.length === 0) return false;
+//   for (const v of ids) if (typeof v !== "string" || v.trim().length === 0) return false;
+//   return true;
+// }
+// function getRetryCount(msg: ConsumeMessage): number {
+//   const deaths = (msg.properties.headers as any)?.["x-death"] as any[] | undefined;
+//   return Array.isArray(deaths) && deaths[0]?.count > 0 ? deaths[0].count : 0;
+// }
+
+// /* -------------------- Config -------------------- */
+// const PREFETCH = Math.min(3, Number(process.env.RABBITMQ_PREFETCH_DELETE_RECORDS) || 1);
+// const MAX_RETRIES = Number(process.env.DELETE_MAX_RETRIES || 3);
+// const RETRY_DELAY_MS = Number(process.env.DELETE_RETRY_DELAY_MS || 30_000);
+// const MAX_IDS_PER_MSG = Number(process.env.DELETE_MAX_IDS_PER_MSG || 1000);
+
+// // Topología
+// const EXCHANGE = RabbitMQKeys.pubSubDeleteExchange();
+// const QUEUE = RabbitMQKeys.pubSubDeleteCalendarQueue();
+// const ROUTING_KEY = RabbitMQKeys.pubSubDeleteCalendarRoutingKey();
+
+// // DLX/DLQ
+// const DLX = RabbitMQKeys.deadLetterExchange();
+// const DLQ = RabbitMQKeys.pubSubDeleteCalendarDLQ();
+
+// // Cola de reintentos con TTL (DL de vuelta a la principal)
+// const RETRY_QUEUE = `${QUEUE}.retry`;
+// const ROUTING_KEY_RETRY = `${ROUTING_KEY}.retry`;
+
+// /* -------------------- Consumer principal -------------------- */
+// async function deleteRecordsConsumer(): Promise<void> {
+//   const rabbit = RabbitPubSubService.instance;
+//   const channel: Channel = await rabbit.connect();
+
+//   // Exchanges / colas
+//   await rabbit.assertExchange(EXCHANGE, "direct", true);
+
+//   await rabbit.assertExchange(DLX, "direct", true);
+//   await channel.assertQueue(DLQ, {
+//     durable: true,
+//     arguments: {
+//       "x-message-ttl": 24 * 60 * 60 * 1000, // 24h
+//       "x-max-length": 2000,
+//     },
+//   });
+//   await rabbit.bindQueueToExchange(DLQ, DLX, DLQ);
+
+//   await channel.assertQueue(RETRY_QUEUE, {
+//     durable: true,
+//     arguments: {
+//       "x-message-ttl": RETRY_DELAY_MS,
+//       "x-dead-letter-exchange": EXCHANGE,
+//       "x-dead-letter-routing-key": ROUTING_KEY,
+//       "x-max-length": 5000,
+//     },
+//   });
+//   await rabbit.bindQueueToExchange(RETRY_QUEUE, EXCHANGE, ROUTING_KEY_RETRY);
+
+//   await channel.assertQueue(QUEUE, {
+//     durable: true,
+//     arguments: {
+//       "x-dead-letter-exchange": DLX,
+//       "x-dead-letter-routing-key": DLQ,
+//     },
+//   });
+//   await rabbit.bindQueueToExchange(QUEUE, EXCHANGE, ROUTING_KEY);
+
+//   channel.prefetch(PREFETCH);
+//   console.log(`[Calendar-MS][Delete] ⏳ Awaiting messages on ${QUEUE}...`);
+
+//   await rabbit.consumeQueue<"requestDeleteRecords">(
+//     QUEUE,
+//     async ({ table, ids, idRelation }, raw, ack, nack) => {
+//       // ✅ Validación mínima
+//       const allowedTables = new Set([
+//         "companies",
+//         "workspaces",
+//         "userWorkspaces-byWorkspace",
+//         "userWorkspaces-byUser",
+//         "clientWorkspaces",
+//         "clients",
+//         "users",
+//       ]);
+//       if (!allowedTables.has(table) || !validateIdsAreStrings(ids)) {
+//         console.error(`[Calendar-MS][Delete] Payload inválido table=${table} → DLQ`);
+//         return nack(false);
+//       }
+
+//       // 🔪 Guard: split de mensajes gigantes para paralelismo real
+//       if (ids.length > MAX_IDS_PER_MSG) {
+//         const msgChunks = chunkArray(ids, MAX_IDS_PER_MSG);
+//         console.warn(
+//           `[Calendar-MS][Delete] Oversized message: ${ids.length} ids → republishing ${msgChunks.length} msgs`
+//         );
+//         for (const c of msgChunks) {
+//           await rabbit.publishToExchange(EXCHANGE, ROUTING_KEY, { table, ids: c, idRelation }, { persistent: true });
+//         }
+//         return ack();
+//       }
+
+//       const retries = getRetryCount(raw);
+//       console.log(`[Calendar-MS][Delete] → ${table} (${ids.length} ids) retry#${retries}`);
+
+//       try {
+//         /* ---- BORRADOS por tabla (en chunks/tx) ---- */
+//         if (table === "companies") {
+//           const batches = chunkArray(ids, CHUNK);
+//           for (const batch of batches) {
+//             await prisma.$transaction(async (tx) => {
+//               await tx.businessHour.deleteMany({ where: { idCompanyFk: { in: batch } } });
+//               await tx.workerBusinessHour.deleteMany({ where: { idCompanyFk: { in: batch } } });
+//               await tx.temporaryBusinessHour.deleteMany({ where: { idCompanyFk: { in: batch } } });
+//               await tx.workerAbsence.deleteMany({ where: { idCompanyFk: { in: batch } } });
+
+//               await tx.event.deleteMany({
+//                 where: { idWorkspaceFk: { in: batch } },
+//               });
+
+
+//               // const calendars = await tx.calendar.findMany({
+//               //   where: { idCompanyFk: { in: batch } },
+//               //   select: { id: true },
+//               // });
+//               // const calendarIds = calendars.map((c) => c.id);
+//               // if (calendarIds.length > 0) {
+//               //   await tx.event.deleteMany({ where: { idCalendarFk: { in: calendarIds } } });
+//               // }
+//               // await tx.calendar.deleteMany({ where: { idCompanyFk: { in: batch } } });
+
+
+
+//               // TODO: Los servicios y categorías están ahora en MS-BookingPage
+//               // const services = await tx.service.findMany({
+//               //   where: { idCompanyFk: { in: batch } },
+//               //   select: { id: true },
+//               // });
+//               // const serviceIds = services.map((s) => s.id);
+
+//               // if (serviceIds.length > 0) {
+//               //   await tx.userService.deleteMany({ where: { idServiceFk: { in: serviceIds } } });
+//               //   await tx.categoryService.deleteMany({
+//               //     where: {
+//               //       OR: [
+//               //         { service: { idCompanyFk: { in: batch } } },
+//               //         { category: { idCompanyFk: { in: batch } } },
+//               //       ],
+//               //     },
+//               //   });
+//               // }
+
+//               // await tx.service.deleteMany({ where: { idCompanyFk: { in: batch } } });
+//               // await tx.category.deleteMany({ where: { idCompanyFk: { in: batch } } });
+
+
+
+
+//             });
+//           }
+//         } else if (table === "workspaces") {
+//           const batches = chunkArray(ids, CHUNK);
+//           for (const batch of batches) {
+//             await prisma.$transaction(async (tx) => {
+//               await tx.businessHour.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+//               await tx.workerAbsence.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+//               await tx.workerBusinessHour.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+//               await tx.temporaryBusinessHour.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+
+//               await tx.event.deleteMany({
+//                 where: { idWorkspaceFk: { in: batch } },
+//               });
+
+//               // const calendars = await tx.calendar.findMany({
+//               //   where: { idWorkspaceFk: { in: batch } },
+//               //   select: { id: true },
+//               // });
+//               // const calendarIds = calendars.map((c) => c.id);
+//               // if (calendarIds.length > 0) {
+//               //   await tx.event.deleteMany({ where: { idCalendarFk: { in: calendarIds } } });
+//               // }
+//               // await tx.calendar.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+
+//               // const services = await tx.service.findMany({
+//               //   where: { idWorkspaceFk: { in: batch } },
+//               //   select: { id: true },
+//               // });
+//               // const serviceIds = services.map((s) => s.id);
+
+//               // const categories = await tx.category.findMany({
+//               //   where: { idWorkspaceFk: { in: batch } },
+//               //   select: { id: true },
+//               // });
+//               // const categoryIds = categories.map((c) => c.id);
+
+//               // if (serviceIds.length > 0 || categoryIds.length > 0) {
+//               //   await tx.userService.deleteMany({ where: { idServiceFk: { in: serviceIds } } });
+//               //   await tx.categoryService.deleteMany({
+//               //     where: {
+//               //       OR: [
+//               //         { idServiceFk: { in: serviceIds } },
+//               //         { idCategoryFk: { in: categoryIds } },
+//               //       ],
+//               //     },
+//               //   });
+//               // }
+
+//               // await tx.service.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+//               // await tx.category.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+//             });
+//           }
+//         } else if (table === "userWorkspaces-byWorkspace") {
+//           // idRelation = userId
+//           const batches = chunkArray(ids, CHUNK);
+//           for (const batch of batches) {
+//             await prisma.$transaction(async (tx) => {
+//               // const calendars = await tx.calendar.findMany({
+//               //   where: { idWorkspaceFk: { in: batch } },
+//               //   select: { id: true },
+//               // });
+//               // const calendarIds = calendars.map((c) => c.id);
+
+//               // if (calendarIds.length > 0) {
+//               //   await tx.event.deleteMany({
+//               //     where: { idUserPlatformFk: idRelation, idCalendarFk: { in: calendarIds } },
+//               //   });
+//               // }
+
+//               await tx.workerBusinessHour.deleteMany({
+//                 where: { idUserFk: idRelation, idWorkspaceFk: { in: batch } },
+//               });
+//               await tx.temporaryBusinessHour.deleteMany({
+//                 where: { idUserFk: idRelation, idWorkspaceFk: { in: batch } },
+//               });
+//               await tx.workerAbsence.deleteMany({
+//                 where: { idUserFk: idRelation, idWorkspaceFk: { in: batch } },
+//               });
+//               // await tx.userService.deleteMany({
+//               //   where: { idUserFk: idRelation, service: { idWorkspaceFk: { in: batch } } },
+//               // });
+//             });
+//           }
+//         } else if (table === "userWorkspaces-byUser") {
+//           // idRelation = workspaceId
+//           const batches = chunkArray(ids, CHUNK);
+//           for (const batch of batches) {
+//             await prisma.$transaction(async (tx) => {
+//               await tx.workerBusinessHour.deleteMany({
+//                 where: { idUserFk: { in: batch }, idWorkspaceFk: idRelation },
+//               });
+//               await tx.temporaryBusinessHour.deleteMany({
+//                 where: { idUserFk: { in: batch }, idWorkspaceFk: idRelation },
+//               });
+//               await tx.workerAbsence.deleteMany({
+//                 where: { idUserFk: { in: batch }, idWorkspaceFk: idRelation },
+//               });
+
+
+//               // Ya no hay servicios en MS-Calendar
+//               // await tx.userService.deleteMany({
+//               //   where: { idUserFk: { in: batch }, service: { idWorkspaceFk: idRelation } },
+//               // });
+//             });
+//           }
+//         } else if (table === "clientWorkspaces") {
+//           const batches = chunkArray(ids, CHUNK);
+//           for (const batch of batches) {
+//             await prisma.$transaction(async (tx) => {
+//               // Solo eliminar las relaciones de participantes, no los eventos completos
+//               await tx.eventParticipant.deleteMany({
+//                 where: { idClientWorkspaceFk: { in: batch } },
+//               });
+              
+//               // Opcional: eliminar eventos que se queden sin participantes
+//               const eventsWithoutParticipants = await tx.event.findMany({
+//                 where: {
+//                   eventParticipant: { none: {} },
+//                 },
+//                 select: { id: true },
+//               });
+              
+//               if (eventsWithoutParticipants.length > 0) {
+//                 const eventIdsToDelete = eventsWithoutParticipants.map(e => e.id);
+//                 await tx.event.deleteMany({
+//                   where: { id: { in: eventIdsToDelete } },
+//                 });
+//                 console.log(`[Calendar-MS][Delete] Eliminados ${eventIdsToDelete.length} eventos sin participantes`);
+//               }
+//             });
+//           }
+//         } else if (table === "clients") {
+//           const batches = chunkArray(ids, CHUNK);
+//           for (const batch of batches) {
+//             await prisma.$transaction(async (tx) => {
+//               // Solo eliminar las relaciones de participantes, no los eventos completos
+//               await tx.eventParticipant.deleteMany({
+//                 where: { idClientFk: { in: batch } },
+//               });
+              
+//               // Opcional: eliminar eventos que se queden sin participantes
+//               const eventsWithoutParticipants = await tx.event.findMany({
+//                 where: {
+//                   eventParticipant: { none: {} },
+//                 },
+//                 select: { id: true },
+//               });
+              
+//               if (eventsWithoutParticipants.length > 0) {
+//                 const eventIdsToDelete = eventsWithoutParticipants.map(e => e.id);
+//                 await tx.event.deleteMany({
+//                   where: { id: { in: eventIdsToDelete } },
+//                 });
+//                 console.log(`[Calendar-MS][Delete] Eliminados ${eventIdsToDelete.length} eventos sin participantes`);
+//               }
+//             });
+//           }
+//         } else if (table === "users") {
+//           const batches = chunkArray(ids, CHUNK);
+//           for (const batch of batches) {
+//             await prisma.$transaction(async (tx) => {
+//               await tx.event.updateMany({
+//                 where: { idUserPlatformFk: { in: batch } },
+//                 data: { idUserPlatformFk: null },
+//               });
+
+//               await tx.workerBusinessHour.deleteMany({ where: { idUserFk: { in: batch } } });
+//               await tx.temporaryBusinessHour.deleteMany({ where: { idUserFk: { in: batch } } });
+//               await tx.workerAbsence.deleteMany({ where: { idUserFk: { in: batch } } });
+
+//               // await tx.userService.deleteMany({ where: { idUserFk: { in: batch } } });
+//             });
+//           }
+//         } else {
+//           console.log(`[Calendar-MS][Delete] Tabla ${table} no procesada (ignorada).`);
+//         }
+
+//         ack();
+//       } catch (err) {
+//         console.error("[Calendar-MS][Delete] Error procesando:", err);
+
+//         const retries = getRetryCount(raw);
+//         if (retries >= MAX_RETRIES) {
+//           console.error("[Calendar-MS][Delete] 💀 Max retries alcanzado → DLQ");
+//           return nack(false); // sin requeue → DLQ
+//         }
+
+//         // Reintento diferido (TTL)
+//         try {
+//           await RabbitPubSubService.instance.publishToExchange(
+//             EXCHANGE,
+//             ROUTING_KEY_RETRY,
+//             raw ? JSON.parse(raw.content.toString()) : { table, ids, idRelation },
+//             { persistent: true, headers: { "x-retry": retries + 1 } }
+//           );
+//           console.warn(`[Calendar-MS][Delete] 🔄 Programado retry #${retries + 1} en ${RETRY_DELAY_MS}ms`);
+//           ack();
+//         } catch (pubErr) {
+//           console.error("[Calendar-MS][Delete] ❗ Error re-publicando a retry; envío a DLQ", pubErr);
+//           nack(false);
+//         }
+//       }
+//     }
+//   );
+// }
+
+// /* -------------------- Consumer DLQ (observa/ACKea) -------------------- */
+// async function deleteRecordsDLQConsumer(): Promise<void> {
+//   const rabbit = RabbitPubSubService.instance;
+//   const channel: Channel = await rabbit.connect();
+
+//   await channel.assertQueue(DLQ, {
+//     durable: true,
+//     arguments: {
+//       "x-message-ttl": 24 * 60 * 60 * 1000, // 24h
+//       "x-max-length": 2000,
+//     },
+//   });
+
+
+//   channel.prefetch(Math.min(5, Number(process.env.RABBITMQ_PREFETCH_DLQ || 1)));
+
+//   await rabbit.consumeQueue<any>(
+//     DLQ,
+//     async (content, raw, ack) => {
+//       console.error("[Calendar-MS][Delete][DLQ] Mensaje muerto:", {
+//         headers: raw.properties.headers,
+//         content,
+//       });
+//       // Aquí podrías persistir en tabla failed_messages, alertar, etc.
+//       ack();
+//     }
+//   );
+// }
+
+
+
+// consumers/delete-records-consumer.calendar.ts
+import { Channel, ConsumeMessage } from "amqplib";
+import { RabbitPubSubService } from "../facade-pubsub/rabbit-pubsub.service";
+import prisma from "../../../../lib/prisma";
 import { RabbitMQKeys } from "../../keys/rabbitmq.keys";
 
-/**
- * Consumer para borrar datos relacionados a "companies", "workspaces", "users", "clientWorkspaces" y "client"
- * dentro del microservicio de Calendar.
- */
-export async function deleteRecordsConsumer(): Promise<void> {
-    // 1) Obtenemos la instancia de nuestro servicio
-    const rabbitPubSubService = RabbitPubSubService.instance;
-    // Conectamos y obtenemos el channel para asserts directos
-    const channel: Channel = await rabbitPubSubService.connect();
+export const deleteRecordsConsumers = {
+  deleteRecordsConsumer,
+  deleteRecordsDLQConsumer,
+};
 
-    // 2) Declaramos la cola (durable)
-    const queueName = RabbitMQKeys.pubSubDeleteCalendarQueue();
-    await channel.assertQueue(queueName, { durable: true });
+/* -------------------- Helpers -------------------- */
+const CHUNK = Math.min(500, Number(process.env.DELETE_CHUNK_SIZE) || 300);
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+function validateIdsAreStrings(ids: unknown): ids is string[] {
+  if (!Array.isArray(ids) || ids.length === 0) return false;
+  for (const v of ids) if (typeof v !== "string" || v.trim().length === 0) return false;
+  return true;
+}
+function getRetryCount(msg: ConsumeMessage): number {
+  const deaths = (msg.properties.headers as any)?.["x-death"] as any[] | undefined;
+  return Array.isArray(deaths) && deaths[0]?.count > 0 ? deaths[0].count : 0;
+}
 
-    // 3) Declaramos (o aseguramos) el exchange.
-    const exchangeName = RabbitMQKeys.pubSubDeleteExchange();
-    await rabbitPubSubService.assertExchange(exchangeName, "direct", true);
+/* -------------------- Config -------------------- */
+const PREFETCH = Math.min(3, Number(process.env.RABBITMQ_PREFETCH_DELETE_RECORDS) || 1);
+const MAX_RETRIES = Number(process.env.DELETE_MAX_RETRIES || 3);
+const RETRY_DELAY_MS = Number(process.env.DELETE_RETRY_DELAY_MS || 30_000);
+const MAX_IDS_PER_MSG = Number(process.env.DELETE_MAX_IDS_PER_MSG || 1000);
 
-    // 4) Hacemos el bind de la cola al exchange con el routing key correspondiente
-    await rabbitPubSubService.bindQueueToExchange(
-        queueName, // key de la cola en tu enum
-        exchangeName,
-        RabbitMQKeys.pubSubDeleteCalendarRoutingKey()
-    );
+// ⏳ TTLs añadidos (solo esto es nuevo)
+const MAIN_MESSAGE_TTL_MS = Number(process.env.DELETE_MAIN_MESSAGE_TTL_MS || 86_400_000 * 3); // 3d
+const DLQ_MESSAGE_TTL_MS  = Number(process.env.DELETE_DLQ_MESSAGE_TTL_MS  || 604_800_000);   // 7d
 
-    // 5) Consumimos la cola
-    await rabbitPubSubService.consumeQueue<"requestDeleteRecords">(
-        queueName,
-        async ({ table, ids, idRelation }, msg: ConsumeMessage, ack, nack) => {
-            try {
+// Topología
+const EXCHANGE = RabbitMQKeys.pubSubDeleteExchange();
+const QUEUE = RabbitMQKeys.pubSubDeleteCalendarQueue();
+const ROUTING_KEY = RabbitMQKeys.pubSubDeleteCalendarRoutingKey();
 
-                console.log(`[Calendar-MS] Borrando registros de la tabla ${table} con IDs: ${ids.join(", ")}`);
-                if (table === "companies") {
-                    // Borrar en cascada registros relacionados a companies
-                    await prisma.$transaction(async (tx) => {
-                        for (const idCompany of ids) {
-                            // 1. BusinessHour
-                            await tx.businessHour.deleteMany({
-                                where: { idCompanyFk: idCompany },
-                            });
+// DLX/DLQ
+const DLX = RabbitMQKeys.deadLetterExchange();
+const DLQ = RabbitMQKeys.pubSubDeleteCalendarDLQ();
 
-                            // 2. WorkerBusinessHour
-                            await tx.workerBusinessHour.deleteMany({
-                                where: { idCompanyFk: idCompany },
-                            });
+// Cola de reintentos con TTL (DL de vuelta a la principal)
+const RETRY_QUEUE = `${QUEUE}.retry`;
+const ROUTING_KEY_RETRY = `${ROUTING_KEY}.retry`;
 
-                            // 3. TemporaryBusinessHour
-                            await tx.temporaryBusinessHour.deleteMany({
-                                where: { idCompanyFk: idCompany },
-                            });
+/* -------------------- Consumer principal -------------------- */
+async function deleteRecordsConsumer(): Promise<void> {
+  const rabbit = RabbitPubSubService.instance;
+  const channel: Channel = await rabbit.connect();
 
-                            // 4. WorkerAbsence
-                            await tx.workerAbsence.deleteMany({
-                                where: { idCompanyFk: idCompany },
-                            });
+  // Exchanges / colas
+  await rabbit.assertExchange(EXCHANGE, "direct", true);
 
-                            // 5. Calendars y sus Events asociados
-                            const calendars = await tx.calendar.findMany({
-                                where: { idCompanyFk: idCompany },
-                                select: { id: true },
-                            });
-                            const calendarIds = calendars.map((c) => c.id);
+  await rabbit.assertExchange(DLX, "direct", true);
+  await channel.assertQueue(DLQ, {
+    durable: true,
+    arguments: {
+      "x-message-ttl": DLQ_MESSAGE_TTL_MS, // ✨ antes 24h fijo; ahora por env (7d por defecto)
+      "x-max-length": 2000,
+      // (si quieres bytes: "x-max-length-bytes": 10 * 1024 * 1024)
+    },
+  });
+  await rabbit.bindQueueToExchange(DLQ, DLX, DLQ);
 
-                            // Borrar Events que referencian estos calendars
-                            await tx.event.deleteMany({
-                                where: {
-                                    idCalendarFk: { in: calendarIds },
-                                },
-                            });
-                            // Borrar los propios calendars
-                            await tx.calendar.deleteMany({
-                                where: { idCompanyFk: idCompany },
-                            });
+  await channel.assertQueue(RETRY_QUEUE, {
+    durable: true,
+    arguments: {
+      "x-message-ttl": RETRY_DELAY_MS,
+      "x-dead-letter-exchange": EXCHANGE,
+      "x-dead-letter-routing-key": ROUTING_KEY,
+      "x-max-length": 5000,
+    },
+  });
+  await rabbit.bindQueueToExchange(RETRY_QUEUE, EXCHANGE, ROUTING_KEY_RETRY);
 
-                            // 6. Services y sus UserServices asociados
-                            const services = await tx.service.findMany({
-                                where: { idCompanyFk: idCompany },
-                                select: { id: true },
-                            });
-                            const serviceIds = services.map((s) => s.id);
+  await channel.assertQueue(QUEUE, {
+    durable: true,
+    arguments: {
+      "x-message-ttl": MAIN_MESSAGE_TTL_MS, // ✨ vida máxima en principal (3d por defecto)
+      "x-dead-letter-exchange": DLX,
+      "x-dead-letter-routing-key": DLQ,
+    },
+  });
+  await rabbit.bindQueueToExchange(QUEUE, EXCHANGE, ROUTING_KEY);
 
-                            // Borrar UserServices que referencian esos services
-                            await tx.userService.deleteMany({
-                                where: {
-                                    idServiceFk: { in: serviceIds },
-                                },
-                            });
-                            // Borrar los Services
-                            await tx.service.deleteMany({
-                                where: { idCompanyFk: idCompany },
-                            });
+  channel.prefetch(PREFETCH);
+  console.log(`[Calendar-MS][Delete] ⏳ Awaiting messages on ${QUEUE}...`);
 
-                            // 7. Categories y sus CategoryWorkspaces asociados
-                            const categories = await tx.category.findMany({
-                                where: { idCompanyFk: idCompany },
-                                select: { id: true },
-                            });
-                            const categoryIds = categories.map((cat) => cat.id);
+  await rabbit.consumeQueue<"requestDeleteRecords">(
+    QUEUE,
+    async ({ table, ids, idRelation }, raw, ack, nack) => {
+      // ✅ Validación mínima
+      const allowedTables = new Set([
+        "companies",
+        "workspaces",
+        "userWorkspaces-byWorkspace",
+        "userWorkspaces-byUser",
+        "clientWorkspaces",
+        "clients",
+        "users",
+      ]);
+      if (!allowedTables.has(table) || !validateIdsAreStrings(ids)) {
+        console.error(`[Calendar-MS][Delete] Payload inválido table=${table} → DLQ`);
+        return nack(false);
+      }
 
-                            // Borrar CategoryWorkspaces que referencian esas categorías
-                            // await tx.categoryWorkspace.deleteMany({
-                            //     where: {
-                            //         idCategoryFk: { in: categoryIds },
-                            //     },
-                            // });
-
-                            await tx.categoryService.deleteMany({
-                                where: {
-                                    category: {
-                                        idCompanyFk: idCompany,
-                                    },
-                                    service: {
-                                        idCompanyFk: idCompany,
-                                    }
-                                },
-                            });
-
-                            await tx.service.deleteMany({
-                                where: {
-                                    idCompanyFk: idCompany,
-                                    // idCategoryFk: { in: categoryIds },
-                                },
-                            });
-
-                            // Borrar las categorías
-                            await tx.category.deleteMany({
-                                where: { idCompanyFk: idCompany },
-                            });
-                        }
-                    });
-                    console.log(
-                        `[Calendar-MS] Eliminados registros relacionados a companies con IDs: ${ids.join(", ")}`
-                    );
-
-                } else if (table === "workspaces") {
-                    // Borrar en cascada registros relacionados a workspaces
-                    await prisma.$transaction(async (tx) => {
-                        for (const idWorkspace of ids) {
-                            // 1. BusinessHour
-                            await tx.businessHour.deleteMany({
-                                where: { idWorkspaceFk: idWorkspace },
-                            });
-
-                            // 2. WorkerAbsence
-                            await tx.workerAbsence.deleteMany({
-                                where: { idWorkspaceFk: idWorkspace },
-                            });
-
-                            // 3. Calendars y sus Events asociados
-                            const calendars = await tx.calendar.findMany({
-                                where: { idWorkspaceFk: idWorkspace },
-                                select: { id: true },
-                            });
-                            const calendarIds = calendars.map((c) => c.id);
-
-                            // Borrar Events que referencian estos calendars
-                            await tx.event.deleteMany({
-                                where: {
-                                    idCalendarFk: { in: calendarIds },
-                                },
-                            });
-                            // Borrar los propios calendars
-                            await tx.calendar.deleteMany({
-                                where: { idWorkspaceFk: idWorkspace },
-                            });
-
-                            // 4. CategoryWorkspace
-                            // await tx.categoryWorkspace.deleteMany({
-                            //     where: { idWorkspaceFk: idWorkspace },
-                            // });
-                            // 1. Determinar cuáles son los IDs de los servicios de este establecimiento
-                            const servicios = await tx.service.findMany({
-                                where: { idWorkspaceFk: idWorkspace },
-                                select: { id: true },
-                            });
-                            const serviceIds = servicios.map(s => s.id);
-
-                            // 2. Determinar cuáles son los IDs de las categorías de este establecimiento
-                            const categorias = await tx.category.findMany({
-                                where: { idWorkspaceFk: idWorkspace },
-                                select: { id: true },
-                            });
-                            const categoryIds = categorias.map(c => c.id);
-
-                            // 3. Borrar todas las relaciones UserService donde el servicio pertenezca al establecimiento
-                            if (serviceIds.length > 0) {
-                                await tx.userService.deleteMany({
-                                    where: {
-                                        idServiceFk: { in: serviceIds },
-                                    },
-                                });
-                            }
-
-                            // 4. Borrar todas las relaciones CategoryService que apunten a:
-                            //    – servicios de este establecimiento, o
-                            //    – categorías de este establecimiento
-                            //    (de este modo cubrimos cualquier pivote category⇄service donde al menos un lado
-                            //     esté en el establecimiento que borramos)
-                            if (serviceIds.length > 0) {
-                                await tx.categoryService.deleteMany({
-                                    where: {
-                                        OR: [
-                                            { idServiceFk: { in: serviceIds } },
-                                            { idCategoryFk: { in: categoryIds } },
-                                        ],
-                                    },
-                                });
-                            }
-
-                            // 5. Borrar los servicios de ese establecimiento
-                            await tx.service.deleteMany({
-                                where: { idWorkspaceFk: idWorkspace },
-                            });
-
-                            // 6. Borrar las categorías de ese establecimiento
-                            await tx.category.deleteMany({
-                                where: { idWorkspaceFk: idWorkspace },
-                            });
-
-
-
-                        }
-                    });
-                    console.log(
-                        `[Calendar-MS] Eliminados registros relacionados a workspaces con IDs: ${ids.join(", ")}`
-                    );
-                } else if (table === "userWorkspaces-byWorkspace") {
-
-                    await prisma.$transaction(async (tx) => {
-
-                        // Obtenemos todos los calendarios de los establecimientos que se van a eliminar
-                        const calendars = await tx.calendar.findMany({
-                            where: { idWorkspaceFk: { in: ids } },
-                            select: { id: true },
-                        });
-
-                        if (calendars.length === 0) {
-                            // Mandar LOG si no se encuentran calendarios
-                            console.log(`[Calendar-MS] No se encontraron calendarios para los establecimientos: ${ids.join(", ")}`);
-                            return;
-                        }
-
-                        const calendarIds = calendars.map(c => c.id);
-                        
-                        // Borramos los eventos del usuario en estos establecimientos
-                        await tx.event.deleteMany({
-                            where: { idUserPlatformFk: idRelation, idCalendarFk: { in: calendarIds } },
-                         
-                        });
-
-                        // Borramos los registros de horas de trabajo del usuario en estos establecimientos
-                        await tx.workerBusinessHour.deleteMany({
-                            where: { idUserFk: idRelation, idWorkspaceFk: { in: ids } },
-                        });
-
-                        // Borramos los registros de horas temporales del usuario en estos establecimientos
-                        await tx.temporaryBusinessHour.deleteMany({
-                            where: { idUserFk: idRelation, idWorkspaceFk: { in: ids } },
-                        });
-
-                        // Borramos las ausencias del usuario en estos establecimientos
-                        await tx.workerAbsence.deleteMany({
-                            where: { idUserFk: idRelation, idWorkspaceFk: { in: ids } },
-                        });
-
-                        // Borramos todos los servicios del usuario en estos establecimientos
-                        await tx.userService.deleteMany({
-                            where: { idUserFk: idRelation, service: { idWorkspaceFk: { in: ids } } },
-                        });
-                    });
-                } else if (table === "userWorkspaces-byUser") {
-
-                    // Borrar registros relacionados a userWorkspaces-byUser
-                    // idRelation es el establecimiento
-                    await prisma.$transaction(async (tx) => {
-                        // Borrar los registros de horas de trabajo del usuario en este establecimiento
-                        await tx.workerBusinessHour.deleteMany({
-                            where: { idUserFk: { in: ids }, idWorkspaceFk: idRelation },
-                        });
-
-                        // Borrar los registros de horas temporales del usuario en este establecimiento
-                        await tx.temporaryBusinessHour.deleteMany({
-                            where: { idUserFk: { in: ids }, idWorkspaceFk: idRelation },
-                        });
-
-                        // Borrar las ausencias del usuario en este establecimiento
-                        await tx.workerAbsence.deleteMany({
-                            where: { idUserFk: { in: ids }, idWorkspaceFk: idRelation },
-                        });
-
-                        // Borrar los servicios del usuario en este establecimiento
-                        await tx.userService.deleteMany({
-                            where: { idUserFk: { in: ids }, service: { idWorkspaceFk: idRelation } },
-                        });
-                    });
-                    console.log(
-                        `[Calendar-MS] Eliminados registros relacionados a userWorkspaces-byUser con IDs: ${ids.join(", ")} en el establecimiento ${idRelation}`
-                    );
-
-                } else if (table === "clientWorkspaces" || table === "clients") {  // Para clientWorkspaces o client, se borran directamente los eventos asociados
-                    await prisma.$transaction(async (tx) => {
-                        if (table === "clientWorkspaces") {
-                            await tx.event.deleteMany({
-                                where: {
-                                    // idClientWorkspaceFk: { in: ids }
-                                    eventParticipant: {
-                                        some: {
-                                            idClientWorkspaceFk: { in: ids },
-                                        }
-                                    }
-                                },
-                            });
-                        } else {
-                            await tx.event.deleteMany({
-                                where: {
-                                    //  idClientFk: { in: ids }
-                                    eventParticipant: {
-                                        some: {
-                                            idClientFk: { in: ids },
-
-                                        }
-                                    }
-                                },
-                            });
-                        }
-                    });
-                    console.log(
-                        `[Calendar-MS] Eliminados eventos relacionados a ${table} con IDs: ${ids.join(", ")}`
-                    );
-
-                } else if (table === "users") {
-                    // Para users:
-                    // 1. No se borran los eventos, sino que se actualiza el campo idUserPlatformFk a null.
-                    // 2. Se borran registros relacionados al usuario en varias tablas.
-                    await prisma.$transaction(async (tx) => {
-                        // Actualizar eventos: poner a null el idUserPlatformFk donde corresponda
-                        await tx.event.updateMany({
-                            where: { idUserPlatformFk: { in: ids } },
-                            data: { idUserPlatformFk: null },
-                        });
-
-                        // Borrar registros relacionados al usuario
-                        await tx.workerBusinessHour.deleteMany({
-                            where: { idUserFk: { in: ids } },
-                        });
-                        await tx.temporaryBusinessHour.deleteMany({
-                            where: { idUserFk: { in: ids } },
-                        });
-                        await tx.workerAbsence.deleteMany({
-                            where: { idUserFk: { in: ids } },
-                        });
-                        // await tx.userColor.deleteMany({
-                        //     where: { idUserFk: { in: ids } },
-                        // });
-                        await tx.userService.deleteMany({
-                            where: { idUserFk: { in: ids } },
-                        });
-                    });
-                    console.log(
-                        `[Calendar-MS] Actualizados eventos y eliminados registros relacionados a users con IDs: ${ids.join(", ")}`
-                    );
-
-                } else {
-                    console.log(`[Calendar-MS] Tabla ${table} no procesada.`);
-                }
-
-                // Confirmamos el mensaje una vez finalizado el borrado
-                ack();
-            } catch (error) {
-                console.error("[Calendar-MS] Error al procesar el borrado:", error);
-                // No se llama a ack() para permitir reintentos o envío a DLQ
-            }
+      // 🔪 Guard: split de mensajes gigantes para paralelismo real
+      if (ids.length > MAX_IDS_PER_MSG) {
+        const msgChunks = chunkArray(ids, MAX_IDS_PER_MSG);
+        console.warn(
+          `[Calendar-MS][Delete] Oversized message: ${ids.length} ids → republishing ${msgChunks.length} msgs`
+        );
+        for (const c of msgChunks) {
+          await rabbit.publishToExchange(EXCHANGE, ROUTING_KEY, { table, ids: c, idRelation }, { persistent: true });
         }
-    );
+        return ack();
+      }
+
+      const retries = getRetryCount(raw);
+      console.log(`[Calendar-MS][Delete] → ${table} (${ids.length} ids) retry#${retries}`);
+
+      try {
+        /* ---- BORRADOS por tabla (en chunks/tx) ---- */
+        if (table === "companies") {
+          const batches = chunkArray(ids, CHUNK);
+          for (const batch of batches) {
+            await prisma.$transaction(async (tx) => {
+              await tx.businessHour.deleteMany({ where: { idCompanyFk: { in: batch } } });
+              await tx.workerBusinessHour.deleteMany({ where: { idCompanyFk: { in: batch } } });
+              await tx.temporaryBusinessHour.deleteMany({ where: { idCompanyFk: { in: batch } } });
+              await tx.workerAbsence.deleteMany({ where: { idCompanyFk: { in: batch } } });
+
+              await tx.event.deleteMany({
+                where: { idWorkspaceFk: { in: batch } },
+              });
+
+              // --- Comentado por refactor (mantener) ---
+              // const calendars = await tx.calendar.findMany({
+              //   where: { idCompanyFk: { in: batch } },
+              //   select: { id: true },
+              // });
+              // const calendarIds = calendars.map((c) => c.id);
+              // if (calendarIds.length > 0) {
+              //   await tx.event.deleteMany({ where: { idCalendarFk: { in: calendarIds } } });
+              // }
+              // await tx.calendar.deleteMany({ where: { idCompanyFk: { in: batch } } });
+
+              // TODO: Los servicios y categorías están ahora en MS-BookingPage
+              // const services = await tx.service.findMany({ where: { idCompanyFk: { in: batch } }, select: { id: true } });
+              // const serviceIds = services.map((s) => s.id);
+              // if (serviceIds.length > 0) {
+              //   await tx.userService.deleteMany({ where: { idServiceFk: { in: serviceIds } } });
+              //   await tx.categoryService.deleteMany({
+              //     where: { OR: [{ service: { idCompanyFk: { in: batch } } }, { category: { idCompanyFk: { in: batch } } }] },
+              //   });
+              // }
+              // await tx.service.deleteMany({ where: { idCompanyFk: { in: batch } } });
+              // await tx.category.deleteMany({ where: { idCompanyFk: { in: batch } } });
+            });
+          }
+        } else if (table === "workspaces") {
+          const batches = chunkArray(ids, CHUNK);
+          for (const batch of batches) {
+            await prisma.$transaction(async (tx) => {
+              await tx.businessHour.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+              await tx.workerAbsence.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+              await tx.workerBusinessHour.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+              await tx.temporaryBusinessHour.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+
+              await tx.event.deleteMany({
+                where: { idWorkspaceFk: { in: batch } },
+              });
+
+              // --- Comentado por refactor (mantener) ---
+              // const calendars = await tx.calendar.findMany({
+              //   where: { idWorkspaceFk: { in: batch } },
+              //   select: { id: true },
+              // });
+              // const calendarIds = calendars.map((c) => c.id);
+              // if (calendarIds.length > 0) {
+              //   await tx.event.deleteMany({ where: { idCalendarFk: { in: calendarIds } } });
+              // }
+              // await tx.calendar.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+
+              // const services = await tx.service.findMany({ where: { idWorkspaceFk: { in: batch } }, select: { id: true } });
+              // const serviceIds = services.map((s) => s.id);
+              // const categories = await tx.category.findMany({ where: { idWorkspaceFk: { in: batch } }, select: { id: true } });
+              // const categoryIds = categories.map((c) => c.id);
+              // if (serviceIds.length > 0 || categoryIds.length > 0) {
+              //   await tx.userService.deleteMany({ where: { idServiceFk: { in: serviceIds } } });
+              //   await tx.categoryService.deleteMany({
+              //     where: { OR: [{ idServiceFk: { in: serviceIds } }, { idCategoryFk: { in: categoryIds } }] },
+              //   });
+              // }
+              // await tx.service.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+              // await tx.category.deleteMany({ where: { idWorkspaceFk: { in: batch } } });
+            });
+          }
+        } else if (table === "userWorkspaces-byWorkspace") {
+          // idRelation = userId
+          const batches = chunkArray(ids, CHUNK);
+          for (const batch of batches) {
+            await prisma.$transaction(async (tx) => {
+              // --- Comentado por refactor (mantener) ---
+              // const calendars = await tx.calendar.findMany({
+              //   where: { idWorkspaceFk: { in: batch } },
+              //   select: { id: true },
+              // });
+              // const calendarIds = calendars.map((c) => c.id);
+              // if (calendarIds.length > 0) {
+              //   await tx.event.deleteMany({
+              //     where: { idUserPlatformFk: idRelation, idCalendarFk: { in: calendarIds } },
+              //   });
+              // }
+
+              await tx.workerBusinessHour.deleteMany({
+                where: { idUserFk: idRelation, idWorkspaceFk: { in: batch } },
+              });
+              await tx.temporaryBusinessHour.deleteMany({
+                where: { idUserFk: idRelation, idWorkspaceFk: { in: batch } },
+              });
+              await tx.workerAbsence.deleteMany({
+                where: { idUserFk: idRelation, idWorkspaceFk: { in: batch } },
+              });
+              // await tx.userService.deleteMany({
+              //   where: { idUserFk: idRelation, service: { idWorkspaceFk: { in: batch } } },
+              // });
+            });
+          }
+        } else if (table === "userWorkspaces-byUser") {
+          // idRelation = workspaceId
+          const batches = chunkArray(ids, CHUNK);
+          for (const batch of batches) {
+            await prisma.$transaction(async (tx) => {
+              await tx.workerBusinessHour.deleteMany({
+                where: { idUserFk: { in: batch }, idWorkspaceFk: idRelation },
+              });
+              await tx.temporaryBusinessHour.deleteMany({
+                where: { idUserFk: { in: batch }, idWorkspaceFk: idRelation },
+              });
+              await tx.workerAbsence.deleteMany({
+                where: { idUserFk: { in: batch }, idWorkspaceFk: idRelation },
+              });
+
+              // Ya no hay servicios en MS-Calendar
+              // await tx.userService.deleteMany({
+              //   where: { idUserFk: { in: batch }, service: { idWorkspaceFk: idRelation } },
+              // });
+            });
+          }
+        } else if (table === "clientWorkspaces") {
+          const batches = chunkArray(ids, CHUNK);
+          for (const batch of batches) {
+            await prisma.$transaction(async (tx) => {
+              // Solo eliminar las relaciones de participantes, no los eventos completos
+              await tx.eventParticipant.deleteMany({
+                where: { idClientWorkspaceFk: { in: batch } },
+              });
+
+              // Opcional: eliminar eventos que se queden sin participantes
+              const eventsWithoutParticipants = await tx.event.findMany({
+                where: {
+                  eventParticipant: { none: {} },
+                },
+                select: { id: true },
+              });
+
+              if (eventsWithoutParticipants.length > 0) {
+                const eventIdsToDelete = eventsWithoutParticipants.map(e => e.id);
+                await tx.event.deleteMany({
+                  where: { id: { in: eventIdsToDelete } },
+                });
+                console.log(`[Calendar-MS][Delete] Eliminados ${eventIdsToDelete.length} eventos sin participantes`);
+              }
+            });
+          }
+        } else if (table === "clients") {
+          const batches = chunkArray(ids, CHUNK);
+          for (const batch of batches) {
+            await prisma.$transaction(async (tx) => {
+              // Solo eliminar las relaciones de participantes, no los eventos completos
+              await tx.eventParticipant.deleteMany({
+                where: { idClientFk: { in: batch } },
+              });
+
+              // Opcional: eliminar eventos que se queden sin participantes
+              const eventsWithoutParticipants = await tx.event.findMany({
+                where: {
+                  eventParticipant: { none: {} },
+                },
+                select: { id: true },
+              });
+
+              if (eventsWithoutParticipants.length > 0) {
+                const eventIdsToDelete = eventsWithoutParticipants.map(e => e.id);
+                await tx.event.deleteMany({
+                  where: { id: { in: eventIdsToDelete } },
+                });
+                console.log(`[Calendar-MS][Delete] Eliminados ${eventIdsToDelete.length} eventos sin participantes`);
+              }
+            });
+          }
+        } else if (table === "users") {
+          const batches = chunkArray(ids, CHUNK);
+          for (const batch of batches) {
+            await prisma.$transaction(async (tx) => {
+              await tx.event.updateMany({
+                where: { idUserPlatformFk: { in: batch } },
+                data: { idUserPlatformFk: null },
+              });
+
+              await tx.workerBusinessHour.deleteMany({ where: { idUserFk: { in: batch } } });
+              await tx.temporaryBusinessHour.deleteMany({ where: { idUserFk: { in: batch } } });
+              await tx.workerAbsence.deleteMany({ where: { idUserFk: { in: batch } } });
+
+              // await tx.userService.deleteMany({ where: { idUserFk: { in: batch } } });
+            });
+          }
+        } else {
+          console.log(`[Calendar-MS][Delete] Tabla ${table} no procesada (ignorada).`);
+        }
+
+        ack();
+      } catch (err) {
+        console.error("[Calendar-MS][Delete] Error procesando:", err);
+
+        const retries = getRetryCount(raw);
+        if (retries >= MAX_RETRIES) {
+          console.error("[Calendar-MS][Delete] 💀 Max retries alcanzado → DLQ");
+          return nack(false); // sin requeue → DLQ
+        }
+
+        // Reintento diferido (TTL)
+        try {
+          await RabbitPubSubService.instance.publishToExchange(
+            EXCHANGE,
+            ROUTING_KEY_RETRY,
+            raw ? JSON.parse(raw.content.toString()) : { table, ids, idRelation },
+            { persistent: true, headers: { "x-retry": retries + 1 } }
+          );
+          console.warn(`[Calendar-MS][Delete] 🔄 Programado retry #${retries + 1} en ${RETRY_DELAY_MS}ms`);
+          ack();
+        } catch (pubErr) {
+          console.error("[Calendar-MS][Delete] ❗ Error re-publicando a retry; envío a DLQ", pubErr);
+          nack(false);
+        }
+      }
+    }
+  );
+}
+
+/* -------------------- Consumer DLQ (observa/ACKea) -------------------- */
+async function deleteRecordsDLQConsumer(): Promise<void> {
+  const rabbit = RabbitPubSubService.instance;
+  const channel: Channel = await rabbit.connect();
+
+  // Misma config que en el principal para evitar inequivalence
+  await channel.assertQueue(DLQ, {
+    durable: true,
+    arguments: {
+      "x-message-ttl": DLQ_MESSAGE_TTL_MS, // ✨ antes 24h fijo; ahora por env (7d por defecto)
+      "x-max-length": 2000,
+      // "x-max-length-bytes": 10 * 1024 * 1024
+    },
+  });
+
+  channel.prefetch(Math.min(5, Number(process.env.RABBITMQ_PREFETCH_DLQ || 1)));
+
+  await rabbit.consumeQueue<any>(
+    DLQ,
+    async (content, raw, ack) => {
+      console.error("[Calendar-MS][Delete][DLQ] Mensaje muerto:", {
+        headers: raw.properties.headers,
+        content,
+      });
+      // Aquí podrías persistir en tabla failed_messages, alertar, etc.
+      ack();
+    }
+  );
 }

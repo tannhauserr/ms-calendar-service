@@ -1,5 +1,4 @@
-import { update } from "@react-spring/web";
-import { deleteRecordsConsumer, recurrenceWorkerConsumer, updateServiceInEventConsumer } from "./consumer";
+import { deleteRecordsConsumers, recurrenceWorkerConsumer, updateServiceInEventConsumer } from "./consumer";
 
 
 
@@ -7,7 +6,9 @@ import { deleteRecordsConsumer, recurrenceWorkerConsumer, updateServiceInEventCo
 export const initializeConsumerPubSub_RabbitMQ = () => {
 
     console.log("INICIALIZANDO RABBIT PUBSUB CONSUMER");
-    deleteRecordsConsumer();
+    deleteRecordsConsumers.deleteRecordsConsumer();
+    deleteRecordsConsumers.deleteRecordsDLQConsumer();
+
     recurrenceWorkerConsumer();
     updateServiceInEventConsumer();
 

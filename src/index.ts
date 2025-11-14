@@ -19,6 +19,7 @@ import { initializeSubscriptionsRedis } from "./services/@redis/pubsub/initializ
 import { initializeConsumerRabbitMQ } from "./services/@rabbitmq/initializeConsumers";
 import { initializeConsumerRCP_RabbitMQ } from "./services/@rabbitmq/rpc/initializeRpcConsumer";
 import { initializeConsumerPubSub_RabbitMQ } from "./services/@rabbitmq/pubsub/initializePubSubConsumer";
+import { NotificationPlanCronService } from "./services/@cron/notification-plan-cron.service";
 
 // const ip = process.env.IP || "127.0.0.1";
 
@@ -97,6 +98,7 @@ app.listen(port, () => {
 
     // Crons work
     CheckCacheCronService.instance.start();
+    NotificationPlanCronService.instance.start();
     // TODO: Hasta que no tenga ruta https no se hacen pruebas con el canal de eventos
     // CalendarChannelRefreshCronService.instance.start();
     console.log("🌐 CORS WHITELIST:", process.env.WEB_WHITELIST_CORS);

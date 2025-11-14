@@ -1,10 +1,8 @@
 import express from 'express';
 import { EventController } from '../../controllers/event/event.controller';
-import { JWTService } from '../../services/jwt/jwt.service';
-import { EventMiddleware } from '../../middlewares/event/event.middleware';
-import { OnlyAdminMiddleware } from '../../middlewares/only-admin.middleware';
 import { CheckCompanyMiddleware } from '../../middlewares/check-company/check-company.middleware';
-import { BookingGuardsMiddleware } from '../../middlewares/booiking-guard/booking-guard.middleware';
+import { OnlyAdminMiddleware } from '../../middlewares/only-admin.middleware';
+import { JWTService } from '../../services/jwt/jwt.service';
 
 
 const router = express.Router();
@@ -43,20 +41,22 @@ router.post('/events/add', [
     // EventMiddleware.checkEventConflict,
 ], controller.add);
 
-// TODO: crear middleware para confirmar que el id de cliente es válido
-router.post(
-    "/events/client-add",
-    [
-        JWTService.authCookieOrBearer,                 // auth
-        BookingGuardsMiddleware.BaseValidationAndNormalize(),    // valida + normaliza input -> ctx.input
-        BookingGuardsMiddleware.ResolveWorkspace(),              // resuelve workspace + config + tz -> ctx.workspace/config/timeZoneWorkspace
-        BookingGuardsMiddleware.ResolveClientWorkspace(),        // resuelve idClientWorkspace -> ctx.customer
-        BookingGuardsMiddleware.EnforceTimeRules(),              // reglas de ventana / lead times / etc. -> ctx.when
-        BookingGuardsMiddleware.EnforceUserLimits(),             // límites por usuario -> bloquea si excede
-        // BookingGuards.FeatureFlagsAndIdempotency(), // opcional (deja TODOs)
-    ],
-    controller.addFromWeb
-);
+
+// TODO: Movido a las rutas de client-event
+// // TODO: crear middleware para confirmar que el id de cliente es válido
+// router.post(
+//     "/events/client-add",
+//     [
+//         JWTService.authCookieOrBearer,                 // auth
+//         BookingGuardsMiddleware.BaseValidationAndNormalize(),    // valida + normaliza input -> ctx.input
+//         BookingGuardsMiddleware.ResolveWorkspace(),              // resuelve workspace + config + tz -> ctx.workspace/config/timeZoneWorkspace
+//         BookingGuardsMiddleware.ResolveClientWorkspace(),        // resuelve idClientWorkspace -> ctx.customer
+//         BookingGuardsMiddleware.EnforceTimeRules(),              // reglas de ventana / lead times / etc. -> ctx.when
+//         BookingGuardsMiddleware.EnforceUserLimits(),             // límites por usuario -> bloquea si excede
+//         // BookingGuards.FeatureFlagsAndIdempotency(), // opcional (deja TODOs)
+//     ],
+//     controller.addFromWeb
+// );
 
 // Esto es para cuando se añade un evento desde el front del cliente
 // router.post('/events/client/:id/add', [

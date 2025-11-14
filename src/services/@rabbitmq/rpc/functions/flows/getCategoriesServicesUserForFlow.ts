@@ -30,17 +30,14 @@ export async function getCategoriesServicesUserForFlow(idWorkspace: string): Pro
             SubscriberActions.requestGetCategoryServiceUserForFlow,
             { idWorkspace } as ActionPayloads['requestGetCategoryServiceUserForFlow'],
             correlationId,
-            true,
             TIME_MILLISECONDS.SECOND * 8
         );
 
-        // Devuelve usuarios y horarios de un establecimiento
         const promiseMsLogin: any = rabbitRpc.sendRpc(
             RabbitMQKeys.handleRpcGetUserForFlowQueue(),
             SubscriberActions.requestGetCategoryServiceUserForFlow,
             { idWorkspace } as ActionPayloads['requestGetCategoryServiceUserForFlow'],
             correlationId2,
-            true,
             TIME_MILLISECONDS.SECOND * 8
         );
 

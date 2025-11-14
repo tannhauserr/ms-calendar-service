@@ -4,53 +4,80 @@ import prisma from "../../../../lib/prisma";
 import CustomError from "../../../../models/custom-error/CustomError";
 import { BusinessHoursType, WorkerHoursMapType } from "../../../../models/interfaces";
 import { TemporaryHoursMapType } from "../../../../models/interfaces/temporary-business-hours-type";
+import { getServiceByIds } from "../../../@service-token-client/api-ms/bookingPage.ms";
 
-
-
-// Obtiene usuarios que pueden hacer un servicio (tu función adaptada)
 export async function getUsersWhoCanPerformService(
     idWorkspace: string,
     idService: string,
     idCategory?: string
 ): Promise<string[]> {
     try {
-        // Si tienes otra ruta para mapear servicio → users, úsala aquí.
-        // El código de tu consumer usaba category -> service -> userServices:
-        const result = await prisma.category.findMany({
-            where: {
-                id: idCategory,
-                idWorkspaceFk: idWorkspace,
-            },
-            select: {
-                categoryServices: {
-                    where: {
-                        deletedDate: null,
-                        service: {
-                            deletedDate: null,
-                            id: idService,
-                            userServices: { some: {} },
-                        },
-                    },
-                    select: {
-                        service: {
-                            select: {
-                                userServices: { select: { idUserFk: true } },
-                            },
-                        },
-                    },
-                },
-            },
-        });
+        // Obtener el servicio del microservicio para ver qué usuarios pueden realizarlo
+        const services = await getServiceByIds([idService], idWorkspace);
 
-        const userIds = result.flatMap((ce) =>
-            ce.categoryServices.flatMap((cs) => cs.service.userServices.map((us) => us.idUserFk))
-        );
+        if (services.length === 0) {
+            console.warn(`[getUsersWhoCanPerformService] Servicio ${idService} no encontrado`);
+            return [];
+        }
 
+        const service = services[0];
+
+        // Extraer los userIds de userServices
+        const userIds = service.userServices?.map(us => us.idUserFk).filter(Boolean) || [];
+
+        // Si se especifica categoría, podríamos filtrar por ella si el servicio tiene esa info
+        // Por ahora devolvemos todos los usuarios que pueden realizar el servicio
         return Array.from(new Set(userIds));
     } catch (error: any) {
+        console.error(`[getUsersWhoCanPerformService] Error:`, error);
         throw new CustomError("getUsersWhoCanPerformService", error);
     }
 }
+
+// // Obtiene usuarios que pueden hacer un servicio (tu función adaptada)
+// export async function getUsersWhoCanPerformService(
+//     idWorkspace: string,
+//     idService: string,
+//     idCategory?: string
+// ): Promise<string[]> {
+//     try {
+//         // Si tienes otra ruta para mapear servicio → users, úsala aquí.
+//         // El código de tu consumer usaba category -> service -> userServices:
+//         const result = await prisma.category.findMany({
+//             where: {
+//                 id: idCategory,
+//                 idWorkspaceFk: idWorkspace,
+//             },
+//             select: {
+//                 categoryServices: {
+//                     where: {
+//                         deletedDate: null,
+//                         service: {
+//                             deletedDate: null,
+//                             id: idService,
+//                             userServices: { some: {} },
+//                         },
+//                     },
+//                     select: {
+//                         service: {
+//                             select: {
+//                                 userServices: { select: { idUserFk: true } },
+//                             },
+//                         },
+//                     },
+//                 },
+//             },
+//         });
+
+//         const userIds = result.flatMap((ce) =>
+//             ce.categoryServices.flatMap((cs) => cs.service.userServices.map((us) => us.idUserFk))
+//         );
+
+//         return Array.from(new Set(userIds));
+//     } catch (error: any) {
+//         throw new CustomError("getUsersWhoCanPerformService", error);
+//     }
+// }
 
 // Devuelve eventos que SOLAPAN el rango (no solo dentro)
 export async function getEventsOverlappingRange(
@@ -87,17 +114,27 @@ export async function getEventsOverlappingRange(
 }
 
 // Genera lista de YYYY-MM-DD entre start..end, inclusive
-export function enumerateDays(startISO: string, endISO: string) {
+// export function enumerateDays(startISO: string, endISO: string) {
+//     const out: string[] = [];
+//     const cur = moment.utc(startISO, "YYYY-MM-DD").startOf("day");
+//     const end = moment.utc(endISO, "YYYY-MM-DD").startOf("day");
+//     while (cur.isSameOrBefore(end)) {
+//         out.push(cur.format("YYYY-MM-DD"));
+//         cur.add(1, "day");
+//     }
+//     return out;
+// }
+
+export function enumerateDays(startISO: string, endISO: string): string[] {
     const out: string[] = [];
-    const cur = moment.utc(startISO, "YYYY-MM-DD").startOf("day");
-    const end = moment.utc(endISO, "YYYY-MM-DD").startOf("day");
-    while (cur.isSameOrBefore(end)) {
+    let cur = moment(startISO, "YYYY-MM-DD");
+    const end = moment(endISO, "YYYY-MM-DD");
+    while (!cur.isAfter(end, "day")) {
         out.push(cur.format("YYYY-MM-DD"));
-        cur.add(1, "day");
+        cur = cur.add(1, "day");
     }
     return out;
 }
-
 /**
  * Versión “booleana”: ¿existe al menos 1 slot para ese servicio en ese día
  * y para alguno de los usuarios candidatos?
