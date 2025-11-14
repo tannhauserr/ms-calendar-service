@@ -1,6 +1,5 @@
 import axios, { AxiosResponse } from 'axios';
 import { google, calendar_v3 } from 'googleapis';
-import { TIME_SECONDS } from '../../constant/time';
 import CustomError from '../../models/custom-error/CustomError';
 import { GoogleOAuthStrategy } from '../@redis/cache/strategies/googleOAuth/googleOAuth.strategy';
 import { CalendarGoogleRoleType } from '../../models/interfaces/calendar-google-role';

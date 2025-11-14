@@ -1,13 +1,13 @@
 import express from 'express';
 import { google } from 'googleapis';
-import { CalendarService } from '../../services/@database/calendar/calendar.service';
+// import { CalendarService } from '../../services/@database/calendar/calendar.service';
 import { EventService } from '../../services/@database/event/event.service';
 import { RedisStrategyFactory } from '../../services/@redis/cache/strategies/redisStrategyFactory';
 import { AvoidSameEventStrategy } from '../../services/@redis/cache/strategies/avoidSameEvent/avoidSameEvent.strategy';
 import { TIME_SECONDS } from '../../constant/time';
 import { EventSourceType } from '@prisma/client';
 import { UserCalendarService } from '../../services/@database/user-calendar/user-calendar.service';
-import { ChannelCalendarGoogleController } from '../../controllers/@channel-calendar-google/channel-calendar-google.controller';
+// import { ChannelCalendarGoogleController } from '../../controllers/@channel-calendar-google/channel-calendar-google.controller';
 
 const router = express.Router();
 
@@ -145,15 +145,15 @@ const router = express.Router();
 //     }
 // });
 
-const controller = new ChannelCalendarGoogleController();
-router.post('/webhook/channel/google-calendar', controller.handleWebhookNotification);
+// const controller = new ChannelCalendarGoogleController();
+// router.post('/webhook/channel/google-calendar', controller.handleWebhookNotification);
 
-module.exports = router;
+// module.exports = router;
 
-const getGoogleAuthByCredentials = async () => {
-    const auth = new google.auth.GoogleAuth({
-        keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE,
-        scopes: ['https://www.googleapis.com/auth/calendar'],
-    });
-    return auth;
-}
+// const getGoogleAuthByCredentials = async () => {
+//     const auth = new google.auth.GoogleAuth({
+//         keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE,
+//         scopes: ['https://www.googleapis.com/auth/calendar'],
+//     });
+//     return auth;
+// }

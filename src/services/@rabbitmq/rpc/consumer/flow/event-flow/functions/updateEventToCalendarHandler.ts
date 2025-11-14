@@ -76,19 +76,19 @@ export async function updateEventToCalendarHandler(
     }
 
     // Upsert del calendario
-    const calendar = await prisma.calendar.upsert({
-        where: {
-            idCompanyFk_idWorkspaceFk: {
-                idCompanyFk: idCompany,
-                idWorkspaceFk: idWorkspace,
-            },
-        },
-        update: {},
-        create: {
-            idCompanyFk: idCompany,
-            idWorkspaceFk: idWorkspace,
-        },
-    });
+    // const calendar = await prisma.calendar.upsert({
+    //     where: {
+    //         idCompanyFk_idWorkspaceFk: {
+    //             idCompanyFk: idCompany,
+    //             idWorkspaceFk: idWorkspace,
+    //         },
+    //     },
+    //     update: {},
+    //     create: {
+    //         idCompanyFk: idCompany,
+    //         idWorkspaceFk: idWorkspace,
+    //     },
+    // });
 
     // Armar datos del evento a actualizar
     const eventData: any = {
@@ -101,9 +101,9 @@ export async function updateEventToCalendarHandler(
         commentClient: commentClient.substring(0, 255),
         eventSourceType: EventSourceType.BOT,
         eventStatusType: EventStatusType.CONFIRMED,
-        calendar: {
-            connect: { id: calendar.id }
-        },
+        // calendar: {
+        //     connect: { id: calendar.id }
+        // },
     };
 
     if (idService && Number(idService)) {

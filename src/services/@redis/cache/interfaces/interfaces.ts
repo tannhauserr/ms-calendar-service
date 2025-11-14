@@ -3,7 +3,12 @@ import { GetCategoriesAndServicesResponse } from "../../../../models/rabbitmq/ge
 import { HoursRangeInput, HoursMap } from "../../../@database/all-business-services/interfaces";
 import { ChannelCalendar } from "../../../caledar-googleapi/interfaces/channel-calendar";
 import { UserColorCalendar } from "../../../caledar-googleapi/interfaces/user-color-calendar";
+import { BookingPageBrief } from "./models/booking-brief";
+import { ServiceBrief } from "./models/service-brief";
+import { ClientBrief, ClientWorkspaceBrief } from "./models/client-brief";
 import { Workspace } from "./models/workspace";
+import { WorkspaceBrief } from "./models/workspace-brief";
+import { UserBrief } from "./models/user-brief";
 
 
 
@@ -189,4 +194,130 @@ export interface IRedisRoundRobinStrategy {
         startISO: string;
         endISO: string;
     }): Promise<void>;
+}
+
+
+// Brief
+
+export interface IRedisWorkspaceBriefStrategy {
+    /**
+     * Guarda snapshot de workspace por id.
+     */
+    setWorkspace(workspace: WorkspaceBrief, ttl?: number): Promise<void>;
+
+    /**
+     * Recupera snapshot por id.
+     */
+    getWorkspaceById(idWorkspace: string): Promise<WorkspaceBrief | null>;
+
+    /**
+     * Elimina snapshot.
+     */
+    deleteWorkspace(idWorkspace: string): Promise<void>;
+}
+
+
+export interface IRedisBookingPageBriefStrategy {
+    setBookingPage(page: BookingPageBrief, ttl?: number): Promise<void>;
+    getBookingPageById(idBookingPage: string): Promise<BookingPageBrief | null>;
+    getBookingPagesByWorkspace(idWorkspace: string): Promise<BookingPageBrief[]>;
+    getBookingPageBySlug(idWorkspace: string, slug: string): Promise<BookingPageBrief | null>;
+    deleteBookingPage(idBookingPage: string, idWorkspace: string, slug?: string): Promise<void>;
+}
+
+
+export interface IRedisServiceBriefStrategy {
+    /**
+     * Guarda snapshot de servicio por id, y actualiza índices:
+     * - workspace → [serviceIds]
+     * - company → [serviceIds]
+     * - category → [serviceIds]
+     */
+    setService(service: ServiceBrief, ttl?: number): Promise<void>;
+
+    /**
+     * Recupera snapshot por id.
+     */
+    getServiceById(idService: string): Promise<ServiceBrief | null>;
+
+    /**
+     * Recupera todos los servicios de un workspace.
+     */
+    getServicesByWorkspace(idWorkspace: string): Promise<ServiceBrief[]>;
+
+    /**
+     * Recupera todos los servicios de una company.
+     */
+    getServicesByCompany(idCompany: string): Promise<ServiceBrief[]>;
+
+    /**
+     * Recupera todos los servicios de una categoría.
+     */
+    getServicesByCategory(idCategory: string): Promise<ServiceBrief[]>;
+
+
+    /**
+     * Recupera todos los servicios únicos de múltiples usuarios.
+     */
+    getServicesByUsers(userIds: string[]): Promise<ServiceBrief[]>;
+
+    /**
+     * Borra snapshot e índices derivados.
+     */
+    deleteService(idService: string, idWorkspace: string, idCompany: string, categoryIds?: string[], userIds?: string[]): Promise<void>;
+
+    /**
+     * Invalida todos los servicios de un workspace.
+     */
+    invalidateWorkspaceServices(idWorkspace: string): Promise<void>;
+
+    /**
+     * Invalida todos los servicios de una company.
+     */
+    invalidateCompanyServices(idCompany: string): Promise<void>;
+}
+
+/**
+ * Estrategia Redis para ClientBrief (cache de clientes con workspace data)
+ */
+export interface IRedisClientWorkspaceBriefStrategy {
+    setClientWorkspace(cw: ClientWorkspaceBrief, ttlSec?: number): Promise<void>;
+
+    getClientWorkspaceById(idClientWorkspace: string, idWorkspace?: string): Promise<ClientWorkspaceBrief | null>;
+    getClientWorkspacesByWorkspace(idWorkspace: string): Promise<ClientWorkspaceBrief[]>;
+
+    // Índices útiles
+    getClientWorkspacesByClientId(idClient: string, idWorkspace?: string): Promise<ClientWorkspaceBrief[]>;
+    getClientWorkspaceByEmail(idWorkspace: string, email: string): Promise<ClientWorkspaceBrief | null>;
+    getClientWorkspaceByPhone(idWorkspace: string, e164Phone: string): Promise<ClientWorkspaceBrief | null>;
+
+    deleteClientWorkspace(
+        idClientWorkspace: string,
+        idWorkspace: string,
+        email?: string,
+        phoneE164?: string
+    ): Promise<void>;
+}
+
+export interface IRedisUserBriefStrategy {
+    /**
+     * Guarda un snapshot de usuario en Redis.
+     * Además crea índice email → userId.
+     */
+    setUser(user: UserBrief, ttl?: number): Promise<void>;
+
+    /**
+     * Recupera un snapshot de usuario por su ID.
+     */
+    getUserById(userId: string): Promise<UserBrief | null>;
+
+    /**
+     * Recupera un snapshot de usuario por su email.
+     */
+    getUserByEmail(email: string): Promise<UserBrief | null>;
+
+    /**
+     * Elimina el snapshot y el índice email → id.
+     */
+    deleteUser(userId: string, email: string): Promise<void>;
 }

@@ -42,6 +42,28 @@ export const RabbitMQKeys = {
     pubSubDeleteCalendarRoutingKey: () => "delete.calendar" as const,
     pubSubDeleteNotificationRoutingKey: () => "delete.notification" as const,
 
+    // 🔴 Dead-letter exchange (DLX) común
+    deadLetterExchange: () => "dead_letter_exchange",
+
+    // 🔴 DLQ por cola de delete (las 3 que pediste)
+    pubSubDeleteClientsDLQ: () => "pubsub_delete_clients_queue.dlq",
+    pubSubDeleteCalendarDLQ: () => "pubsub_delete_calendar_queue.dlq",
+    pubSubDeleteNotificationDLQ: () => "pubsub_delete_notification_queue.dlq",
+
+
+    // MS-Notification - Store
+    pubSubNotificationStoreExchange: () => "pubsub_notification_store_exchange",
+
+    pubSubStoreNotificationCreatedRk: () => "store.notification.created" as const,
+    pubSubStoreNotificationDeletedRk: () => "store.notification.deleted" as const,
+
+    // Colas para cada microservicio
+    pubSubStoreNotificationCreatedQueue: () => "pubsub_store_notification_created_queue",
+    pubSubStoreNotificationDeletedQueue: () => "pubsub_store_notification_deleted_queue",
+
+    // Fin MS-Notification - Store
+
+
 
     // Ms-Calendar Recurrence worker  –– main queue, DLQ & routing keys
     pubSubCalendarRecurrenceExchange: () => "calendar_recurrence_exchange",
@@ -49,7 +71,8 @@ export const RabbitMQKeys = {
     pubSubCalendarRecurrenceDLQ: () => "calendar_recurrence_dlq",
     pubSubCalendarRecurrenceRoutingKey: () => "recurrence.op",
 
-    // Ms-Calendar Update Service In Event worker –– main queue, DLQ & routing keys
+
+    // El Ms-BookingPage escucha aquí (Ms-Calendar) para actualizar el servicio en eventos afectados
     pubSubUpdateServiceInEventExchange: () => "pubsub_update_service_in_event_exchange",
     pubSubUpdateServiceInEventQueue: () => "pubsub_update_service_in_event_queue",
     pubSubUpdateServiceInEventDLQ: () => "pubsub_update_service_in_event_dlq",

@@ -4,9 +4,15 @@ import moment from "moment-timezone";
 import { CONSOLE_COLOR } from "../../constant/console-color";
 import prisma from "../../lib/prisma";
 import CustomError from "../../models/custom-error/CustomError";
-import { IRedisSavedWorkspaceStrategy } from "../../services/@redis/cache/interfaces/interfaces";
+import { IRedisBookingPageBriefStrategy, IRedisSavedWorkspaceStrategy, IRedisWorkspaceBriefStrategy } from "../../services/@redis/cache/interfaces/interfaces";
 import { RedisStrategyFactory } from "../../services/@redis/cache/strategies/redisStrategyFactory";
 import * as RPC from "../../services/@rabbitmq/rpc/functions";
+import { BookingPageStatusType } from "../../services/@redis/cache/interfaces/models/booking-brief";
+import { getBookingPageByIds } from "../../services/@service-token-client/api-ms/bookingPage.ms";
+import { TIME_SECONDS } from "../../constant/time";
+import { getWorkspacesByIds } from "../../services/@service-token-client/api-ms/auth.ms";
+import { getClientWorkspacesByClientIds, getClientWorkspacesByIds } from "../../services/@service-token-client/api-ms/client.ms";
+import { config } from "googleapis/build/src/apis/config";
 
 // Ajusta rutas de import a tu proyecto:
 
@@ -20,6 +26,7 @@ export type AttendeeInput = {
 export type BookingInputNormalized = {
     idCompany: string;
     idWorkspace: string;
+    idBookingPage: string;
     startLocalISO: string; // "YYYY-MM-DDTHH:mm:ss"
     timeZoneClient: string;
     attendees: AttendeeInput[];
@@ -37,9 +44,10 @@ export type BookingInputNormalized = {
 export type BookingConfig = any;
 
 export type BookingCtx = {
-    input: BookingInputNormalized;
+    input?: BookingInputNormalized;
 
     workspace?: any;
+    bookingPage?: any;
     config?: BookingConfig;
     timeZoneWorkspace?: string;
 
@@ -109,11 +117,13 @@ export class BookingGuardsMiddleware {
                 const p = req.body ?? {};
 
 
-                console.log("mira que es p", p);
+                // console.log("mira que es p", p);
+                console.log("mira que es p cuando editas", p);
 
-                if (!p?.idCompany || !p?.idWorkspace) {
-                    return this.endBadRequest(res, 400, "Faltan idCompany o idWorkspace", "BookingGuards.BaseValidation");
+                if (!p?.idCompany || !p?.idWorkspace || !p?.idBookingPage) {
+                    return this.endBadRequest(res, 400, "Faltan idCompany o idWorkspace o idBookingPage", "BookingGuards.BaseValidation");
                 }
+
 
                 const hasNew =
                     typeof p?.startLocalISO === "string" &&
@@ -164,6 +174,7 @@ export class BookingGuardsMiddleware {
                 const input = {
                     idCompany: p.idCompany,
                     idWorkspace: p.idWorkspace,
+                    idBookingPage: p.idBookingPage,
                     startLocalISO,
                     timeZoneClient,
                     attendees: p.attendees.map((a: any) => ({
@@ -172,14 +183,17 @@ export class BookingGuardsMiddleware {
                         staffId: a.staffId ?? null,
                         categoryId: a.categoryId ?? null,
                     })),
-                    excludeEventId: p.excludeEventId,
-                    note: p.note,
+                    excludeEventId: p?.excludeEventId,
+                    note: p?.note,
                     customer: {
                         id: p?.customer?.id,
                         name: p?.customer?.name,
                         phone: p?.customer?.phone,
                         email: p?.customer?.email,
                     },
+                    // Usado en editar reservas
+                    idEvent: p?.idEvent,
+                    deletedEventIds: p?.deletedEventIds,
                 };
 
                 req.booking = { ctx: { input } };
@@ -190,6 +204,7 @@ export class BookingGuardsMiddleware {
         };
     }
 
+
     /* ─────────────────────────────────────
        2) WORKSPACE: cache/RPC + tz + config
     ────────────────────────────────────── */
@@ -198,27 +213,76 @@ export class BookingGuardsMiddleware {
             try {
                 const ctx = req.booking!.ctx;
                 const { idWorkspace } = ctx.input;
-
-                const savedWorkspace = RedisStrategyFactory.getStrategy("savedWorkspace") as IRedisSavedWorkspaceStrategy;
-                let workspace = await savedWorkspace.getSavedWorkspaceByIdWorkspace(idWorkspace);
+                console.log("resolviendo workspace para idWorkspace", idWorkspace);
+                const workspaceBriefStrategy = RedisStrategyFactory.getStrategy("workspaceBrief") as IRedisWorkspaceBriefStrategy;
+                // let workspace: any = await workspaceBriefStrategy.getSavedWorkspaceByIdWorkspace(idWorkspace);
+                console.log("buscando workspace en cache");
+                let workspace = null;
                 if (!workspace) {
-                    const rpcRes: any = await RPC.getEstablishmentByIdForFlow(idWorkspace);
-                    workspace = rpcRes?.workspace ?? null;
+                    // const rpcRes: any = await RPC.getEstablishmentByIdForFlow(idWorkspace);
+                    const workspaceRes = await getWorkspacesByIds([idWorkspace]);
+                    console.log("buscando workspace en DB");
+                    workspace = workspaceRes?.[0] ?? null;
                     if (workspace?.id) {
-                        await savedWorkspace.setSavedWorkspaceByIdWorkspace(workspace.id, workspace, 60 * 60);
+                        // await savedWorkspace.setSavedWorkspaceByIdWorkspace(workspace.id, workspace, 60 * 60);
+                        await workspaceBriefStrategy.setWorkspace(workspace, TIME_SECONDS.HOUR);
+
                     }
                 }
 
+                console.log("mira que es workspace", workspace?.id);
                 if (!workspace?.timeZone) {
                     return this.endBadRequest(res, 400, "No se pudo resolver el timezone del workspace", "BookingGuards.ResolveWorkspace");
                 }
 
-                console.log("esto es workspace", workspace);
+                // console.log("esto es workspace", workspace);
 
                 ctx.workspace = workspace;
                 // tu config vive en workspace.config (o bookingConfig según casos)
-                ctx.config = workspace?.config ?? {};
+                // ctx.config = workspace?.config ?? {};
                 ctx.timeZoneWorkspace = workspace.timeZone;
+
+                return next();
+            } catch (error: any) {
+                return next(new CustomError("BookingGuards.ResolveWorkspace", error));
+            }
+        };
+    }
+
+    /* ─────────────────────────────────────
+    2.5) BookingPage Obtiene la configuración específica de la página de reservas
+ ────────────────────────────────────── */
+    static ResolveBookingPage() {
+        return async (req: Request, res: Response, next: NextFunction) => {
+            try {
+                const ctx = req.booking!.ctx;
+                const { idBookingPage } = ctx.input;
+
+
+
+
+                const bookingPageStrategy = RedisStrategyFactory.getStrategy("bookingPageBrief") as IRedisBookingPageBriefStrategy;
+                let bp = await bookingPageStrategy.getBookingPageById(idBookingPage);
+                if (!bp) {
+                    console.log("no está en cache, voy a buscarlo rpc");
+                    // const rpcRes: any = await RPC.getEstablishmentByIdForFlow(idBookingPage);
+                    const briefResponse = await getBookingPageByIds([idBookingPage], ctx.input.idWorkspace);
+                    bp = briefResponse?.[0] ?? null;
+                    if (bp?.id) {
+                        // await savedWorkspace.setSavedWorkspaceByIdWorkspace(workspace.id, workspace, 60);
+                        await bookingPageStrategy.setBookingPage(bp, TIME_SECONDS.HOUR);
+                    }
+                }
+                console.log("mira que es bp2", bp?.id);
+
+                if (bp?.bookingPageStatusType !== ("PUBLISHED" as BookingPageStatusType)) {
+                    return this.endBadRequest(res, 400, "La página de reservas no está publicada", "BookingGuards.ResolveBookingPage");
+                }
+
+
+                // console.log("esto es bookingPage", bp);
+                ctx.bookingPage = bp;
+                ctx.config = bp?.bookingPageConfJson ?? {};
 
                 return next();
             } catch (error: any) {
@@ -234,20 +298,46 @@ export class BookingGuardsMiddleware {
         return async (req: Request, res: Response, next: NextFunction) => {
             try {
                 const ctx = req.booking!.ctx;
-                const { idWorkspace, idCompany, customer } = ctx.input;
+                const { idWorkspace, customer, idCompany } = ctx.input;
 
-                const list = await RPC.getClientstByIdClientAndIdWorkspace(idWorkspace, [customer.id]);
+                console.log("mira el workspace id que llega", idWorkspace);
+                console.log("mira el customer id que llega", customer?.id);
+
+                if (!customer?.id) {
+                    return this.endBadRequest(res, 400, "No se pudo resolver el cliente", "BookingGuards.ResolveClientWorkspace");
+                }
+
+                if (!idWorkspace) {
+                    return this.endBadRequest(res, 400, "No se pudo resolver el workspace", "BookingGuards.ResolveClientWorkspace");
+                }
+
+                // Usar el cliente MS en lugar del RPC
+                const list = await getClientWorkspacesByClientIds([customer?.id], idWorkspace);
+                // console.log("mira que es list", list);
                 if (!list || list.length !== 1) {
                     return this.endBadRequest(res, 400, "No se encontró el cliente en el workspace", "BookingGuards.ResolveClientWorkspace");
                 }
 
-                ctx.customer = { idClient: customer.id, idClientWorkspace: list[0]?.id };
+                console.log(`${CONSOLE_COLOR.BgYellow}[BookingGuards.ResolveClientWorkspace] Cliente resuelto en workspace${CONSOLE_COLOR.Reset}`);
+                console.log("mira que es customer", customer);
+                console.log("mira que es idWorkspace", idWorkspace);
+
+                console.log(`${CONSOLE_COLOR.BgMagenta}[BookingGuards.ResolveClientWorkspace] Lista de clientWorkspaces obtenida:${CONSOLE_COLOR.Reset}`, list);
+                const clientWorkspace = list[0];
+                ctx.customer = {
+                    idClient: clientWorkspace.idClientFk || customer.id,
+                    idClientWorkspace: clientWorkspace.id
+                };
+
+                console.log(`${CONSOLE_COLOR.BgGreen}[BookingGuards.ResolveClientWorkspace] Cliente resuelto en workspace${CONSOLE_COLOR.Reset}`, ctx.customer);
+
                 return next();
             } catch (error: any) {
                 return next(new CustomError("BookingGuards.ResolveClientWorkspace", error));
             }
         };
     }
+
 
     /* ─────────────────────────────────────
        4) REGLAS DE TIEMPO (ventana / lead times)
@@ -311,6 +401,110 @@ export class BookingGuardsMiddleware {
     /* ─────────────────────────────────────
        5) LÍMITES POR USUARIO (día / concurrentes)
     ────────────────────────────────────── */
+    // static EnforceUserLimits() {
+    //     return async (req: Request, res: Response, next: NextFunction) => {
+    //         try {
+    //             const ctx = req.booking!.ctx;
+
+    //             // ---- Limits con defaults seguros
+    //             const lim = (ctx.config?.limits ?? {}) as {
+    //                 perUserPerDay?: number;
+    //                 perUserConcurrent?: number;
+    //                 maxServicesPerBooking?: number;
+    //             };
+
+    //             // Si no lo configuras, aplicamos estas políticas por defecto:
+    //             const maxServicesPerBooking = Number.isFinite(lim.maxServicesPerBooking)
+    //                 ? Number(lim.maxServicesPerBooking)
+    //                 : 1; // ⬅️ por defecto, 1 servicio por reserva
+
+    //             const perUserPerDay = Number.isFinite(lim.perUserPerDay)
+    //                 ? Number(lim.perUserPerDay)
+    //                 : 1; // ⬅️ por defecto, 1 cita al día
+
+    //             const perUserConcurrent = Number.isFinite(lim.perUserConcurrent)
+    //                 ? Number(lim.perUserConcurrent)
+    //                 : 0; // 0 = sin límite concurrente por defecto
+
+    //             // ---- (A) Chequeo: servicios por reserva
+    //             const servicesCount = ctx.input.attendees.length;
+    //             if (maxServicesPerBooking > 0 && servicesCount > maxServicesPerBooking) {
+    //                 return this.endBadRequest(
+    //                     res,
+    //                     400,
+    //                     `Solo se permiten ${maxServicesPerBooking} servicio(s) por reserva.`,
+    //                     "BookingGuards.EnforceUserLimits"
+    //                 );
+    //             }
+
+    //             // Si no tenemos cliente o ventana temporal calculada, continúa
+    //             if (!ctx.customer || !ctx.when) {
+    //                 return next();
+    //             }
+
+    //             const { idClientWorkspace } = ctx.customer;
+    //             const slotStartWS = ctx.when.startWS.clone();
+    //             const slotEndWS = ctx.when.endWS!.clone();
+
+    //             // Rangos día en WS → a UTC para query
+    //             const dayStartUTC = slotStartWS.clone().startOf("day").utc().toDate();
+    //             const dayEndUTC = slotStartWS.clone().endOf("day").utc().toDate();
+
+    //             const slotStartUTC = slotStartWS.clone().utc().toDate();
+    //             const slotEndUTC = slotEndWS.clone().utc().toDate();
+
+    //             const reasons: string[] = [];
+
+    //             // ---- (B) Chequeo: límite de citas por día
+    //             if (perUserPerDay > 0) {
+    //                 const countDay = await prisma.eventParticipant.count({
+    //                     where: {
+    //                         idClientWorkspaceFk: idClientWorkspace,
+    //                         deletedDate: null,
+    //                         event: {
+    //                             deletedDate: null,
+    //                             startDate: { lt: dayEndUTC },
+    //                             endDate: { gt: dayStartUTC },
+    //                         },
+    //                     },
+    //                 });
+
+    //                 if (countDay >= perUserPerDay) {
+    //                     reasons.push(`Has alcanzado el máximo de citas por día (${countDay}/${perUserPerDay}).`);
+    //                 }
+    //             }
+
+    //             // ---- (C) Chequeo: solapes concurrentes (opcional)
+    //             if (perUserConcurrent > 0) {
+    //                 const overlappingCount = await prisma.eventParticipant.count({
+    //                     where: {
+    //                         idClientWorkspaceFk: idClientWorkspace,
+    //                         deletedDate: null,
+    //                         event: {
+    //                             deletedDate: null,
+    //                             startDate: { lt: slotEndUTC },
+    //                             endDate: { gt: slotStartUTC },
+    //                         },
+    //                     },
+    //                 });
+
+    //                 if (overlappingCount >= perUserConcurrent) {
+    //                     reasons.push(`Límite de reservas simultáneas alcanzado (${overlappingCount}/${perUserConcurrent}).`);
+    //                 }
+    //             }
+
+    //             if (reasons.length > 0) {
+    //                 // 409: reglas del negocio infringidas
+    //                 return this.endBadRequest(res, 409, reasons.join(" "), "BookingGuards.EnforceUserLimits");
+    //             }
+
+    //             return next();
+    //         } catch (error: any) {
+    //             return next(new CustomError("BookingGuards.EnforceUserLimits", error));
+    //         }
+    //     };
+    // }
+
     static EnforceUserLimits() {
         return async (req: Request, res: Response, next: NextFunction) => {
             try {
@@ -323,6 +517,8 @@ export class BookingGuardsMiddleware {
                     maxServicesPerBooking?: number;
                 };
 
+                console.log(`${CONSOLE_COLOR.FgCyan}[BookingGuards.EnforceUserLimits] ${ctx?.config}${CONSOLE_COLOR.Reset}`);
+
                 // Si no lo configuras, aplicamos estas políticas por defecto:
                 const maxServicesPerBooking = Number.isFinite(lim.maxServicesPerBooking)
                     ? Number(lim.maxServicesPerBooking)
@@ -330,7 +526,7 @@ export class BookingGuardsMiddleware {
 
                 const perUserPerDay = Number.isFinite(lim.perUserPerDay)
                     ? Number(lim.perUserPerDay)
-                    : 1; // ⬅️ por defecto, 1 cita al día
+                    : 1; // ⬅️ por defecto, 1 reserva al día
 
                 const perUserConcurrent = Number.isFinite(lim.perUserConcurrent)
                     ? Number(lim.perUserConcurrent)
@@ -365,9 +561,13 @@ export class BookingGuardsMiddleware {
 
                 const reasons: string[] = [];
 
-                // ---- (B) Chequeo: límite de citas por día
+                // Helper para calcular el identificador de "reserva" (booking)
+                const bookingKeyFromEvent = (ev: { id: string; idGroup: string | null }) =>
+                    ev.idGroup ? `g:${ev.idGroup}` : `e:${ev.id}`;
+
+                // ---- (B) Chequeo: límite de reservas por día (NO por servicios)
                 if (perUserPerDay > 0) {
-                    const countDay = await prisma.eventParticipant.count({
+                    const dayParticipations = await prisma.eventParticipant.findMany({
                         where: {
                             idClientWorkspaceFk: idClientWorkspace,
                             deletedDate: null,
@@ -377,16 +577,36 @@ export class BookingGuardsMiddleware {
                                 endDate: { gt: dayStartUTC },
                             },
                         },
+                        select: {
+                            event: {
+                                select: {
+                                    id: true,
+                                    idGroup: true,
+                                },
+                            },
+                        },
                     });
 
-                    if (countDay >= perUserPerDay) {
-                        reasons.push(`Has alcanzado el máximo de citas por día (${countDay}/${perUserPerDay}).`);
+                    const bookingIdsDay = new Set<string>();
+
+                    for (const p of dayParticipations) {
+                        const ev = p.event;
+                        if (!ev) continue;
+                        bookingIdsDay.add(bookingKeyFromEvent(ev));
+                    }
+
+                    const countDayBookings = bookingIdsDay.size;
+
+                    if (countDayBookings >= perUserPerDay) {
+                        reasons.push(
+                            `Has alcanzado el máximo de reservas por día (${countDayBookings}/${perUserPerDay}).`
+                        );
                     }
                 }
 
-                // ---- (C) Chequeo: solapes concurrentes (opcional)
+                // ---- (C) Chequeo: límite de reservas simultáneas (NO por servicios)
                 if (perUserConcurrent > 0) {
-                    const overlappingCount = await prisma.eventParticipant.count({
+                    const overlappingParticipations = await prisma.eventParticipant.findMany({
                         where: {
                             idClientWorkspaceFk: idClientWorkspace,
                             deletedDate: null,
@@ -396,16 +616,41 @@ export class BookingGuardsMiddleware {
                                 endDate: { gt: slotStartUTC },
                             },
                         },
+                        select: {
+                            event: {
+                                select: {
+                                    id: true,
+                                    idGroup: true,
+                                },
+                            },
+                        },
                     });
 
-                    if (overlappingCount >= perUserConcurrent) {
-                        reasons.push(`Límite de reservas simultáneas alcanzado (${overlappingCount}/${perUserConcurrent}).`);
+                    const bookingIdsOverlap = new Set<string>();
+
+                    for (const p of overlappingParticipations) {
+                        const ev = p.event;
+                        if (!ev) continue;
+                        bookingIdsOverlap.add(bookingKeyFromEvent(ev));
+                    }
+
+                    const overlappingBookings = bookingIdsOverlap.size;
+
+                    if (overlappingBookings >= perUserConcurrent) {
+                        reasons.push(
+                            `Límite de reservas simultáneas alcanzado (${overlappingBookings}/${perUserConcurrent}).`
+                        );
                     }
                 }
 
                 if (reasons.length > 0) {
                     // 409: reglas del negocio infringidas
-                    return this.endBadRequest(res, 409, reasons.join(" "), "BookingGuards.EnforceUserLimits");
+                    return this.endBadRequest(
+                        res,
+                        409,
+                        reasons.join(" "),
+                        "BookingGuards.EnforceUserLimits"
+                    );
                 }
 
                 return next();
@@ -444,6 +689,93 @@ export class BookingGuardsMiddleware {
                 return next();
             } catch (error: any) {
                 return next(new CustomError("BookingGuards.FeatureFlagsAndIdempotency", error));
+            }
+        };
+    }
+
+
+
+
+    // Nuevos middlewares aquí...
+    /**
+ * Contexto mínimo común para endpoints de cliente/consultas.
+ *
+ * - NO valida slots ni attendees.
+ * - Solo exige:
+ *    - idWorkspace
+ *    - customer.id (igual que ResolveClientWorkspace)
+ * - Deja opcionales idCompany / idBookingPage / meta adicionales.
+ *
+ * Resultado:
+ *   req.booking.ctx.input = {
+ *     idWorkspace,
+ *     idCompany?,
+ *     idBookingPage?,
+ *     customer: { id, name?, email?, phone? },
+ *     extra: { ... } // opcional, passthrough
+ *   }
+ */
+    static BaseContextSimple() {
+        return (req: Request, res: Response, next: NextFunction) => {
+            try {
+                const p = req.body ?? {};
+
+                // idWorkspace obligatorio
+                if (!p?.idWorkspace) {
+                    return this.endBadRequest(
+                        res,
+                        400,
+                        "Falta idWorkspace",
+                        "BookingGuards.BaseContextSimple"
+                    );
+                }
+
+                // customer con al menos id (compatible con ResolveClientWorkspace)
+                const customer = p?.customer ?? {};
+                if (!customer?.id) {
+                    return this.endBadRequest(
+                        res,
+                        400,
+                        "Falta customer.id",
+                        "BookingGuards.BaseContextSimple"
+                    );
+                }
+                
+                // Construimos input "ligero"
+                const input: any = {
+                    idWorkspace: p.idWorkspace,
+                    idEvent: p.idEvent ?? undefined, // opcional
+                    // opcionales: no rompemos nada si vienen
+                    // idCompany: p?.idCompany,
+                    // idBookingPage: p?.idBookingPage,
+                    customer: {
+                        id: customer.id,
+                        name: customer.name,
+                        email: customer.email,
+                        phone: customer.phone,
+                    },
+                    // cualquier cosa adicional que quieras pasar sin validar fuerte
+                    extra: p.extra ?? undefined,
+                };
+
+                if (!req.booking) {
+                    (req as any).booking = {};
+                }
+
+                req.booking.ctx = {
+                    ...(req.booking.ctx || {}),
+                    input,
+                };
+
+                return next();
+            } catch (error: any) {
+                return this.endBadRequest(
+                    res,
+                    400,
+                    "Bad request",
+                    "BookingGuards.BaseContextSimple",
+                    error
+                );
             }
         };
     }

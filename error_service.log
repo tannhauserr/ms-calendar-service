@@ -1,19 +1,390 @@
 
     =====================================================
-    Date: 2025-09-09T13:55:48.146Z
-    Service: BookingGuards.ResolveWorkspace
-    Error Message: Error during RPC calls. getCategoriesServicesUserForFlow
-    Stack Trace: Error: Error during RPC calls. getCategoriesServicesUserForFlow
-    at Object.getEstablishmentByIdForFlow (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@rabbitmq/rpc/functions/flows/getEstablishmentListByIdForFlow.ts:70:15)
-    at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/middlewares/booiking-guard/booking-guard.middleware.ts:205:41
+    Date: 2025-11-12T13:35:25.016Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:239:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:207:28)
     =====================================================
     
     =====================================================
-    Date: 2025-09-09T13:58:35.132Z
-    Service: BookingGuards.ResolveWorkspace
-    Error Message: Error during RPC calls. getCategoriesServicesUserForFlow
-    Stack Trace: Error: Error during RPC calls. getCategoriesServicesUserForFlow
-    at Object.getEstablishmentByIdForFlow (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@rabbitmq/rpc/functions/flows/getEstablishmentListByIdForFlow.ts:70:15)
-    at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/middlewares/booiking-guard/booking-guard.middleware.ts:205:41
+    Date: 2025-11-12T13:36:25.546Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:240:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:207:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-12T13:37:01.478Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:240:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:207:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-12T13:37:10.293Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:240:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:207:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-12T13:37:17.380Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:240:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:207:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-12T13:45:07.030Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:240:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:219:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-12T13:45:07.313Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:240:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:219:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-12T13:51:03.900Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:240:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:219:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-12T16:19:49.048Z
+    Service: Error al actualizar evento
+    Error Message: Update desde web solo soporta un servicio en esta versión.
+    Stack Trace: Error: Update desde web solo soporta un servicio en esta versión.
+    at ClientEventService.updateEventFromWebBase (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:984:23)
+    at ClientEventService.updateSingleEventFromWeb (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:918:21)
+    at ClientEventController.updateFromWeb (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:106:47)
+    at Layer.handle [as handle_request] (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/express/lib/router/route.js:149:13)
+    at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/middlewares/booiking-guard/booking-guard.middleware.ts:387:24
+    at Layer.handle [as handle_request] (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/express/lib/router/route.js:149:13)
+    at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/middlewares/booiking-guard/booking-guard.middleware.ts:327:24
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-12T17:01:39.709Z
+    Service: TemporaryBusinessHour.getTemporaryHoursFromRedis
+    Error Message: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    Stack Trace: TypeError: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    at TemporaryBusinessHourService.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:629:21)
+    at TemporaryBusinessHourController.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:163:63)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-12T17:02:02.743Z
+    Service: TemporaryBusinessHour.getTemporaryHoursFromRedis
+    Error Message: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    Stack Trace: TypeError: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    at TemporaryBusinessHourService.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:629:21)
+    at TemporaryBusinessHourController.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:163:63)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-12T17:02:29.366Z
+    Service: TemporaryBusinessHour.getTemporaryHoursFromRedis
+    Error Message: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    Stack Trace: TypeError: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    at TemporaryBusinessHourService.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:629:21)
+    at TemporaryBusinessHourController.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:163:63)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-12T17:53:50.632Z
+    Service: TemporaryBusinessHour.getTemporaryHoursFromRedis
+    Error Message: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    Stack Trace: TypeError: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    at TemporaryBusinessHourService.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:629:21)
+    at TemporaryBusinessHourController.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:163:63)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T10:41:40.360Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:241:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:329:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T10:42:26.458Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:241:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:329:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T10:42:47.825Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:241:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:329:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T10:43:08.812Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:241:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:329:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T10:43:09.247Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:241:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:329:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T10:43:37.618Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:241:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:329:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T10:43:39.517Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:241:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:329:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T10:45:16.123Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:241:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:329:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T10:45:29.831Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:241:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:329:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T10:46:09.217Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:241:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:329:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T12:51:07.982Z
+    Service: TemporaryBusinessHour.getTemporaryHoursFromRedis
+    Error Message: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    Stack Trace: TypeError: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    at TemporaryBusinessHourService.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:629:21)
+    at TemporaryBusinessHourController.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:163:63)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T13:00:59.829Z
+    Service: TemporaryBusinessHour.getTemporaryHoursFromRedis
+    Error Message: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    Stack Trace: TypeError: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    at TemporaryBusinessHourService.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:629:21)
+    at TemporaryBusinessHourController.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:163:63)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T16:00:51.559Z
+    Service: ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace
+    Error Message: Evento no encontrado o no pertenece al cliente
+    Stack Trace: Error: Evento no encontrado o no pertenece al cliente
+    at ClientEventService.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:459:23)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:347:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T16:19:47.232Z
+    Service: TemporaryBusinessHour.getTemporaryHoursFromRedis
+    Error Message: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    Stack Trace: TypeError: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    at TemporaryBusinessHourService.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:629:21)
+    at TemporaryBusinessHourController.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:163:63)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T17:15:10.151Z
+    Service: JWTService.verify
+    Error Message: Token expirado
+    Stack Trace: Error: Token expirado
+    at JWTService.verify (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/jwt/jwt.service.ts:118:60)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/event/client-event.controller.ts:344:13)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T17:43:30.040Z
+    Service: Error al crear evento
+    Error Message: 
+Invalid `tx.event.updateMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:1531:36
+
+  1528 const firstId = eventsCreated[0].id;
+  1529 const ids = eventsCreated.map((e) => e.id);
+  1530 
+→ 1531 await tx.event.updateMany({
+         where: {
+           id: {
+             in: [
+               undefined,
+               ~~~~~~~~~
+               undefined
+             ]
+           }
+         },
+         data: {
+           idGroup: undefined
+         }
+       })
+
+Invalid value for argument `in[0]`: Can not use `undefined` value within array. Use `null` or filter out `undefined` values.
+    Stack Trace: PrismaClientValidationError: 
+Invalid `tx.event.updateMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/event/client-event.service.ts:1531:36
+
+  1528 const firstId = eventsCreated[0].id;
+  1529 const ids = eventsCreated.map((e) => e.id);
+  1530 
+→ 1531 await tx.event.updateMany({
+         where: {
+           id: {
+             in: [
+               undefined,
+               ~~~~~~~~~
+               undefined
+             ]
+           }
+         },
+         data: {
+           idGroup: undefined
+         }
+       })
+
+Invalid value for argument `in[0]`: Can not use `undefined` value within array. Use `null` or filter out `undefined` values.
+    at wn (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:29:1363)
+    at e.throwValidationError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:29:10206)
+    at od (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:29:9323)
+    at sa (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:29:8075)
+    at aa (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:29:8908)
+    at sa (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:29:8439)
+    at aa (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:29:8908)
+    at sa (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:29:8439)
+    at aa (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:29:8908)
+    at mr (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:29:6037)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T18:28:47.763Z
+    Service: TemporaryBusinessHour.getTemporaryHoursFromRedis
+    Error Message: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    Stack Trace: TypeError: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    at TemporaryBusinessHourService.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:629:21)
+    at TemporaryBusinessHourController.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:163:63)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T20:18:58.242Z
+    Service: TemporaryBusinessHour.getTemporaryHoursFromRedis
+    Error Message: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    Stack Trace: TypeError: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    at TemporaryBusinessHourService.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:629:21)
+    at TemporaryBusinessHourController.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:163:63)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-13T20:28:55.419Z
+    Service: TemporaryBusinessHour.getTemporaryHoursFromRedis
+    Error Message: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    Stack Trace: TypeError: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    at TemporaryBusinessHourService.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:629:21)
+    at TemporaryBusinessHourController.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:163:63)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-14T15:43:12.106Z
+    Service: TemporaryBusinessHour.getTemporaryHoursFromRedis
+    Error Message: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    Stack Trace: TypeError: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    at TemporaryBusinessHourService.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:629:21)
+    at TemporaryBusinessHourController.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:163:63)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-14T16:10:34.230Z
+    Service: TemporaryBusinessHour.getTemporaryHoursFromRedis
+    Error Message: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    Stack Trace: TypeError: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    at TemporaryBusinessHourService.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:629:21)
+    at TemporaryBusinessHourController.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:163:63)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    =====================================================
+    
+    =====================================================
+    Date: 2025-11-14T16:10:47.701Z
+    Service: TemporaryBusinessHour.getTemporaryHoursFromRedis
+    Error Message: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    Stack Trace: TypeError: Cannot destructure property 'start' of '(0 , interfaces_1.normalizeRange)(...)' as it is undefined.
+    at TemporaryBusinessHourService.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:629:21)
+    at TemporaryBusinessHourController.getTemporaryHoursFromRedis (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:163:63)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
     =====================================================
     

@@ -156,9 +156,12 @@ export class OnlyAdminMiddleware {
                 }
             }
 
+            console.log("Pasa el middleware");
+
             next();
         }
         catch (err) {
+            console.log("Error en el middleware");
             console.error(err);
             res.status(500).json({ message: "Hubo un error al enviar el token" });
         }
