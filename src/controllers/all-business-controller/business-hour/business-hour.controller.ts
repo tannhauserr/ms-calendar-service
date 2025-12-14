@@ -1,5 +1,6 @@
 import { Response } from "../../../models/messages/response";
 import { BusinessHourService } from "../../../services/@database/all-business-services/business-hours/business-hours.service";
+import { BusinessHoursStrategy } from "../../../services/@redis/cache/strategies/businessHours/businessHours.strategy";
 import { JWTService } from "../../../services/jwt/jwt.service";
 
 
@@ -21,6 +22,11 @@ export class BusinessHourController {
             await this.jwtBusinessHour.verify(token);
 
             const result = await this.businessHourBusinessHour.addBusinessHour(body);
+            const businessHoursStrategy = new BusinessHoursStrategy();
+            if (body?.idWorkspaceFk) {
+                await businessHoursStrategy.deleteBusinessHours(body.idWorkspaceFk);
+            }
+
             res.status(200).json(Response.build("Registro creado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -73,6 +79,11 @@ export class BusinessHourController {
             await this.jwtBusinessHour.verify(token);
 
             const result = await this.businessHourBusinessHour.updateBusinessHour(body);
+            const businessHoursStrategy = new BusinessHoursStrategy();
+            if (body?.idWorkspaceFk) {
+                await businessHoursStrategy.deleteBusinessHours(body.idWorkspaceFk);
+            }
+
             res.status(200).json(Response.build("Registro actualizado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -96,8 +107,24 @@ export class BusinessHourController {
         try {
             const { idCompany, idWorkspace } = req.body;
 
+            console.log("llego aqui para algo?", idCompany, idWorkspace);
+
             const token = req.token;
             await this.jwtBusinessHour.verify(token);
+
+            const result = await this.businessHourBusinessHour.getBusinessHoursFromRedis(idCompany, idWorkspace);
+            res.status(200).json(Response.build("Registros encontrados", 200, true, result));
+        } catch (err: any) {
+            res.status(500).json({ message: err.message });
+        }
+    }
+
+
+    public getBusinessHoursFromRedis_internalMS = async (req: any, res: any, next: any) => {
+        try {
+            const { idCompany, idWorkspace } = req.body;
+
+            console.log("llego aqui para algo?", idCompany, idWorkspace);
 
             const result = await this.businessHourBusinessHour.getBusinessHoursFromRedis(idCompany, idWorkspace);
             res.status(200).json(Response.build("Registros encontrados", 200, true, result));

@@ -11,14 +11,12 @@ import { EventV2Service } from "../../services/@database/event/eventv2.service";
 import { IcsMeta, buildIcs } from "../../services/@database/event/util/build-ics";
 import { _getServicesSnapshotById } from "../../services/@database/event/util/getInfoServices";
 
-import * as RPC from "../../services/@rabbitmq/rpc/functions";
-import { IRedisBookingPageBriefStrategy, IRedisSavedWorkspaceStrategy, IRedisWorkspaceBriefStrategy } from "../../services/@redis/cache/interfaces/interfaces";
+import { IRedisBookingPageBriefStrategy, IRedisWorkspaceBriefStrategy } from "../../services/@redis/cache/interfaces/interfaces";
+import { BookingPageStatusType } from "../../services/@redis/cache/interfaces/models/booking-brief";
 import { Workspace } from "../../services/@redis/cache/interfaces/models/workspace";
 import { RedisStrategyFactory } from "../../services/@redis/cache/strategies/redisStrategyFactory";
 import { getWorkspacesByIds } from "../../services/@service-token-client/api-ms/auth.ms";
 import { getBookingPageByIds, getServiceByIds } from "../../services/@service-token-client/api-ms/bookingPage.ms";
-import { BookingPageStatusType } from "../../services/@redis/cache/interfaces/models/booking-brief";
-import { time } from "console";
 
 export class PublicEventController {
     public eventService: EventV2Service;
@@ -132,9 +130,6 @@ export class PublicEventController {
             //   attendees: [{ serviceId, durationMin, staffId?: string|null, categoryId?: string }],
             //   excludeEventId?: string
             // }
-
-
-
             const payload = req.body;
             const idBookingPage = payload?.idBookingPage;
             const idWorkspace = payload?.idWorkspace;
@@ -142,23 +137,24 @@ export class PublicEventController {
             console.log("mira que es payload en available days get", payload);
 
 
-            const bookingPageStrategy = RedisStrategyFactory.getStrategy("bookingPageBrief") as IRedisBookingPageBriefStrategy;
-            let bp = await bookingPageStrategy.getBookingPageById(idBookingPage);
-            if (!bp) {
-                console.log("no está en cache, voy a buscarlo rpc");
-                // const rpcRes: any = await RPC.getEstablishmentByIdForFlow(idBookingPage);
-                const briefResponse = await getBookingPageByIds([idBookingPage], idWorkspace);
-                bp = briefResponse?.[0] ?? null;
-                if (bp?.id) {
-                    // await savedWorkspace.setSavedWorkspaceByIdWorkspace(workspace.id, workspace, 60);
-                    await bookingPageStrategy.setBookingPage(bp, TIME_SECONDS.HOUR);
-                }
-            }
-            console.log("mira que es bp2", bp);
+            // const bookingPageStrategy = RedisStrategyFactory.getStrategy("bookingPageBrief") as IRedisBookingPageBriefStrategy;
+            // let bp = await bookingPageStrategy.getBookingPageById(idBookingPage);
+            // if (!bp) {
+            //     console.log("no está en cache, voy a buscarlo rpc");
+            //     // const rpcRes: any = await RPC.getEstablishmentByIdForFlow(idBookingPage);
+            //     const briefResponse = await getBookingPageByIds([idBookingPage], idWorkspace);
+            //     bp = briefResponse?.[0] ?? null;
+            //     if (bp?.id) {
+            //         // await savedWorkspace.setSavedWorkspaceByIdWorkspace(workspace.id, workspace, 60);
+            //         await bookingPageStrategy.setBookingPage(bp, TIME_SECONDS.HOUR);
+            //     }
+            // }
 
-            if (bp?.bookingPageStatusType !== ("PUBLISHED" as BookingPageStatusType)) {
-                return res.status(400).json({ message: "La página de reservas no está publicada" });
-            }
+
+            // Esto está mal, ya que va por workspace y no por bookingPage.
+            // if (bp?.bookingPageStatusType !== ("PUBLISHED" as BookingPageStatusType)) {
+            //     return res.status(400).json({ message: "La página de reservas no está publicada" });
+            // }
 
             const workspaceBriefStrategy = RedisStrategyFactory.getStrategy("workspaceBrief") as IRedisWorkspaceBriefStrategy;
             let workspace = null;
@@ -171,6 +167,8 @@ export class PublicEventController {
                 }
             }
 
+            const config = workspace?.config || workspace?.generalConfigJson || {};
+            workspace.config = config;
 
             const result = await this.eventService.publicGetAvailableDays(
                 {
@@ -184,7 +182,7 @@ export class PublicEventController {
                     businessHoursService: this.businessHoursService,
                     workerHoursService: this.workerHoursService,
                     temporaryHoursService: this.temporaryHoursService,
-                    bookingConfig: bp?.bookingPageConfJson ?? undefined,
+                    bookingConfig: config,
                 }
 
             );
@@ -204,12 +202,7 @@ export class PublicEventController {
         try {
             const payload = req.body;
 
-
             // console.log("mira que es payload en times get", payload);
-
-
-
-
             // Validación básica
             if (!payload?.idCompany || !payload?.idWorkspace || !payload?.idBookingPage) {
                 return res.status(400).json({ message: "Faltan idCompany, idWorkspace o idBookingPage" });
@@ -289,7 +282,7 @@ export class PublicEventController {
             );
 
             // console.log("mira que es result aaa", result);
-            
+
             return res
                 .status(200)
                 .json(Response.build("Horarios disponibles", 200, true, result || { timeSlots: [], dayStatus: "no" }));
@@ -384,6 +377,136 @@ export class PublicEventController {
             console.log(`${CONSOLE_COLOR.FgGreen} /event/ics completed ${CONSOLE_COLOR.Reset}`);
             res.setHeader("Content-Type", "text/calendar; charset=utf-8");
             res.setHeader("Content-Disposition", `attachment; filename=event-${event.id}.ics`);
+            return res.status(200).send(icsString);
+        } catch (err: any) {
+            console.error(err);
+            return res.status(500).json({ ok: false, message: err?.message || "Internal error" });
+        }
+    }
+
+    getICSByGroup = async (req: any, res: any) => {
+        try {
+            console.log(`${CONSOLE_COLOR.FgYellow} /event/ics-group called ${CONSOLE_COLOR.Reset}`);
+
+            const idGroup =
+                req.params?.idGroup ||
+                req.query?.idGroup ||
+                req.body?.idGroup;
+
+            if (!idGroup) {
+                return res.status(400).json({ ok: false, message: "idGroup (string) is required" });
+            }
+
+            // 1) Events del grupo
+            const events: Array<Event & { eventParticipant: { id: string; idClientFk: string; idClientWorkspaceFk: string }[] }>
+                = await this.eventService.getEventByIdGroup(idGroup);
+
+            if (!events || events.length === 0) {
+                return res.status(404).json({ ok: false, message: "No events found for this group" });
+            }
+
+            // Usar el primer evento como referencia para workspace
+            const firstEvent = events[0];
+
+            // 2) Workspace (para organizer/location)
+            const workspaces = await getWorkspacesByIds([firstEvent.idWorkspaceFk]);
+            const workspace = workspaces?.[0];
+            if (!workspace) {
+                return res.status(404).json({ ok: false, message: "Workspace not found" });
+            }
+
+            // 3) Obtener todos los servicios únicos del grupo
+            const serviceIds = Array.from(new Set(
+                events
+                    .map(e => e.idServiceFk)
+                    .filter(Boolean) as string[]
+            ));
+
+            let services: { name?: string; id?: string }[] = [];
+            if (serviceIds.length > 0) {
+                services = await getServiceByIds(serviceIds, firstEvent.idWorkspaceFk);
+            }
+
+            // 4) Crear un mapa de servicios para acceso rápido
+            const serviceMap = new Map(services.map(s => [s.id, s]));
+
+            // 5) Construir listado detallado de cada evento para la descripción
+            const eventDetails = events.map((e, index) => {
+                const serviceName = e.idServiceFk && serviceMap.has(e.idServiceFk)
+                    ? serviceMap.get(e.idServiceFk)?.name
+                    : e.title || 'Servicio';
+                
+                const startTime = new Date(e.startDate).toLocaleTimeString('es-ES', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    timeZone: workspace.timeZone || 'UTC'
+                });
+                
+                const endTime = new Date(e.endDate).toLocaleTimeString('es-ES', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    timeZone: workspace.timeZone || 'UTC'
+                });
+
+                return `${index + 1}. ${serviceName} (${startTime} - ${endTime})`;
+            });
+
+            // 6) Encontrar el evento con la hora más temprana y más tardía
+            const sortedByStart = [...events].sort((a, b) =>
+                new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+            );
+            const sortedByEnd = [...events].sort((a, b) =>
+                new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+            );
+
+            const earliestEvent = sortedByStart[0];
+            const latestEvent = sortedByEnd[0];
+
+            // 7) Location "bonito" (o "Online" si no hay dirección)
+            const location = workspace.address
+                ? [
+                    workspace.address,
+                    workspace.addressNumber,
+                    workspace.city,
+                    workspace.postalCode,
+                    workspace.country,
+                ]
+                    .filter(Boolean)
+                    .join(", ")
+                : "Online";
+
+            // 8) Construir descripción con listado detallado de eventos
+            const eventsListText = eventDetails.join('\n');
+            const description = events.length === 1
+                ? eventDetails[0].split('. ')[1] // Para un solo evento, solo el nombre y horario
+                : `Reserva con ${events.length} servicios:\n\n${eventsListText}`;
+
+            // 9) ICS meta para el grupo
+            const icsMeta: IcsMeta = {
+                uid: `${idGroup}@reserflow`,
+                summary: events.length === 1 
+                    ? eventDetails[0].split('. ')[1].split(' (')[0] // Solo el nombre del servicio
+                    : `Reserva - ${events.length} servicios`,
+                description,
+                startUtc: earliestEvent.startDate,
+                endUtc: latestEvent.endDate,
+                allDay: !!earliestEvent.allDay,
+                location,
+                organizer: workspace.email
+                    ? { name: workspace.name, email: workspace.email }
+                    : undefined,
+                status: events.every(e => e.eventStatusType === "CANCELLED") ? "CANCELLED" : "CONFIRMED",
+                createdUtc: earliestEvent?.createdDate ?? earliestEvent?.startDate,
+                lastModifiedUtc: latestEvent?.updatedDate ?? latestEvent?.endDate ?? latestEvent?.startDate,
+                sequence: 0,
+            };
+
+            // 10) Construir y servir
+            const icsString = buildIcs(icsMeta);
+
+            console.log(`${CONSOLE_COLOR.FgGreen} /event/ics-group completed ${CONSOLE_COLOR.Reset}`);
+            res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+            res.setHeader("Content-Disposition", `attachment; filename=booking-${idGroup}.ics`);
             return res.status(200).send(icsString);
         } catch (err: any) {
             console.error(err);

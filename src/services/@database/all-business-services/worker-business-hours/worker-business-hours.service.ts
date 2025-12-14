@@ -213,9 +213,26 @@ export class WorkerBusinessHourService {
 
     async deleteWorkerBusinessHourByWorker(weekDayType: WeekDayType, idWorker: string): Promise<any> {
         try {
-            return await prisma.workerBusinessHour.deleteMany({
+            // Obtener idWorkspace antes de eliminar para invalidar Redis
+            const record = await prisma.workerBusinessHour.findFirst({
+                where: { weekDayType: weekDayType, idUserFk: idWorker },
+                select: { idWorkspaceFk: true }
+            });
+
+            const result = await prisma.workerBusinessHour.deleteMany({
                 where: { weekDayType: weekDayType, idUserFk: idWorker },
             });
+
+            // Invalidar Redis
+            if (record) {
+                const workerHoursStrategy = new WorkerHoursStrategy();
+                await workerHoursStrategy.deleteWorkerHours(
+                    record.idWorkspaceFk,
+                    idWorker
+                );
+            }
+
+            return result;
         } catch (error: any) {
             throw new CustomError('WorkerBusinessHourWorkerBusinessHour.deleteWorkerBusinessHourByWorker', error);
         }
@@ -223,13 +240,34 @@ export class WorkerBusinessHourService {
 
     async deleteClosedRecordsByWorker(weekDayType: WeekDayType, idWorker: string): Promise<any> {
         try {
-            return await prisma.workerBusinessHour.deleteMany({
+            // Obtener idWorkspace antes de eliminar para invalidar Redis
+            const record = await prisma.workerBusinessHour.findFirst({
+                where: {
+                    weekDayType: weekDayType,
+                    idUserFk: idWorker,
+                    closed: true
+                },
+                select: { idWorkspaceFk: true }
+            });
+
+            const result = await prisma.workerBusinessHour.deleteMany({
                 where: {
                     weekDayType: weekDayType,
                     idUserFk: idWorker,
                     closed: true
                 }
             });
+
+            // Invalidar Redis
+            if (record) {
+                const workerHoursStrategy = new WorkerHoursStrategy();
+                await workerHoursStrategy.deleteWorkerHours(
+                    record.idWorkspaceFk,
+                    idWorker
+                );
+            }
+
+            return result;
         } catch (error: any) {
             throw new CustomError('WorkerBusinessHourWorkerBusinessHour.deleteClosedRecordsByWorker', error);
         }

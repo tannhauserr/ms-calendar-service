@@ -626,7 +626,9 @@ export class TemporaryBusinessHourService {
             const temporaryHoursMap: TemporaryHoursMapType = {};
             const temporaryHoursStrategy = new TemporaryHoursStrategy();
 
-            const { start, end } = normalizeRange(range);
+            const { start, end } = normalizeRange(range, true);
+
+            
             const wantedDays = listDaysInclusive(start, end);
             const startDate = moment(start, "YYYY-MM-DD").toDate();
             const endDate = moment(end, "YYYY-MM-DD").toDate();

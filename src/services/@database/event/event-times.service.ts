@@ -98,7 +98,7 @@ export type AvailabilityDepsSpecial = {
 };
 
 /* ────────────────────────────────────────────────────────────
-   Service con soporte grupal (conteo + miembros)
+   Service que devuelve los tiempos de eventos
 ────────────────────────────────────────────────────────────── */
 export class EventTimesService {
     /**
@@ -196,6 +196,8 @@ export class EventTimesService {
             });
 
             const BOOKING_PAGE_CONFIG: OnlineBookingConfig = deps.bookingConfig;
+
+            console.log("mira booking page config en time slots", BOOKING_PAGE_CONFIG);
 
             // Booking window (con defaults seguros)
             const { maxAdvanceDays = 60, minLeadTimeMin = 60 } =
@@ -482,6 +484,7 @@ export class EventTimesService {
                 }
 
                 const timeSlots = dedupeAndSortSlots_SPECIAL(rawSlots);
+                
                 return { timeSlots, dayStatus: timeSlots.length > 0 ? "available" : "completed" };
             }
 

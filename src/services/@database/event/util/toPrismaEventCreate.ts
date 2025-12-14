@@ -31,6 +31,7 @@ export function toPrismaEventCreate(
         servicePriceSnapshot,
         serviceDiscountSnapshot,
         serviceDurationSnapshot,
+        serviceMaxParticipantsSnapshot,
        
    
         // ignora createdDate, updatedDate, relaciones extras…
@@ -55,6 +56,7 @@ export function toPrismaEventCreate(
         servicePriceSnapshot,
         serviceDiscountSnapshot,
         serviceDurationSnapshot,
+        serviceMaxParticipantsSnapshot,
         // idRecurrenceRuleFk, // lo manejamos aparte
         // idServiceFk: service ? service.id : null, // lo manejamos aparte
         // idCalendarFk, // lo manejamos aparte

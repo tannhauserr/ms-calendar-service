@@ -1,4 +1,4 @@
-import { Event, EventParticipant, EventStatusType, Prisma, PrismaClient, ActionSectionType } from "@prisma/client";
+import { Event, EventParticipant, EventStatusType, Prisma, PrismaClient } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
 import { Pagination } from "../../../models/pagination";
@@ -37,16 +37,44 @@ import {
 } from "../event/availability-special.service"; // <-- ajusta la ruta
 
 import { TIME_SECONDS } from "../../../constant/time";
-import { IRedisRoundRobinStrategy } from "../../@redis/cache/interfaces/interfaces";
 import { OnlineBookingConfig } from "../../@redis/cache/interfaces/models/booking-config";
 import { ServiceBrief } from "../../@redis/cache/interfaces/models/service-brief";
 import { RedisStrategyFactory } from "../../@redis/cache/strategies/redisStrategyFactory";
 import { getServiceByUserIds } from "../../@service-token-client/api-ms/bookingPage.ms";
 import { _getServicesSnapshotById } from "./util/getInfoServices";
 import { createNotification } from "../../../models/notification/util/trigger/for-action";
+import { ActionKey } from "../../../models/notification/util/action-to-senctions";
+import { randomUUID } from "crypto";
+import { v4 as uuidv4 } from "uuid";
+import { IRedisRoundRobinStrategy } from "../../@redis/cache/strategies/roundRobin/interfaces";
+
+
+// Tipos para cambio de estado de un evento
+
+type EventWithRelations = Prisma.EventGetPayload<{
+    include: {
+        eventParticipant: true;
+        recurrenceRule: true;
+    };
+}>;
+
+type ChangeEventStatusResult = {
+    /** Todos los eventos que han cambiado de estado (evento suelto o grupo) */
+    events: EventWithRelations[];
+    /**
+     * Subconjunto de `events` que:
+     *  - antes estaban en PENDING
+     *  - ahora están en ACCEPTED / CONFIRMED / CANCEL*
+     * Es decir, los que deben disparar una notificación.
+     */
+    notifyEvents: EventWithRelations[];
+};
+
 
 
 type ParticipantAction = "accept" | "cancel";
+
+
 
 const PARTICIPANT_ALLOWED: Record<EventStatusType, EventStatusType[]> = {
     PENDING: [EventStatusType.ACCEPTED, EventStatusType.CANCELLED_BY_CLIENT],
@@ -179,6 +207,9 @@ export class EventV2Service {
         );
         service = service.length > 0 ? service[0] : null;
 
+        const bookingId = uuidv4();
+        event.idGroup = bookingId;
+
         console.log("mira que es esto en addEventV2", service);
 
         // event.service = service;
@@ -191,6 +222,8 @@ export class EventV2Service {
 
         let createdEvent = { ...event };
         if (!skipMainEvent) {
+
+
             // 1) Crear el primer evento (+ regla inline + participantes) en una tx
             createdEvent = await prisma.$transaction((tx) =>
                 tx.event.create({
@@ -212,10 +245,14 @@ export class EventV2Service {
                         servicePriceSnapshot: event.service?.price ?? null,
                         serviceDiscountSnapshot: event.service?.discount ?? null,
                         serviceDurationSnapshot: event.service?.duration ?? null,
+                        serviceMaxParticipantsSnapshot: event.service?.maxParticipants ?? null,
 
                         // calendar: { connect: { id: event.idCalendarFk } },
                         idWorkspaceFk: event.idWorkspaceFk,
                         idCompanyFk: event.idCompanyFk,
+                        // 🟢 booking code para plataforma
+
+                        idGroup: bookingId,
 
                         // Si hay regla, créala INLINE
                         // recurrenceRule: recurrenceRule
@@ -254,6 +291,7 @@ export class EventV2Service {
                             : undefined,
 
 
+
                     },
                     include: {
                         recurrenceRule: true,
@@ -263,7 +301,9 @@ export class EventV2Service {
             );
         }
 
+        console.log("justo antess", createdEvent?.id);
         if (createdEvent?.id) {
+            console.log("entro para crear la noptificacion en addEventV2");
             // Crear el plan de notificación para el evento
             createNotification(createdEvent as any,
                 {
@@ -321,6 +361,7 @@ export class EventV2Service {
                     ...createdEvent,
                     startDate,
                     endDate,
+                    idGroup: bookingId,
                 },
                 recurrenceRule: {
                     id: ruleId,
@@ -336,6 +377,7 @@ export class EventV2Service {
                     recurrenceStatusType: recurrenceRule.recurrenceStatusType!,
                 },
                 eventParticipant,
+
             };
 
 
@@ -397,13 +439,17 @@ export class EventV2Service {
                 select: {
                     eventStatusType: true,
                     startDate: true,
-                    endDate: true
+                    endDate: true,
+                    idGroup: true
                 }
             });
 
             if (!currentEvent) {
                 throw new Error("Evento no encontrado");
             }
+
+            const bookingId = currentEvent.idGroup ?? event.idGroup;
+            event.idGroup = bookingId;
 
             let service: ServiceBrief | ServiceBrief[] = await getServiceByUserIds
                 ([event.idServiceFk], event.idWorkspaceFk);
@@ -423,18 +469,18 @@ export class EventV2Service {
             const updated = await prisma.$transaction(async tx => {
                 // 1.a) Si hay una actualización de regla existente
                 if (recurrenceRuleUpdate) {
-                    const strat = RecurrenceStrategyFactory.get(scope ?? 'NEW');
+                    const recurrenceStrategy = RecurrenceStrategyFactory.get(scope ?? 'NEW');
 
                     // THIS => modifico solo la instancia puntual
                     if (scope === 'THIS') {
-                        await strat.handleImmediate(payload, tx as PrismaClient);
+                        await recurrenceStrategy.handleImmediate(payload, tx as PrismaClient);
                         return tx.event.findUnique({
                             where: { id: event.id },
                             include: { recurrenceRule: true, eventParticipant: true },
                         });
                     }
                     // FUTURE / ALL => genero una regla nueva
-                    const newRuleId = await strat.handleImmediate(payload, tx as PrismaClient);
+                    const newRuleId = await recurrenceStrategy.handleImmediate(payload, tx as PrismaClient);
 
                     if (skipMainEvent) {
                         // elimino el evento principal
@@ -451,6 +497,7 @@ export class EventV2Service {
                             where: { id: event.id },
                             data: {
                                 ...toPrismaEventUpdate(event),
+                                // idGroup: bookingId, // 🟢 mantener booking code actual
                                 recurrenceRule: { connect: { id: newRuleId } },
                                 ...buildNestedUpdates(event, eventParticipant, eventParticipantDelete),
                             },
@@ -504,7 +551,7 @@ export class EventV2Service {
                 // 1) Resolver acción según transición de estado
                 const resolveAction = (
                     oldS: EventStatusType,
-                    newS: EventStatusType): ActionSectionType => {
+                    newS: EventStatusType): ActionKey => {
                     // cancelaciones siempre => "cancel"
                     if (newS === "CANCELLED" || newS === "CANCELLED_BY_CLIENT" || newS === "CANCELLED_BY_CLIENT_REMOVED") {
                         return "cancel";
@@ -592,6 +639,28 @@ export class EventV2Service {
             throw new CustomError('EventV2Service.updateEventV2', err);
         }
     }
+
+
+
+
+    markCommentAsRead = async (eventId: string, idWorkspace) => {
+        try {
+            if (!eventId) {
+                throw new Error("El id del evento es requerido");
+            }
+
+            const updatedEvent = await prisma.event.update({
+                where: { id: eventId, idWorkspaceFk: idWorkspace },
+                data: {
+                    isCommentRead: true,
+                },
+            });
+
+            return updatedEvent;
+        } catch (err: any) {
+            throw new CustomError('EventV2Service.markCommentAsRead', err);
+        }
+    };
 
 
     // async updateEventV2(payload: EventForBackend) {
@@ -767,87 +836,302 @@ export class EventV2Service {
 
 
 
-
-
     /**
-     * Cambia el estado de un evento y sus participantes según las reglas definidas.
-     * @param id 
-     * @param newStatus 
-     * @returns 
-     */
+ * Cambia el estado de un evento y sus participantes según las reglas definidas.
+ * Devuelve:
+ *  - events: todos los eventos que han cambiado de estado
+ *  - notifyEvents: solo aquellos que pasaban de PENDING a ACCEPTED/CONFIRMED/CANCEL*
+ */
     async changeEventStatus(
         id: string,
-        newStatus: EventStatusType
-    ): Promise<Event | undefined> {
+        newStatus: EventStatusType,
+        updateGroup: boolean = false
+    ): Promise<ChangeEventStatusResult | undefined> {
         try {
-            // 2) Leer estado actual
+            // 1) Leer estado actual y grupo
             const evt = await prisma.event.findUnique({
                 where: { id },
-                select: { eventStatusType: true },
+                select: {
+                    eventStatusType: true,
+                    idGroup: true,
+                    idWorkspaceFk: true,
+                },
             });
             if (!evt) throw new Error("Evento no encontrado");
 
             const current = evt.eventStatusType;
 
-            // 3) Validar transición
+            // 2) Validar transición para el evento principal
             if (!ALLOWED[current].includes(newStatus)) {
-                // Aquí puedes loggear el intento
+                console.warn(
+                    `[changeEventStatus] Transición no permitida: ${current} -> ${newStatus}`
+                );
                 return undefined;
             }
 
-            // 4) Preparar operaciones
-            const ops: Prisma.PrismaPromise<any>[] = [];
+            // 3) Ejecutar actualización en transacción
+            return await prisma.$transaction<ChangeEventStatusResult | undefined>(
+                async (tx) => {
+                    const eventIds: string[] = [];
+                    const notifyIds: string[] = [];
 
-            // 4a) Actualizar estado global
-            ops.push(
-                prisma.event.update({
-                    where: { id },
-                    data: { eventStatusType: newStatus },
-                })
-            );
-
-            // 4b) Si cancelas globalmente → cancela participantes que no lo estén
-            if (
-                newStatus === EventStatusType.CANCELLED ||
-                newStatus === EventStatusType.CANCELLED_BY_CLIENT_REMOVED
-            ) {
-                ops.push(
-                    prisma.eventParticipant.updateMany({
-                        where: {
-                            idEventFk: id,
-                            eventStatusType: {
-                                notIn: [
-                                    EventStatusType.CANCELLED,
-                                    EventStatusType.CANCELLED_BY_CLIENT,
-                                    EventStatusType.CANCELLED_BY_CLIENT_REMOVED,
-                                ],
+                    if (updateGroup && evt.idGroup) {
+                        // Obtener todos los eventos del grupo
+                        const groupEvents = await tx.event.findMany({
+                            where: {
+                                idGroup: evt.idGroup,
+                                idWorkspaceFk: evt.idWorkspaceFk,
+                                deletedDate: null,
                             },
-                        },
-                        data: { eventStatusType: newStatus },
-                    })
-                );
-            }
+                            select: { id: true, eventStatusType: true },
+                        });
 
-            // 4c) Si confirmas globalmente → optional: acepta los PENDING
-            if (newStatus === EventStatusType.CONFIRMED) {
-                ops.push(
-                    prisma.eventParticipant.updateMany({
-                        where: {
-                            idEventFk: id,
-                            eventStatusType: EventStatusType.PENDING,
-                        },
-                        data: { eventStatusType: EventStatusType.ACCEPTED },
-                    })
-                );
-            }
+                        for (const ge of groupEvents) {
+                            const oldStatus = ge.eventStatusType;
 
-            // 5) Ejecutar en transacción
-            const [eventUpdated] = await prisma.$transaction(ops);
-            return eventUpdated;
+                            // Solo los que pueden hacer la transición
+                            if (ALLOWED[oldStatus].includes(newStatus)) {
+                                eventIds.push(ge.id);
+
+                                // Marcar si este en concreto debe notificar
+                                if (this._shouldNotifyOnTransition(oldStatus, newStatus)) {
+                                    notifyIds.push(ge.id);
+                                }
+                            }
+                        }
+
+                        if (eventIds.length === 0) {
+                            console.warn(
+                                `[changeEventStatus] Ningún evento del grupo puede transicionar a ${newStatus}`
+                            );
+                            return undefined;
+                        }
+
+                        // Actualizar todos los eventos del grupo
+                        await tx.event.updateMany({
+                            where: { id: { in: eventIds } },
+                            data: { eventStatusType: newStatus },
+                        });
+                    } else {
+                        // Solo actualizar el evento específico
+                        eventIds.push(id);
+
+                        // El principal ya sabemos su oldStatus
+                        if (this._shouldNotifyOnTransition(current, newStatus)) {
+                            notifyIds.push(id);
+                        }
+
+                        await tx.event.update({
+                            where: { id },
+                            data: { eventStatusType: newStatus },
+                        });
+                    }
+
+                    // 4) Actualizar participantes según el nuevo estado
+                    // 4a) Si cancelas → cancela participantes que no lo estén
+                    if (
+                        newStatus === EventStatusType.CANCELLED ||
+                        newStatus === EventStatusType.CANCELLED_BY_CLIENT_REMOVED
+                    ) {
+                        await tx.eventParticipant.updateMany({
+                            where: {
+                                idEventFk: { in: eventIds },
+                                eventStatusType: {
+                                    notIn: [
+                                        EventStatusType.CANCELLED,
+                                        EventStatusType.CANCELLED_BY_CLIENT,
+                                        EventStatusType.CANCELLED_BY_CLIENT_REMOVED,
+                                    ],
+                                },
+                            },
+                            data: { eventStatusType: newStatus },
+                        });
+                    }
+
+                    // 4b) Si confirmas → acepta los PENDING
+                    if (
+                        newStatus === EventStatusType.CONFIRMED ||
+                        newStatus === EventStatusType.ACCEPTED
+                    ) {
+                        await tx.eventParticipant.updateMany({
+                            where: {
+                                idEventFk: { in: eventIds },
+                                eventStatusType: EventStatusType.PENDING,
+                            },
+                            data: { eventStatusType: EventStatusType.ACCEPTED },
+                        });
+                    }
+
+                    // 5) Cargar los eventos actualizados con los datos mínimos para createNotification
+                    const events = await tx.event.findMany({
+                        where: { id: { in: eventIds } },
+                        include: {
+                            eventParticipant: true,
+                            recurrenceRule: true,
+                        },
+                    });
+
+                    // Subconjunto que debe notificar (los que estaban en PENDING → final)
+                    const notifyEvents = events.filter((e) =>
+                        notifyIds.includes(e.id)
+                    );
+
+                    console.log("dentro de servicio justo antes de return", events, notifyEvents);
+
+                    return { events, notifyEvents };
+                }
+            );
         } catch (err: any) {
             throw new CustomError("EventService.changeEventStatus", err);
         }
     }
+
+
+    /**
+     * Decide si se debe notificar un cambio de estado según las reglas definidas.
+     * @param oldStatus 
+     * @param newStatus 
+     * @returns 
+     */
+    _shouldNotifyOnTransition(
+        oldStatus: EventStatusType,
+        newStatus: EventStatusType
+    ): boolean {
+        if (oldStatus !== EventStatusType.PENDING) return false;
+
+        // Cualquier "aceptado/confirmado" o "cancelado"
+        if (
+            newStatus === EventStatusType.ACCEPTED ||
+            newStatus === EventStatusType.CONFIRMED ||
+            newStatus === EventStatusType.CANCELLED ||
+            newStatus === EventStatusType.CANCELLED_BY_CLIENT ||
+            newStatus === EventStatusType.CANCELLED_BY_CLIENT_REMOVED
+        ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Cambia el estado de un evento y sus participantes según las reglas definidas.
+     * @param id - ID del evento a actualizar
+     * @param newStatus - Nuevo estado del evento
+     * @param updateGroup - Si true, actualiza todos los eventos del mismo idGroup
+     * @returns El evento actualizado o undefined si la transición no es válida
+     */
+    // async changeEventStatus(
+    //     id: string,
+    //     newStatus: EventStatusType,
+    //     updateGroup: boolean = false
+    // ): Promise<Event | undefined> {
+    //     try {
+    //         // 1) Leer estado actual y grupo
+    //         const evt = await prisma.event.findUnique({
+    //             where: { id },
+    //             select: { 
+    //                 eventStatusType: true,
+    //                 idGroup: true,
+    //                 idWorkspaceFk: true
+    //             },
+    //         });
+    //         if (!evt) throw new Error("Evento no encontrado");
+
+    //         const current = evt.eventStatusType;
+
+    //         // 2) Validar transición
+    //         if (!ALLOWED[current].includes(newStatus)) {
+    //             console.warn(`[changeEventStatus] Transición no permitida: ${current} -> ${newStatus}`);
+    //             return undefined;
+    //         }
+
+    //         // 3) Ejecutar actualización en transacción
+    //         return await prisma.$transaction(async (tx) => {
+    //             const eventIds: string[] = [];
+
+    //             if (updateGroup && evt.idGroup) {
+    //                 // Obtener todos los eventos del grupo
+    //                 const groupEvents = await tx.event.findMany({
+    //                     where: {
+    //                         idGroup: evt.idGroup,
+    //                         idWorkspaceFk: evt.idWorkspaceFk,
+    //                         deletedDate: null,
+    //                     },
+    //                     select: { id: true, eventStatusType: true },
+    //                 });
+
+    //                 // Filtrar solo los que pueden hacer la transición
+    //                 for (const ge of groupEvents) {
+    //                     if (ALLOWED[ge.eventStatusType].includes(newStatus)) {
+    //                         eventIds.push(ge.id);
+    //                     }
+    //                 }
+
+    //                 if (eventIds.length === 0) {
+    //                     console.warn(`[changeEventStatus] Ningún evento del grupo puede transicionar a ${newStatus}`);
+    //                     return undefined;
+    //                 }
+
+    //                 // Actualizar todos los eventos del grupo
+    //                 await tx.event.updateMany({
+    //                     where: { id: { in: eventIds } },
+    //                     data: { eventStatusType: newStatus },
+    //                 });
+    //             } else {
+    //                 // Solo actualizar el evento específico
+    //                 eventIds.push(id);
+    //                 await tx.event.update({
+    //                     where: { id },
+    //                     data: { eventStatusType: newStatus },
+    //                 });
+    //             }
+
+    //             // 4) Actualizar participantes según el nuevo estado
+
+    //             // 4a) Si cancelas → cancela participantes que no lo estén
+    //             if (
+    //                 newStatus === EventStatusType.CANCELLED ||
+    //                 newStatus === EventStatusType.CANCELLED_BY_CLIENT_REMOVED
+    //             ) {
+    //                 await tx.eventParticipant.updateMany({
+    //                     where: {
+    //                         idEventFk: { in: eventIds },
+    //                         eventStatusType: {
+    //                             notIn: [
+    //                                 EventStatusType.CANCELLED,
+    //                                 EventStatusType.CANCELLED_BY_CLIENT,
+    //                                 EventStatusType.CANCELLED_BY_CLIENT_REMOVED,
+    //                             ],
+    //                         },
+    //                     },
+    //                     data: { eventStatusType: newStatus },
+    //                 });
+    //             }
+
+    //             // 4b) Si confirmas → acepta los PENDING
+    //             if (newStatus === EventStatusType.CONFIRMED || newStatus === EventStatusType.ACCEPTED) {
+    //                 await tx.eventParticipant.updateMany({
+    //                     where: {
+    //                         idEventFk: { in: eventIds },
+    //                         eventStatusType: EventStatusType.PENDING,
+    //                     },
+    //                     data: { eventStatusType: EventStatusType.ACCEPTED },
+    //                 });
+    //             }
+
+    //             // 5) Devolver el evento principal actualizado
+    //             return tx.event.findUnique({
+    //                 where: { id },
+    //                 include: {
+    //                     eventParticipant: true,
+    //                     recurrenceRule: true,
+    //                 },
+    //             });
+    //         });
+    //     } catch (err: any) {
+    //         throw new CustomError("EventService.changeEventStatus", err);
+    //     }
+    // }
 
 
 
@@ -929,6 +1213,8 @@ export class EventV2Service {
                     // eventSourceType: true,
                     idServiceFk: true,
                     allDay: true,
+                    commentClient: true,
+                    isCommentRead: true,
 
                 };
 
@@ -958,6 +1244,8 @@ export class EventV2Service {
                     eventPurposeType: true,
                     eventSourceType: true,
                     allDay: true,
+                    commentClient: true,
+                    isCommentRead: true,
 
 
                     // TODO: El servicio debe de venir del ms de booking page
@@ -1026,11 +1314,14 @@ export class EventV2Service {
                     title: true,
                     idServiceFk: true,
                     description: true,
+                    commentClient: true,
+                    isCommentRead: true,
 
                     serviceNameSnapshot: true,
                     servicePriceSnapshot: true,
                     serviceDiscountSnapshot: true,
                     serviceDurationSnapshot: true,
+                    serviceMaxParticipantsSnapshot: true,
 
                     // serviceDurationSnapshot: true,
 
@@ -1085,8 +1376,11 @@ export class EventV2Service {
                     servicePriceSnapshot,
                     serviceDiscountSnapshot,
                     serviceDurationSnapshot,
+                    serviceMaxParticipantsSnapshot,
                     eventParticipant,
                     recurrenceRule,
+                    commentClient,
+                    isCommentRead,
                     // service,
                 }): EventExtraData => ({
                     id,
@@ -1096,14 +1390,28 @@ export class EventV2Service {
                     servicePriceSnapshot: servicePriceSnapshot ?? undefined,
                     serviceDiscountSnapshot: serviceDiscountSnapshot ?? undefined,
                     serviceDurationSnapshot: serviceDurationSnapshot ?? undefined,
+                    serviceMaxParticipantsSnapshot: serviceMaxParticipantsSnapshot ?? undefined,
                     eventParticipant: eventParticipant ?? [],
                     recurrenceRule: recurrenceRule as any ?? undefined,
+                    commentClient: commentClient ?? undefined,
+                    isCommentRead: isCommentRead ?? undefined,
                     // service: service ?? undefined,
                 }),
             );
         } catch (error: any) {
             throw new CustomError('EventService.getEventExtraData', error);
         }
+    }
+
+
+    async getEventWithoutWorkerById_Counter(idWorkspace): Promise<any> {
+
+
+    }
+
+    async getEventWithoutWorkerById_List(idWorkspace, pagination: Pagination): Promise<any> {
+
+
     }
 
     async getEventById(id: string): Promise<any> {
@@ -1132,6 +1440,8 @@ export class EventV2Service {
                     eventSourceType: true,
                     eventStatusType: true,
                     allDay: true,
+                    commentClient: true,
+                    isCommentRead: true,
 
 
                     // service: {
@@ -1166,490 +1476,48 @@ export class EventV2Service {
         }
     }
 
+    async getEventByIdGroup(idGroup: string): Promise<any> {
+        try {
+            return await prisma.event.findMany({
+                where: {
+                    idGroup: idGroup,
+                    eventStatusType: {
+                        notIn: [EventStatusType.CANCELLED, EventStatusType.CANCELLED_BY_CLIENT_REMOVED, EventStatusType.CANCELLED_BY_CLIENT]
+                    }
+                },
+                select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    startDate: true,
+                    endDate: true,
+                    idCompanyFk: true,
+                    idWorkspaceFk: true,
+                    idUserPlatformFk: true,
+                    idServiceFk: true,
+                    idGroup: true,
+                    eventPurposeType: true,
+                    eventSourceType: true,
+                    eventStatusType: true,
+                    allDay: true,
 
-
-    // public async publicGetAvailableDays_OLD(
-    //     input: GetTimeSlotsInputSpecial,
-    //     deps: AvailabilityDepsSpecial
-    // ): Promise<{ days: DayFlag[] }> {
-    //     try {
-    //         const {
-    //             idCompany,
-    //             idWorkspace,
-    //             timeZoneClient,
-    //             range: { start, end },
-    //             attendees,
-    //             excludeEventId,
-    //             idClient, // opcional
-    //         } = input;
-
-    //         const {
-    //             bookingConfig,
-    //             businessHoursService,
-    //             workerHoursService,
-    //             temporaryHoursService,
-    //         } = deps;
-
-    //         const date = new Date();
-    //         console.log("[publicGetAvailableDays_SPECIAL] called", {
-    //             date,
-    //             attendees: attendees.map(a => a.serviceId),
-    //         });
-
-    //         const BOOKING_PAGE_CONFIG: OnlineBookingConfig = bookingConfig;
-
-    //         // 🆕 bookingWindow
-    //         const { maxAdvanceDays = 60, minLeadTimeMin = 60 } =
-    //             BOOKING_PAGE_CONFIG.bookingWindow ?? {};
-
-    //         const alignMode: "clock" | "service" =
-    //             BOOKING_PAGE_CONFIG.slot?.alignMode === "service" ? "service" : "clock";
-    //         const intervalMinutes =
-    //             alignMode === "service"
-    //                 ? attendees?.reduce((acc, a) => acc + (a.durationMin ?? 0), 0)
-    //                 : BOOKING_PAGE_CONFIG?.slot?.stepMinutes;
-
-    //         const professionalAllowed =
-    //             BOOKING_PAGE_CONFIG?.resources?.ids?.map((r) =>
-    //                 Array.isArray(r) ? r?.[0] : r
-    //             ) ?? [];
-
-    //         if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany o idWorkspace");
-    //         if (!start || !end) throw new Error("Faltan fechas de rango (start/end)");
-    //         if (
-    //             typeof intervalMinutes !== "number" ||
-    //             isNaN(intervalMinutes) ||
-    //             intervalMinutes <= 0
-    //         ) {
-    //             throw new Error("El intervalo de minutos debe ser un número positivo");
-    //         }
-    //         if (!Array.isArray(attendees) || attendees.length === 0) return { days: [] };
-    //         if (professionalAllowed.length === 0) return { days: [] };
-
-    //         // Paso base de enumeración de inicios
-    //         const STEP_MINUTES = intervalMinutes;
-
-    //         // Helpers locales
-    //         type Range = { start: moment.Moment; end: moment.Moment };
-    //         const TZ = timeZoneClient; // 🆕 si prefieres el TZ del negocio, cámbialo aquí
-    //         const toLocal = (d: Date | string) =>
-    //             moment(d).tz(TZ).seconds(0).milliseconds(0);
-
-    //         const mergeRanges = (rs: Range[]) => {
-    //             const arr = rs
-    //                 .map((r) => ({ start: r.start.clone(), end: r.end.clone() }))
-    //                 .filter((r) => r.start.isBefore(r.end))
-    //                 .sort((a, b) => a.start.valueOf() - b.start.valueOf());
-    //             if (!arr.length) return arr;
-    //             const out: Range[] = [];
-    //             let cur = arr[0];
-    //             for (let i = 1; i < arr.length; i++) {
-    //                 const r = arr[i];
-    //                 if (r.start.isSameOrBefore(cur.end)) {
-    //                     if (r.end.isAfter(cur.end)) cur.end = r.end.clone();
-    //                 } else {
-    //                     out.push(cur);
-    //                     cur = r;
-    //                 }
-    //             }
-    //             out.push(cur);
-    //             return out;
-    //         };
-
-    //         // resta [busy] a [shift] -> free[]
-    //         const subtractBusy = (shift: Range, busy: Range[]) => {
-    //             const merged = mergeRanges(busy);
-    //             let cursor = shift.start.clone();
-    //             const free: Range[] = [];
-    //             for (const b of merged) {
-    //                 if (b.end.isSameOrBefore(cursor) || b.start.isSameOrAfter(shift.end)) continue;
-    //                 if (b.start.isAfter(cursor)) {
-    //                     free.push({ start: cursor.clone(), end: moment.min(b.start, shift.end) });
-    //                 }
-    //                 cursor = moment.max(cursor, b.end);
-    //                 if (!cursor.isBefore(shift.end)) break;
-    //             }
-    //             if (cursor.isBefore(shift.end)) free.push({ start: cursor, end: shift.end.clone() });
-    //             return free.filter((r) => r.start.isBefore(r.end));
-    //         };
-
-    //         // cuenta inicios posibles dentro de ventanas, usando ceil relativo al comienzo de la ventana
-    //         const countStartsInWindows = (
-    //             wins: Range[],
-    //             durMin: number,
-    //             stepMin: number,
-    //             clampFrom?: moment.Moment
-    //         ) => {
-    //             let total = 0;
-    //             for (const w of wins) {
-    //                 const wStart = clampFrom ? moment.max(w.start, clampFrom) : w.start;
-    //                 const latestStart = w.end.clone().subtract(durMin, "minutes");
-    //                 if (wStart.isAfter(latestStart)) continue;
-
-    //                 // ceil relativo a w.start
-    //                 const offsetMin = Math.max(
-    //                     0,
-    //                     Math.floor((wStart.valueOf() - w.start.valueOf()) / 60000)
-    //                 );
-    //                 const rem = offsetMin % stepMin;
-    //                 const cur = wStart
-    //                     .clone()
-    //                     .add(rem === 0 ? 0 : stepMin - rem, "minutes")
-    //                     .seconds(0)
-    //                     .milliseconds(0);
-
-    //                 const spanMin = Math.max(
-    //                     0,
-    //                     Math.floor((latestStart.valueOf() - cur.valueOf()) / 60000)
-    //                 );
-    //                 const cnt = 1 + Math.floor(spanMin / stepMin);
-    //                 if (cnt > 0) total += cnt;
-    //             }
-    //             return total;
-    //         };
-
-    //         // 1) Elegibles por servicio
-    //         const withinAllowed = (ids: string[]) =>
-    //             ids.filter((id) => professionalAllowed.includes(id));
-
-    //         const userIdsByService = new Map<string, string[]>();
-    //         for (const a of attendees) {
-    //             if (a.staffId) {
-    //                 const elig = professionalAllowed.includes(a.staffId) ? [a.staffId] : [];
-    //                 userIdsByService.set(a.serviceId, elig);
-    //             } else {
-    //                 const users = await getUsersWhoCanPerformService(
-    //                     idWorkspace,
-    //                     a.serviceId,
-    //                     a.categoryId
-    //                 );
-    //                 userIdsByService.set(a.serviceId, withinAllowed(users));
-    //             }
-    //         }
-    //         const allUserIds = Array.from(
-    //             new Set(Array.from(userIdsByService.values()).flat())
-    //         );
-    //         if (!allUserIds.length) {
-    //             const days = enumerateDays(start, end).map((d) => ({
-    //                 date: d,
-    //                 hasSlots: false,
-    //                 capacity: 0,
-    //             }));
-    //             return { days };
-    //         }
-
-    //         // 2) Calendar y reglas
-    //         // const calendar = await prisma.calendar.findFirst({
-    //         //     where: {
-    //         //         idCompanyFk: idCompany,
-    //         //         idWorkspaceFk: idWorkspace,
-    //         //         deletedDate: null,
-    //         //     },
-    //         //     select: { id: true },
-    //         // });
-
-    //         const businessHours = await businessHoursService.getBusinessHoursFromRedis(
-    //             idCompany,
-    //             idWorkspace
-    //         );
-    //         const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(
-    //             allUserIds,
-    //             idWorkspace
-    //         );
-    //         const temporaryHoursMap =
-    //             await temporaryHoursService.getTemporaryHoursFromRedis(
-    //                 allUserIds,
-    //                 idWorkspace,
-    //                 { start, end }
-    //             );
-    //         const events = await getEventsOverlappingRange(
-    //             allUserIds,
-    //             start,
-    //             end,
-    //             excludeEventId
-    //         );
-
-    //         // 3) Capacidad por servicio (para detectar grupales)
-    //         // const serviceCaps = await prisma.service.findMany({
-    //         //     where: { id: { in: attendees.map((a) => a.serviceId) } },
-    //         //     select: { id: true, maxParticipants: true },
-    //         // });
-    //         // const capByService = new Map(
-    //         //     serviceCaps.map((s) => [s.id, Math.max(1, s.maxParticipants ?? 1)])
-    //         // );
-
-    //         // Obtenemos el servicio de su microservicio
-    //         const serviceCaps: ServiceBrief[] = await getServiceByUserIds(allUserIds, idWorkspace);
-    //         const capByService = new Map<string, number>();
-    //         for (const sc of serviceCaps) {
-    //             if (!capByService.has(sc.id)) {
-    //                 capByService.set(sc.id, Math.max(1, sc.maxParticipants ?? 1));
-    //             }
-    //         }
-
-    //         // Agrupa eventos por user para acelerar
-    //         const eventsByUser = new Map<
-    //             string,
-    //             Array<{ startDate: Date; endDate: Date }>
-    //         >();
-    //         for (const ev of events) {
-    //             const uid = (ev as any).idUserPlatformFk as string | null;
-    //             if (!uid) continue;
-    //             const arr = eventsByUser.get(uid) || [];
-    //             arr.push({ startDate: ev.startDate, endDate: ev.endDate });
-    //             eventsByUser.set(uid, arr);
-    //         }
-
-    //         // Helper para obtener turnos de un user en un día
-    //         const getShiftsFor = (uid: string, dateISO: string): Range[] => {
-    //             const weekDay = moment
-    //                 .tz(`${dateISO}T00:00:00`, "YYYY-MM-DDTHH:mm:ss", TZ)
-    //                 .format("dddd")
-    //                 .toUpperCase() as any;
-
-    //             const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
-    //             const tempDay = (temporaryHoursMap as any)?.[uid]?.[dateISO];
-
-    //             let slots: string[][] = [];
-    //             if (tempDay === null) slots = [];
-    //             else if (Array.isArray(tempDay) && tempDay.length) slots = tempDay;
-    //             else if (workerDay === null) slots = [];
-    //             else if (Array.isArray(workerDay) && workerDay.length) slots = workerDay;
-    //             else {
-    //                 const biz = (businessHours as any)?.[weekDay];
-    //                 slots = biz === null ? [] : Array.isArray(biz) ? biz : [];
-    //             }
-
-    //             return (slots || []).map(([s, e]) => ({
-    //                 start: moment.tz(`${dateISO}T${s}`, "YYYY-MM-DDTHH:mm:ss", TZ),
-    //                 end: moment.tz(`${dateISO}T${e}`, "YYYY-MM-DDTHH:mm:ss", TZ),
-    //             }));
-    //         };
-
-    //         // 🆕 Ventana absoluta permitida (TZ = TZ)
-    //         const nowRef = moment.tz(TZ);
-    //         const earliestAllowed = nowRef
-    //             .clone()
-    //             .add(minLeadTimeMin, "minutes")
-    //             .seconds(0)
-    //             .milliseconds(0);
-    //         const latestAllowedEnd = nowRef.clone().add(maxAdvanceDays, "days").endOf("day");
-
-    //         const days: DayFlag[] = [];
-
-    //         for (const dateISO of enumerateDays(start, end)) {
-    //             const dayStart = moment.tz(
-    //                 `${dateISO}T00:00:00`,
-    //                 "YYYY-MM-DDTHH:mm:ss",
-    //                 TZ
-    //             );
-    //             const dayEnd = dayStart.clone().endOf("day");
-    //             const dayStartUTC = dayStart.clone().utc().toDate();
-    //             const dayEndUTC = dayEnd.clone().utc().toDate();
-
-    //             // 🆕 Cortes rápidos por día completo
-    //             if (dayEnd.isBefore(earliestAllowed)) {
-    //                 days.push({ date: dateISO, hasSlots: false, capacity: 0 });
-    //                 continue;
-    //             }
-    //             if (dayStart.isAfter(latestAllowedEnd)) {
-    //                 days.push({ date: dateISO, hasSlots: false, capacity: 0 });
-    //                 continue;
-    //             }
-
-    //             // 🆕 Si es el día del lead, clamp desde earliestAllowed
-    //             const isLeadDay = dayStart.isSame(earliestAllowed, "day");
-    //             const clampFrom = isLeadDay ? earliestAllowed : undefined;
-
-    //             // ---- Caso: 1 servicio
-    //             if (attendees.length === 1) {
-    //                 const a = attendees[0];
-    //                 const elig = userIdsByService.get(a.serviceId) ?? [];
-    //                 if (!elig.length) {
-    //                     days.push({ date: dateISO, hasSlots: false, capacity: 0 });
-    //                     continue;
-    //                 }
-
-    //                 const svcCap = capByService.get(a.serviceId) ?? 1;
-    //                 const isGroup = svcCap > 1;
-
-    //                 // Denominador: inicios posibles por turnos (sin busy), sumados en todos los elegibles
-    //                 let denomStarts = 0;
-    //                 for (const uid of elig) {
-    //                     const shifts = getShiftsFor(uid, dateISO);
-    //                     const mergedShifts = mergeRanges(shifts);
-    //                     denomStarts += countStartsInWindows(
-    //                         mergedShifts,
-    //                         a.durationMin,
-    //                         STEP_MINUTES,
-    //                         clampFrom // 🆕 clamp por lead
-    //                     );
-    //                 }
-    //                 const denomSeats = denomStarts * (isGroup ? svcCap : 1);
-
-    //                 if (denomSeats <= 0) {
-    //                     days.push({ date: dateISO, hasSlots: false, capacity: 0 });
-    //                     continue;
-    //                 }
-
-    //                 // Numerador:
-    //                 // (A) plazas libres en clases existentes de este servicio (solo pros elegibles)
-    //                 let seatsFromExisting = 0;
-    //                 if (isGroup) {
-    //                     const groupEvents = await prisma.event.findMany({
-    //                         where: {
-    //                             // idCalendarFk: calendar.id,
-    //                             idWorkspaceFk: idWorkspace,
-    //                             idServiceFk: a.serviceId,
-    //                             idUserPlatformFk: { in: elig },
-    //                             startDate: { lt: dayEndUTC },
-    //                             endDate: { gt: dayStartUTC },
-    //                             ...(excludeEventId ? { id: { not: excludeEventId } } : {}),
-    //                             deletedDate: null,
-    //                         },
-    //                         select: {
-    //                             id: true,
-    //                             startDate: true, // 🆕 necesitaremos el start para filtrar lead
-    //                             eventParticipant: {
-    //                                 where: { deletedDate: null },
-    //                                 select: { idClientFk: true, idClientWorkspaceFk: true },
-    //                             },
-    //                         },
-    //                     });
-
-    //                     for (const ev of groupEvents) {
-    //                         // 🆕 si es día de lead, ignora clases que empiezan antes del earliestAllowed
-    //                         if (isLeadDay) {
-    //                             const evStartLocal = toLocal(ev.startDate);
-    //                             if (evStartLocal.isBefore(earliestAllowed)) continue;
-    //                         }
-
-    //                         const booked = ev.eventParticipant.length;
-    //                         const alreadyIn = !!(
-    //                             idClient &&
-    //                             ev.eventParticipant.some(
-    //                                 (p) => p.idClientFk === idClient || p.idClientWorkspaceFk === idClient
-    //                             )
-    //                         );
-    //                         const left = Math.max(0, svcCap - booked);
-    //                         seatsFromExisting += alreadyIn ? 0 : left;
-    //                     }
-    //                 }
-
-    //                 // (B) plazas potenciales por nuevas clases (libres tras busy)
-    //                 let startsCreatable = 0;
-    //                 for (const uid of elig) {
-    //                     const shifts = getShiftsFor(uid, dateISO);
-
-    //                     const busy: Range[] = (eventsByUser.get(uid) || [])
-    //                         .filter((ev) => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
-    //                         .map((ev) => ({ start: toLocal(ev.startDate), end: toLocal(ev.endDate) }));
-
-    //                     const freeWins: Range[] = [];
-    //                     for (const sh of shifts) {
-    //                         const shStart = clampFrom ? moment.max(sh.start, clampFrom) : sh.start; // 🆕 clamp lead
-    //                         if (!shStart.isBefore(sh.end)) continue;
-    //                         freeWins.push(...subtractBusy({ start: shStart, end: sh.end }, busy));
-    //                     }
-    //                     const mergedFree = mergeRanges(freeWins);
-
-    //                     startsCreatable += countStartsInWindows(
-    //                         mergedFree,
-    //                         a.durationMin,
-    //                         STEP_MINUTES,
-    //                         clampFrom // 🆕 clamp lead
-    //                     );
-    //                 }
-    //                 const seatsFromNew = startsCreatable * (isGroup ? svcCap : 1);
-
-    //                 const numeratorSeats = seatsFromExisting + seatsFromNew;
-    //                 const ratio = Math.max(0, Math.min(1, numeratorSeats / denomSeats));
-
-    //                 days.push({
-    //                     date: dateISO,
-    //                     hasSlots: ratio > 0,
-    //                     capacity: Number(ratio.toFixed(2)),
-    //                 });
-    //                 continue;
-    //             }
-
-    //             // ---- Caso: >1 servicio (sin grupos mezclados)
-    //             let anyGroup = false;
-    //             for (const a of attendees) {
-    //                 if ((capByService.get(a.serviceId) ?? 1) > 1) {
-    //                     anyGroup = true;
-    //                     break;
-    //                 }
-    //             }
-    //             if (anyGroup) {
-    //                 days.push({ date: dateISO, hasSlots: false, capacity: 0 });
-    //                 continue;
-    //             }
-
-    //             // Para cada servicio individual: ratio = (#starts libres) / (#starts posibles)
-    //             const ratios: number[] = [];
-    //             for (const a of attendees) {
-    //                 const elig = userIdsByService.get(a.serviceId) ?? [];
-    //                 if (!elig.length) {
-    //                     ratios.push(0);
-    //                     continue;
-    //                 }
-
-    //                 // denom
-    //                 let denomStarts = 0;
-    //                 for (const uid of elig) {
-    //                     const shifts = getShiftsFor(uid, dateISO);
-    //                     const mergedShifts = mergeRanges(shifts);
-    //                     denomStarts += countStartsInWindows(
-    //                         mergedShifts,
-    //                         a.durationMin,
-    //                         STEP_MINUTES,
-    //                         clampFrom // 🆕 clamp lead
-    //                     );
-    //                 }
-    //                 if (denomStarts <= 0) {
-    //                     ratios.push(0);
-    //                     continue;
-    //                 }
-
-    //                 // numerador (libres tras busy)
-    //                 let freeStarts = 0;
-    //                 for (const uid of elig) {
-    //                     const shifts = getShiftsFor(uid, dateISO);
-    //                     const busy: Range[] = (eventsByUser.get(uid) || [])
-    //                         .filter((ev) => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
-    //                         .map((ev) => ({ start: toLocal(ev.startDate), end: toLocal(ev.endDate) }));
-
-    //                     const freeWins: Range[] = [];
-    //                     for (const sh of shifts) {
-    //                         const shStart = clampFrom ? moment.max(sh.start, clampFrom) : sh.start; // 🆕 clamp lead
-    //                         if (!shStart.isBefore(sh.end)) continue;
-    //                         freeWins.push(...subtractBusy({ start: shStart, end: sh.end }, busy));
-    //                     }
-    //                     const mergedFree = mergeRanges(freeWins);
-    //                     freeStarts += countStartsInWindows(
-    //                         mergedFree,
-    //                         a.durationMin,
-    //                         STEP_MINUTES,
-    //                         clampFrom // 🆕 clamp lead
-    //                     );
-    //                 }
-    //                 ratios.push(Math.max(0, Math.min(1, freeStarts / denomStarts)));
-    //             }
-
-    //             const minRatio = ratios.length ? Math.min(...ratios) : 0;
-    //             days.push({
-    //                 date: dateISO,
-    //                 hasSlots: minRatio > 0,
-    //                 capacity: Number(minRatio.toFixed(2)),
-    //             });
-    //         }
-
-    //         return { days };
-    //     } catch (error: any) {
-    //         throw new CustomError("EventService.getAvailableDays", error);
-    //     }
-    // }
+                    eventParticipant: {
+                        select: {
+                            id: true,
+                            idClientFk: true,
+                            idClientWorkspaceFk: true,
+                            eventStatusType: true,
+                        }
+                    }
+                },
+                orderBy: {
+                    startDate: 'asc'
+                }
+            });
+        } catch (error: any) {
+            throw new CustomError('EventService.getEventByIdGroup', error);
+        }
+    }
 
 
 
@@ -1823,7 +1691,7 @@ export class EventV2Service {
             const wantedServiceIds = Array.from(
                 new Set(attendees.map((a) => a.serviceId).filter(Boolean))
             ) as string[];
-         
+
             const services =
                 wantedServiceIds.length > 0
                     ? await getServiceByIds(wantedServiceIds, idWorkspace)
@@ -2334,501 +2202,502 @@ export class EventV2Service {
 
 
     // ⬇️ util: crea o une a un evento de grupo (capacidad = Service.maxParticipants)
-    async createOrJoinGroupEvent(
-        tx: Prisma.TransactionClient,
-        params: {
-            idCompany: string;
-            idWorkspace: string;
-            seg: { serviceId: string; userId: string; start: moment.Moment; end: moment.Moment };
-            svc: {
-                id: string;
-                name?: string | null;
-                price?: number | null;
-                discount?: number | null;
-                duration?: number | null;
-                maxParticipants?: number | null; // <=1 => individual
-            };
-            timeZoneWorkspace: string;
-            note?: string | null;
-            customer: { id: string; idClientWorkspace: string };
-        }
-    ): Promise<{ event: Event; action: "created" | "joined" | "already-in" }> {
-        const { idWorkspace, idCompany, seg, svc, timeZoneWorkspace, note, customer } = params;
-        const startDate = seg.start.toDate();
-        const endDate = seg.end.toDate();
-        const capacity = Math.max(1, svc.maxParticipants ?? 1);
-        const isGroup = capacity > 1;
+    // async createOrJoinGroupEvent(
+    //     tx: Prisma.TransactionClient,
+    //     params: {
+    //         idCompany: string;
+    //         idWorkspace: string;
+    //         seg: { serviceId: string; userId: string; start: moment.Moment; end: moment.Moment };
+    //         svc: {
+    //             id: string;
+    //             name?: string | null;
+    //             price?: number | null;
+    //             discount?: number | null;
+    //             duration?: number | null;
+    //             maxParticipants?: number | null; // <=1 => individual
+    //         };
+    //         timeZoneWorkspace: string;
+    //         note?: string | null;
+    //         customer: { id: string; idClientWorkspace: string };
+    //     }
+    // ): Promise<{ event: Event; action: "created" | "joined" | "already-in" }> {
+    //     const { idWorkspace, idCompany, seg, svc, timeZoneWorkspace, note, customer } = params;
+    //     const startDate = seg.start.toDate();
+    //     const endDate = seg.end.toDate();
+    //     const capacity = Math.max(1, svc.maxParticipants ?? 1);
+    //     const isGroup = capacity > 1;
 
-        // 🔒 lock por (pro|servicio)+inicio
-        await tx.$executeRawUnsafe(
-            `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`,
-            `${seg.userId}|${seg.serviceId}`,
-            seg.start.toISOString()
-        );
+    //     // 🔒 lock por (pro|servicio)+inicio
+    //     await tx.$executeRawUnsafe(
+    //         `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`,
+    //         `${seg.userId}|${seg.serviceId}`,
+    //         seg.start.toISOString()
+    //     );
 
-        // ¿ya existe ese evento exacto?
-        const existing = await tx.event.findFirst({
-            where: {
-                idWorkspaceFk: idWorkspace,
-                idServiceFk: seg.serviceId,
-                idUserPlatformFk: seg.userId,
-                startDate,
-                endDate,
-            },
-            select: { id: true },
-        });
+    //     // ¿ya existe ese evento exacto?
+    //     const existing = await tx.event.findFirst({
+    //         where: {
+    //             idWorkspaceFk: idWorkspace,
+    //             idServiceFk: seg.serviceId,
+    //             idUserPlatformFk: seg.userId,
+    //             startDate,
+    //             endDate,
+    //         },
+    //         select: { id: true },
+    //     });
 
-        if (existing) {
-            if (!isGroup) {
-                // Individual ⇒ si ya está el mismo cliente, idempotente; si no, ocupado
-                const same = await tx.eventParticipant.findFirst({
-                    where: {
-                        idEventFk: existing.id,
-                        idClientWorkspaceFk: customer.idClientWorkspace,
-                        deletedDate: null,
-                    },
-                    select: { id: true },
-                });
-                const ev = await tx.event.findUnique({ where: { id: existing.id } });
-                if (same) return { event: ev!, action: "already-in" };
-                throw new Error("Ese horario ya está ocupado.");
-            }
+    //     if (existing) {
+    //         if (!isGroup) {
+    //             // Individual ⇒ si ya está el mismo cliente, idempotente; si no, ocupado
+    //             const same = await tx.eventParticipant.findFirst({
+    //                 where: {
+    //                     idEventFk: existing.id,
+    //                     idClientWorkspaceFk: customer.idClientWorkspace,
+    //                     deletedDate: null,
+    //                 },
+    //                 select: { id: true },
+    //             });
+    //             const ev = await tx.event.findUnique({ where: { id: existing.id } });
+    //             if (same) return { event: ev!, action: "already-in" };
+    //             throw new Error("Ese horario ya está ocupado.");
+    //         }
 
-            // Grupal ⇒ comprueba plazas y si ya está dentro
-            const [count, already] = await Promise.all([
-                tx.eventParticipant.count({ where: { idEventFk: existing.id, deletedDate: null } }),
-                tx.eventParticipant.findFirst({
-                    where: {
-                        idEventFk: existing.id,
-                        idClientWorkspaceFk: customer.idClientWorkspace,
-                        deletedDate: null,
-                    },
-                    select: { id: true },
-                }),
-            ]);
+    //         // Grupal ⇒ comprueba plazas y si ya está dentro
+    //         const [count, already] = await Promise.all([
+    //             tx.eventParticipant.count({ where: { idEventFk: existing.id, deletedDate: null } }),
+    //             tx.eventParticipant.findFirst({
+    //                 where: {
+    //                     idEventFk: existing.id,
+    //                     idClientWorkspaceFk: customer.idClientWorkspace,
+    //                     deletedDate: null,
+    //                 },
+    //                 select: { id: true },
+    //             }),
+    //         ]);
 
-            const ev = await tx.event.findUnique({ where: { id: existing.id } });
+    //         const ev = await tx.event.findUnique({ where: { id: existing.id } });
 
-            if (already) return { event: ev!, action: "already-in" };
-            if (count >= capacity) throw new Error("No quedan plazas disponibles en ese grupo.");
+    //         if (already) return { event: ev!, action: "already-in" };
+    //         if (count >= capacity) throw new Error("No quedan plazas disponibles en ese grupo.");
 
-            await tx.eventParticipant.create({
-                data: {
-                    idEventFk: existing.id,
-                    idClientFk: customer.id,
-                    idClientWorkspaceFk: customer.idClientWorkspace,
-                },
-            });
+    //         await tx.eventParticipant.create({
+    //             data: {
+    //                 idEventFk: existing.id,
+    //                 idClientFk: customer.id,
+    //                 idClientWorkspaceFk: customer.idClientWorkspace,
+    //             },
+    //         });
 
-            return { event: ev!, action: "joined" };
-        }
+    //         return { event: ev!, action: "joined" };
+    //     }
 
-        // Evitar solapes con otros eventos del pro
-        const overlappingOther = await tx.event.findFirst({
-            where: {
-                idUserPlatformFk: seg.userId,
-                startDate: { lt: endDate },
-                endDate: { gt: startDate },
-            },
-            select: { id: true },
-        });
-        if (overlappingOther) throw new Error("Ese profesional ya tiene otro evento en ese horario.");
+    //     // Evitar solapes con otros eventos del pro
+    //     const overlappingOther = await tx.event.findFirst({
+    //         where: {
+    //             idUserPlatformFk: seg.userId,
+    //             startDate: { lt: endDate },
+    //             endDate: { gt: startDate },
+    //         },
+    //         select: { id: true },
+    //     });
+    //     if (overlappingOther) throw new Error("Ese profesional ya tiene otro evento en ese horario.");
 
-        // Crear evento
-        const ev = await tx.event.create({
-            data: {
-                idCompanyFk: idCompany,
-                idWorkspaceFk: idWorkspace,
-                // service: { connect: { id: seg.serviceId } },
-                idServiceFk: seg.serviceId,
-                idUserPlatformFk: seg.userId,
-                startDate,
-                endDate,
-                title: svc.name ?? "Cita",
-                description: note ?? null,
-                timeZone: timeZoneWorkspace,
-                eventPurposeType: "APPOINTMENT",
-                serviceNameSnapshot: svc.name ?? null,
-                servicePriceSnapshot: typeof svc.price === "number" ? svc.price : null,
-                serviceDiscountSnapshot: typeof svc.discount === "number" ? svc.discount : null,
-                serviceDurationSnapshot: typeof svc.duration === "number" ? svc.duration : null,
-                eventParticipant: {
-                    create: {
-                        idClientFk: customer.id,
-                        idClientWorkspaceFk: customer.idClientWorkspace,
-                    },
-                },
-            },
-        });
+    //     // Crear evento
+    //     const ev = await tx.event.create({
+    //         data: {
+    //             idCompanyFk: idCompany,
+    //             idWorkspaceFk: idWorkspace,
+    //             // service: { connect: { id: seg.serviceId } },
+    //             idServiceFk: seg.serviceId,
+    //             idUserPlatformFk: seg.userId,
+    //             startDate,
+    //             endDate,
+    //             title: svc.name ?? "Cita",
+    //             description: note ?? null,
+    //             timeZone: timeZoneWorkspace,
+    //             eventPurposeType: "APPOINTMENT",
+    //             serviceNameSnapshot: svc.name ?? null,
+    //             servicePriceSnapshot: typeof svc.price === "number" ? svc.price : null,
+    //             serviceDiscountSnapshot: typeof svc.discount === "number" ? svc.discount : null,
+    //             serviceDurationSnapshot: typeof svc.duration === "number" ? svc.duration : null,
+    //             serviceMaxParticipantsSnapshot: typeof svc.maxParticipants === "number" ? svc.maxParticipants : null,
+    //             eventParticipant: {
+    //                 create: {
+    //                     idClientFk: customer.id,
+    //                     idClientWorkspaceFk: customer.idClientWorkspace,
+    //                 },
+    //             },
+    //         },
+    //     });
 
-        return { event: ev, action: "created" };
-    }
+    //     return { event: ev, action: "created" };
+    // }
 
+    // Se puede borrar ya que se encuentra en el servicio client-event
+    // async addEventFromWeb(input: AddFromWebInput, deps: AddFromWebDeps) {
+    //     try {
+    //         const {
+    //             idCompany, idWorkspace, timeZoneClient, startLocalISO,
+    //             attendees, excludeEventId, note, customer,
+    //         } = input;
+    //         const {
+    //             timeZoneWorkspace, businessHoursService, workerHoursService,
+    //             temporaryHoursService, bookingConfig, cache,
+    //         } = deps;
 
-    async addEventFromWeb(input: AddFromWebInput, deps: AddFromWebDeps) {
-        try {
-            const {
-                idCompany, idWorkspace, timeZoneClient, startLocalISO,
-                attendees, excludeEventId, note, customer,
-            } = input;
-            const {
-                timeZoneWorkspace, businessHoursService, workerHoursService,
-                temporaryHoursService, bookingConfig, cache,
-            } = deps;
+    //         console.log(CONSOLE_COLOR.FgMagenta, "[addEventFromWeb] input:", input, CONSOLE_COLOR.Reset);
 
-            console.log(CONSOLE_COLOR.FgMagenta, "[addEventFromWeb] input:", input, CONSOLE_COLOR.Reset);
+    //         if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany/idWorkspace");
+    //         if (!timeZoneWorkspace) throw new Error("Falta timeZoneWorkspace");
+    //         if (!timeZoneClient) throw new Error("Falta timeZoneClient");
+    //         if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(startLocalISO))
+    //             throw new Error("startLocalISO debe ser YYYY-MM-DDTHH:mm:ss");
+    //         if (!Array.isArray(attendees) || attendees.length === 0) throw new Error("attendees vacío");
+    //         if (!customer?.id) throw new Error("Falta customer.id");
+    //         if (!customer?.idClientWorkspace) throw new Error("Falta customer.idClientWorkspace");
 
-            if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany/idWorkspace");
-            if (!timeZoneWorkspace) throw new Error("Falta timeZoneWorkspace");
-            if (!timeZoneClient) throw new Error("Falta timeZoneClient");
-            if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(startLocalISO))
-                throw new Error("startLocalISO debe ser YYYY-MM-DDTHH:mm:ss");
-            if (!Array.isArray(attendees) || attendees.length === 0) throw new Error("attendees vacío");
-            if (!customer?.id) throw new Error("Falta customer.id");
-            if (!customer?.idClientWorkspace) throw new Error("Falta customer.idClientWorkspace");
+    //         console.log(CONSOLE_COLOR.FgCyan, "[addEventFromWeb] startLocalISO:", startLocalISO, CONSOLE_COLOR.Reset);
 
-            console.log(CONSOLE_COLOR.FgCyan, "[addEventFromWeb] startLocalISO:", startLocalISO, CONSOLE_COLOR.Reset);
+    //         const startClient = moment.tz(startLocalISO, "YYYY-MM-DDTHH:mm:ss", timeZoneClient);
+    //         if (!startClient.isValid()) throw new Error("startLocalISO inválido");
 
-            const startClient = moment.tz(startLocalISO, "YYYY-MM-DDTHH:mm:ss", timeZoneClient);
-            if (!startClient.isValid()) throw new Error("startLocalISO inválido");
+    //         const startWS = startClient.clone().tz(timeZoneWorkspace);
+    //         const dateWS = startWS.format("YYYY-MM-DD");
 
-            const startWS = startClient.clone().tz(timeZoneWorkspace);
-            const dateWS = startWS.format("YYYY-MM-DD");
+    //         const todayWS = moment().tz(timeZoneWorkspace).startOf("day");
+    //         if (startWS.clone().startOf("day").isBefore(todayWS, "day")) {
+    //             console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Día pasado en TZ workspace", CONSOLE_COLOR.Reset);
+    //             return { ok: false };
+    //         }
 
-            const todayWS = moment().tz(timeZoneWorkspace).startOf("day");
-            if (startWS.clone().startOf("day").isBefore(todayWS, "day")) {
-                console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Día pasado en TZ workspace", CONSOLE_COLOR.Reset);
-                return { ok: false };
-            }
+    //         const { roundedNow, isToday } = computeSlotConfig({
+    //             // alignMode: bookingConfig?.slot?.alignMode ?? "service",
+    //             // attendees,
+    //             intervalMinutes: 5,
+    //             timeZoneWorkspace,
+    //             dayStartLocal: startWS.clone().startOf("day"),
+    //         });
+    //         if (isToday && startWS.isBefore(roundedNow)) {
+    //             console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Hora pasada en TZ workspace", CONSOLE_COLOR.Reset);
+    //             return { ok: false };
+    //         }
 
-            const { roundedNow, isToday } = computeSlotConfig({
-                // alignMode: bookingConfig?.slot?.alignMode ?? "service",
-                // attendees,
-                intervalMinutes: 5,
-                timeZoneWorkspace,
-                dayStartLocal: startWS.clone().startOf("day"),
-            });
-            if (isToday && startWS.isBefore(roundedNow)) {
-                console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Hora pasada en TZ workspace", CONSOLE_COLOR.Reset);
-                return { ok: false };
-            }
+    //         // 2) Elegibles por servicio (quién puede hacer el servicio)
+    //         const userIdsByService = new Map<string, string[]>();
+    //         for (const a of attendees) {
+    //             if (a.staffId) userIdsByService.set(a.serviceId, [a.staffId]);
+    //             else {
+    //                 const users = await getUsersWhoCanPerformService_SPECIAL(
+    //                     idWorkspace, a.serviceId, a.categoryId, cache
+    //                 );
+    //                 userIdsByService.set(a.serviceId, users);
+    //             }
+    //         }
+    //         const allUserIds = Array.from(new Set(Array.from(userIdsByService.values()).flat()));
+    //         if (allUserIds.length === 0) {
+    //             console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] No hay profesionales elegibles", CONSOLE_COLOR.Reset);
+    //             return { ok: false };
+    //         }
 
-            // 2) Elegibles por servicio (quién puede hacer el servicio)
-            const userIdsByService = new Map<string, string[]>();
-            for (const a of attendees) {
-                if (a.staffId) userIdsByService.set(a.serviceId, [a.staffId]);
-                else {
-                    const users = await getUsersWhoCanPerformService_SPECIAL(
-                        idWorkspace, a.serviceId, a.categoryId, cache
-                    );
-                    userIdsByService.set(a.serviceId, users);
-                }
-            }
-            const allUserIds = Array.from(new Set(Array.from(userIdsByService.values()).flat()));
-            if (allUserIds.length === 0) {
-                console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] No hay profesionales elegibles", CONSOLE_COLOR.Reset);
-                return { ok: false };
-            }
+    //         // 3) Reglas del día (ventanas de trabajo reales por user)
+    //         const businessHours = await businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace);
+    //         const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(allUserIds, idWorkspace);
+    //         const temporaryHoursMap = await temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idWorkspace, { date: dateWS });
 
-            // 3) Reglas del día (ventanas de trabajo reales por user)
-            const businessHours = await businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace);
-            const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(allUserIds, idWorkspace);
-            const temporaryHoursMap = await temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idWorkspace, { date: dateWS });
+    //         const events = await getEventsOverlappingRange_SPECIAL(idWorkspace, allUserIds, dateWS, dateWS, excludeEventId);
+    //         const eventsByUser = groupEventsByUser_SPECIAL(events);
 
-            const events = await getEventsOverlappingRange_SPECIAL(idWorkspace, allUserIds, dateWS, dateWS, excludeEventId);
-            const eventsByUser = groupEventsByUser_SPECIAL(events);
+    //         type MM = { start: moment.Moment; end: moment.Moment };
+    //         const weekDay = startWS.format("dddd").toUpperCase() as any;
+    //         const bizShifts: string[][] = (() => {
+    //             const biz = (businessHours as any)?.[weekDay];
+    //             return biz === null ? [] : Array.isArray(biz) ? biz : [];
+    //         })();
 
-            type MM = { start: moment.Moment; end: moment.Moment };
-            const weekDay = startWS.format("dddd").toUpperCase() as any;
-            const bizShifts: string[][] = (() => {
-                const biz = (businessHours as any)?.[weekDay];
-                return biz === null ? [] : Array.isArray(biz) ? biz : [];
-            })();
+    //         const shiftsByUserLocal: Record<string, MM[]> = {};
+    //         for (const uid of allUserIds) {
+    //             let workShifts: string[][] = [];
+    //             const tmp = (temporaryHoursMap as any)?.[uid]?.[dateWS];
+    //             if (tmp === null) workShifts = [];
+    //             else if (Array.isArray(tmp) && tmp.length > 0) workShifts = tmp;
+    //             else {
+    //                 const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
+    //                 if (workerDay === null) workShifts = [];
+    //                 else if (Array.isArray(workerDay) && workerDay.length > 0) workShifts = workerDay;
+    //                 else workShifts = bizShifts;
+    //             }
+    //             shiftsByUserLocal[uid] = (workShifts || []).map(([s, e]) => ({
+    //                 start: moment.tz(`${dateWS}T${s}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
+    //                 end: moment.tz(`${dateWS}T${e}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
+    //             }));
+    //         }
 
-            const shiftsByUserLocal: Record<string, MM[]> = {};
-            for (const uid of allUserIds) {
-                let workShifts: string[][] = [];
-                const tmp = (temporaryHoursMap as any)?.[uid]?.[dateWS];
-                if (tmp === null) workShifts = [];
-                else if (Array.isArray(tmp) && tmp.length > 0) workShifts = tmp;
-                else {
-                    const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
-                    if (workerDay === null) workShifts = [];
-                    else if (Array.isArray(workerDay) && workerDay.length > 0) workShifts = workerDay;
-                    else workShifts = bizShifts;
-                }
-                shiftsByUserLocal[uid] = (workShifts || []).map(([s, e]) => ({
-                    start: moment.tz(`${dateWS}T${s}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-                    end: moment.tz(`${dateWS}T${e}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-                }));
-            }
+    //         const freeWindowsByUser: Record<string, MM[]> = {};
+    //         for (const uid of allUserIds) {
+    //             const busy = (eventsByUser[uid] || []).map((ev) => ({
+    //                 start: moment(ev.startDate).tz(timeZoneWorkspace),
+    //                 end: moment(ev.endDate).tz(timeZoneWorkspace),
+    //             }));
+    //             const raw = shiftsByUserLocal[uid] || [];
+    //             const free: MM[] = [];
+    //             for (const sh of raw) {
+    //                 const startClamped = isToday ? moment.max(sh.start, roundedNow) : sh.start.clone();
+    //                 if (!startClamped.isBefore(sh.end)) continue;
+    //                 free.push(...subtractBusyFromShift_SPECIAL(startClamped, sh.end, busy));
+    //             }
+    //             freeWindowsByUser[uid] = mergeTouchingWindows_SPECIAL(free);
+    //         }
 
-            const freeWindowsByUser: Record<string, MM[]> = {};
-            for (const uid of allUserIds) {
-                const busy = (eventsByUser[uid] || []).map((ev) => ({
-                    start: moment(ev.startDate).tz(timeZoneWorkspace),
-                    end: moment(ev.endDate).tz(timeZoneWorkspace),
-                }));
-                const raw = shiftsByUserLocal[uid] || [];
-                const free: MM[] = [];
-                for (const sh of raw) {
-                    const startClamped = isToday ? moment.max(sh.start, roundedNow) : sh.start.clone();
-                    if (!startClamped.isBefore(sh.end)) continue;
-                    free.push(...subtractBusyFromShift_SPECIAL(startClamped, sh.end, busy));
-                }
-                freeWindowsByUser[uid] = mergeTouchingWindows_SPECIAL(free);
-            }
+    //         // 3.5) Snapshot servicios (saber si es grupal)
+    //         const serviceById = await _getServicesSnapshotById({ idCompany, idWorkspace, attendees });
 
-            // 3.5) Snapshot servicios (saber si es grupal)
-            const serviceById = await _getServicesSnapshotById({ idCompany, idWorkspace, attendees });
+    //         // ==== Pesos RR (0–100; default 100) ====
+    //         const rawIds = Array.isArray(bookingConfig?.resources?.ids)
+    //             ? bookingConfig!.resources!.ids as unknown as [string, number][]
+    //             : [];
 
-            // ==== Pesos RR (0–100; default 100) ====
-            const rawIds = Array.isArray(bookingConfig?.resources?.ids)
-                ? bookingConfig!.resources!.ids as unknown as [string, number][]
-                : [];
-
-            const weightsMap: Record<string, number> = Object.fromEntries(
-                rawIds.map(([id, w]) => [id, Number.isFinite(w) ? w : 100])
-            );
-
-
-            // === PATH ESPECIAL: 1 servicio GRUPAL ===
-            const isSingleGroup =
-                attendees.length === 1 &&
-                Math.max(1, serviceById[attendees[0].serviceId]?.maxParticipants ?? 1) > 1;
-
-            let assignment: Array<{ serviceId: string; userId: string; start: moment.Moment; end: moment.Moment }> = [];
-
-            if (isSingleGroup) {
-                const svcReq = attendees[0];
-                const svcSnap = serviceById[svcReq.serviceId];
-                const dur = svcReq.durationMin ?? (svcSnap?.duration ?? 0);
-                const endWS = startWS.clone().add(dur, "minutes");
-                const elig = userIdsByService.get(svcReq.serviceId) ?? [];
-
-                // 1) intentar UNIRSE a un evento existente por solape
-                // const calendar = await prisma.calendar.findFirst({
-                //     where: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace, deletedDate: null },
-                //     select: { id: true },
-                // });
+    //         const weightsMap: Record<string, number> = Object.fromEntries(
+    //             rawIds.map(([id, w]) => [id, Number.isFinite(w) ? w : 100])
+    //         );
 
 
-                // if (calendar && elig.length) {
-                // 
-                if (elig.length) {
-                    const overlappingEvents = await prisma.event.findMany({
-                        where: {
-                            // idCalendarFk: calendar.id,
-                            idWorkspaceFk: idWorkspace,
-                            idServiceFk: svcReq.serviceId,
-                            idUserPlatformFk: { in: elig },
-                            startDate: { lt: endWS.toDate() },
-                            endDate: { gt: startWS.toDate() },
-                            ...(excludeEventId ? { id: { not: excludeEventId } } : {}),
-                            deletedDate: null,
-                        },
-                        orderBy: { startDate: "asc" },
-                        select: {
-                            id: true,
-                            idUserPlatformFk: true,
-                            startDate: true,
-                            endDate: true,
-                            eventParticipant: { where: { deletedDate: null }, select: { idClientFk: true, idClientWorkspaceFk: true } },
-                        },
-                    });
+    //         // === PATH ESPECIAL: 1 servicio GRUPAL ===
+    //         const isSingleGroup =
+    //             attendees.length === 1 &&
+    //             Math.max(1, serviceById[attendees[0].serviceId]?.maxParticipants ?? 1) > 1;
 
-                    const pick = (() => {
-                        if (!overlappingEvents.length) return null;
-                        const exact = overlappingEvents.find(ev =>
-                            moment(ev.startDate).isSame(startWS, "minute") &&
-                            moment(ev.endDate).isSame(endWS, "minute")
-                        );
-                        if (exact) return exact;
-                        return overlappingEvents
-                            .map(ev => ({ ev, d: Math.abs(moment(ev.startDate).diff(startWS, "minutes")) }))
-                            .sort((a, b) => a.d - b.d)[0].ev;
-                    })();
+    //         let assignment: Array<{ serviceId: string; userId: string; start: moment.Moment; end: moment.Moment }> = [];
 
-                    if (pick && pick.idUserPlatformFk) {
-                        const capacity = Math.max(1, svcSnap?.maxParticipants ?? 1);
-                        const booked = pick.eventParticipant.length;
-                        const hasSeat = booked < capacity;
+    //         if (isSingleGroup) {
+    //             const svcReq = attendees[0];
+    //             const svcSnap = serviceById[svcReq.serviceId];
+    //             const dur = svcReq.durationMin ?? (svcSnap?.duration ?? 0);
+    //             const endWS = startWS.clone().add(dur, "minutes");
+    //             const elig = userIdsByService.get(svcReq.serviceId) ?? [];
 
-                        const alreadyIn = pick.eventParticipant.some(p =>
-                            p.idClientFk === customer.id || p.idClientWorkspaceFk === customer.idClientWorkspace
-                        );
-
-                        if (hasSeat && !alreadyIn) {
-                            assignment = [{
-                                serviceId: svcReq.serviceId,
-                                userId: pick.idUserPlatformFk,
-                                start: startWS.clone().seconds(0).milliseconds(0),
-                                end: endWS.clone().seconds(0).milliseconds(0),
-                            }];
-                        }
-                    }
-                }
-
-                // 2) si no había evento con plazas, crear el primero con RR
-                if (assignment.length === 0) {
-                    const eligAvail = (userIdsByService.get(svcReq.serviceId) ?? []).filter(uid =>
-                        (freeWindowsByUser[uid] ?? []).some(w => startWS.isSameOrAfter(w.start) && endWS.isSameOrBefore(w.end))
-                    );
-
-                    const chosen = await this.chooseStaffWithRR(
-                        idWorkspace,
-                        undefined, // idBookingPage (no lo tenemos aquí)
-                        svcReq.serviceId,
-                        startWS.toDate(),
-                        endWS.toDate(),
-                        eligAvail,
-                        weightsMap
-                    );
-                    if (!chosen) {
-                        console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Grupo: ningún pro disponible para el slot", CONSOLE_COLOR.Reset);
-                        return { ok: false };
-                    }
-                    assignment = [{
-                        serviceId: svcReq.serviceId,
-                        userId: chosen,
-                        start: startWS.clone().seconds(0).milliseconds(0),
-                        end: endWS.clone().seconds(0).milliseconds(0),
-                    }];
-                }
-            } else {
-                // === PATH NORMAL ===
-                const isSingleIndividual =
-                    attendees.length === 1 &&
-                    Math.max(1, serviceById[attendees[0].serviceId]?.maxParticipants ?? 1) === 1;
-
-                if (isSingleIndividual) {
-                    // RR para individual (sin backtracking)
-                    const svcReq = attendees[0];
-                    const dur = svcReq.durationMin ?? (serviceById[svcReq.serviceId]?.duration ?? 0);
-                    const endWS = startWS.clone().add(dur, "minutes");
-
-                    const eligAvail = (userIdsByService.get(svcReq.serviceId) ?? []).filter(uid =>
-                        (freeWindowsByUser[uid] ?? []).some(w => startWS.isSameOrAfter(w.start) && endWS.isSameOrBefore(w.end))
-                    );
-
-                    // TODO: Buscar el idBookingPage, se intentará que llegue desde el front client al hacer la reserva
-                    const chosen = await this.chooseStaffWithRR(
-                        idWorkspace,
-                        undefined, // idBookingPage (no lo tenemos aquí)
-                        svcReq.serviceId,
-                        startWS.toDate(),
-                        endWS.toDate(),
-                        eligAvail,
-                        weightsMap
-                    );
-                    if (!chosen) {
-                        console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Individual: ningún pro disponible para el slot", CONSOLE_COLOR.Reset);
-                        return { ok: false };
-                    }
-
-                    assignment = [{
-                        serviceId: svcReq.serviceId,
-                        userId: chosen,
-                        start: startWS.clone().seconds(0).milliseconds(0),
-                        end: endWS.clone().seconds(0).milliseconds(0),
-                    }];
-                } else {
-                    // Multi-servicio → tu flujo actual (sin RR)
-                    // Verificación previa
-                    for (const svc of attendees) {
-                        const elig = userIdsByService.get(svc.serviceId) ?? [];
-                        const algunoTieneHueco = elig.some((uid) =>
-                            (freeWindowsByUser[uid] ?? []).some(
-                                (w) => w.end.diff(w.start, "minutes") >= svc.durationMin
-                            )
-                        );
-                        if (!algunoTieneHueco) {
-                            console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] No hay hueco suficiente para al menos uno de los servicios.", CONSOLE_COLOR.Reset);
-                            return { ok: false };
-                        }
-                    }
-
-                    const eligibleUsersByService: Record<string, string[]> = {};
-                    for (const a of attendees) {
-                        eligibleUsersByService[a.serviceId] = userIdsByService.get(a.serviceId) ?? [];
-                    }
-
-                    const _assignment: typeof assignment = [];
-                    const ok = assignSequentially_SPECIAL({
-                        idx: 0,
-                        start: startWS.clone().seconds(0).milliseconds(0),
-                        attendees,
-                        eligibleUsersByService,
-                        freeWindowsByUser,
-                        usedByUserAt: [],
-                        assignment: _assignment,
-                    });
-
-                    if (!ok) {
-                        console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] El inicio elegido ya no está disponible (cambió la disponibilidad).", CONSOLE_COLOR.Reset);
-                        return { ok: false };
-                    }
-                    assignment = _assignment;
-                }
-            }
-
-            // total/end para la respuesta
-            const totalDuration = attendees.reduce((acc, a) => acc + a.durationMin, 0);
-            const endWS = startWS.clone().add(totalDuration, "minutes");
-
-            // 6) Calendar & transacción (group-aware)
-            // const calendar = await prisma.calendar.upsert({
-            //     where: { idCompanyFk_idWorkspaceFk: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace } },
-            //     update: {},
-            //     create: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace },
-            // });
+    //             // 1) intentar UNIRSE a un evento existente por solape
+    //             // const calendar = await prisma.calendar.findFirst({
+    //             //     where: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace, deletedDate: null },
+    //             //     select: { id: true },
+    //             // });
 
 
+    //             // if (calendar && elig.length) {
+    //             // 
+    //             if (elig.length) {
+    //                 const overlappingEvents = await prisma.event.findMany({
+    //                     where: {
+    //                         // idCalendarFk: calendar.id,
+    //                         idWorkspaceFk: idWorkspace,
+    //                         idServiceFk: svcReq.serviceId,
+    //                         idUserPlatformFk: { in: elig },
+    //                         startDate: { lt: endWS.toDate() },
+    //                         endDate: { gt: startWS.toDate() },
+    //                         ...(excludeEventId ? { id: { not: excludeEventId } } : {}),
+    //                         deletedDate: null,
+    //                     },
+    //                     orderBy: { startDate: "asc" },
+    //                     select: {
+    //                         id: true,
+    //                         idUserPlatformFk: true,
+    //                         startDate: true,
+    //                         endDate: true,
+    //                         eventParticipant: { where: { deletedDate: null }, select: { idClientFk: true, idClientWorkspaceFk: true } },
+    //                     },
+    //                 });
+
+    //                 const pick = (() => {
+    //                     if (!overlappingEvents.length) return null;
+    //                     const exact = overlappingEvents.find(ev =>
+    //                         moment(ev.startDate).isSame(startWS, "minute") &&
+    //                         moment(ev.endDate).isSame(endWS, "minute")
+    //                     );
+    //                     if (exact) return exact;
+    //                     return overlappingEvents
+    //                         .map(ev => ({ ev, d: Math.abs(moment(ev.startDate).diff(startWS, "minutes")) }))
+    //                         .sort((a, b) => a.d - b.d)[0].ev;
+    //                 })();
+
+    //                 if (pick && pick.idUserPlatformFk) {
+    //                     const capacity = Math.max(1, svcSnap?.maxParticipants ?? 1);
+    //                     const booked = pick.eventParticipant.length;
+    //                     const hasSeat = booked < capacity;
+
+    //                     const alreadyIn = pick.eventParticipant.some(p =>
+    //                         p.idClientFk === customer.id || p.idClientWorkspaceFk === customer.idClientWorkspace
+    //                     );
+
+    //                     if (hasSeat && !alreadyIn) {
+    //                         assignment = [{
+    //                             serviceId: svcReq.serviceId,
+    //                             userId: pick.idUserPlatformFk,
+    //                             start: startWS.clone().seconds(0).milliseconds(0),
+    //                             end: endWS.clone().seconds(0).milliseconds(0),
+    //                         }];
+    //                     }
+    //                 }
+    //             }
+
+    //             // 2) si no había evento con plazas, crear el primero con RR
+    //             if (assignment.length === 0) {
+    //                 const eligAvail = (userIdsByService.get(svcReq.serviceId) ?? []).filter(uid =>
+    //                     (freeWindowsByUser[uid] ?? []).some(w => startWS.isSameOrAfter(w.start) && endWS.isSameOrBefore(w.end))
+    //                 );
+
+    //                 const chosen = await this.chooseStaffWithRR(
+    //                     idWorkspace,
+    //                     undefined, // idBookingPage (no lo tenemos aquí)
+    //                     svcReq.serviceId,
+    //                     startWS.toDate(),
+    //                     endWS.toDate(),
+    //                     eligAvail,
+    //                     weightsMap
+    //                 );
+    //                 if (!chosen) {
+    //                     console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Grupo: ningún pro disponible para el slot", CONSOLE_COLOR.Reset);
+    //                     return { ok: false };
+    //                 }
+    //                 assignment = [{
+    //                     serviceId: svcReq.serviceId,
+    //                     userId: chosen,
+    //                     start: startWS.clone().seconds(0).milliseconds(0),
+    //                     end: endWS.clone().seconds(0).milliseconds(0),
+    //                 }];
+    //             }
+    //         } else {
+    //             // === PATH NORMAL ===
+    //             const isSingleIndividual =
+    //                 attendees.length === 1 &&
+    //                 Math.max(1, serviceById[attendees[0].serviceId]?.maxParticipants ?? 1) === 1;
+
+    //             if (isSingleIndividual) {
+    //                 // RR para individual (sin backtracking)
+    //                 const svcReq = attendees[0];
+    //                 const dur = svcReq.durationMin ?? (serviceById[svcReq.serviceId]?.duration ?? 0);
+    //                 const endWS = startWS.clone().add(dur, "minutes");
+
+    //                 const eligAvail = (userIdsByService.get(svcReq.serviceId) ?? []).filter(uid =>
+    //                     (freeWindowsByUser[uid] ?? []).some(w => startWS.isSameOrAfter(w.start) && endWS.isSameOrBefore(w.end))
+    //                 );
+
+    //                 // TODO: Buscar el idBookingPage, se intentará que llegue desde el front client al hacer la reserva
+    //                 const chosen = await this.chooseStaffWithRR(
+    //                     idWorkspace,
+    //                     undefined, // idBookingPage (no lo tenemos aquí)
+    //                     svcReq.serviceId,
+    //                     startWS.toDate(),
+    //                     endWS.toDate(),
+    //                     eligAvail,
+    //                     weightsMap
+    //                 );
+    //                 if (!chosen) {
+    //                     console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Individual: ningún pro disponible para el slot", CONSOLE_COLOR.Reset);
+    //                     return { ok: false };
+    //                 }
+
+    //                 assignment = [{
+    //                     serviceId: svcReq.serviceId,
+    //                     userId: chosen,
+    //                     start: startWS.clone().seconds(0).milliseconds(0),
+    //                     end: endWS.clone().seconds(0).milliseconds(0),
+    //                 }];
+    //             } else {
+    //                 // Multi-servicio → tu flujo actual (sin RR)
+    //                 // Verificación previa
+    //                 for (const svc of attendees) {
+    //                     const elig = userIdsByService.get(svc.serviceId) ?? [];
+    //                     const algunoTieneHueco = elig.some((uid) =>
+    //                         (freeWindowsByUser[uid] ?? []).some(
+    //                             (w) => w.end.diff(w.start, "minutes") >= svc.durationMin
+    //                         )
+    //                     );
+    //                     if (!algunoTieneHueco) {
+    //                         console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] No hay hueco suficiente para al menos uno de los servicios.", CONSOLE_COLOR.Reset);
+    //                         return { ok: false };
+    //                     }
+    //                 }
+
+    //                 const eligibleUsersByService: Record<string, string[]> = {};
+    //                 for (const a of attendees) {
+    //                     eligibleUsersByService[a.serviceId] = userIdsByService.get(a.serviceId) ?? [];
+    //                 }
+
+    //                 const _assignment: typeof assignment = [];
+    //                 const ok = assignSequentially_SPECIAL({
+    //                     idx: 0,
+    //                     start: startWS.clone().seconds(0).milliseconds(0),
+    //                     attendees,
+    //                     eligibleUsersByService,
+    //                     freeWindowsByUser,
+    //                     usedByUserAt: [],
+    //                     assignment: _assignment,
+    //                 });
+
+    //                 if (!ok) {
+    //                     console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] El inicio elegido ya no está disponible (cambió la disponibilidad).", CONSOLE_COLOR.Reset);
+    //                     return { ok: false };
+    //                 }
+    //                 assignment = _assignment;
+    //             }
+    //         }
+
+    //         // total/end para la respuesta
+    //         const totalDuration = attendees.reduce((acc, a) => acc + a.durationMin, 0);
+    //         const endWS = startWS.clone().add(totalDuration, "minutes");
+
+    //         // 6) Calendar & transacción (group-aware)
+    //         // const calendar = await prisma.calendar.upsert({
+    //         //     where: { idCompanyFk_idWorkspaceFk: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace } },
+    //         //     update: {},
+    //         //     create: { idCompanyFk: idCompany, idWorkspaceFk: idWorkspace },
+    //         // });
 
 
-            const created = await prisma.$transaction(async (tx) => {
-                const events = [];
-                for (const seg of assignment) {
-                    const svc = serviceById[seg.serviceId];
-                    if (!svc) throw new Error("Servicio no disponible o no pertenece a este workspace.");
-                    const ev = await this.createOrJoinGroupEvent(tx, {
-                        idWorkspace,
-                        idCompany,
-                        seg,
-                        svc,
-                        timeZoneWorkspace,
-                        note,
-                        customer: { id: customer.id, idClientWorkspace: customer.idClientWorkspace! },
-                    });
-                    events.push(ev);
-                }
-                return events;
-            });
 
-            return {
-                ok: true as const,
-                appointment: {
-                    startLocalISO: startWS.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-                    endLocalISO: endWS.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-                    timeZoneClient,
-                    timeZoneWorkspace,
-                    totalDurationMin: totalDuration,
-                },
-                assignments: assignment.map((a) => ({
-                    serviceId: a.serviceId,
-                    userId: a.userId,
-                    startUTC: a.start.toISOString(),
-                    endUTC: a.end.toISOString(),
-                    startLocalClient: a.start.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-                    endLocalClient: a.end.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-                })),
-                created,
-            };
-        } catch (error: any) {
-            console.error("Error en EventV2Service:", error);
-            throw new CustomError("Error al crear evento", error);
-        }
-    }
+
+    //         const created = await prisma.$transaction(async (tx) => {
+    //             const events = [];
+    //             for (const seg of assignment) {
+    //                 const svc = serviceById[seg.serviceId];
+    //                 if (!svc) throw new Error("Servicio no disponible o no pertenece a este workspace.");
+    //                 const ev = await this.createOrJoinGroupEvent(tx, {
+    //                     idWorkspace,
+    //                     idCompany,
+    //                     seg,
+    //                     svc,
+    //                     timeZoneWorkspace,
+    //                     note,
+    //                     customer: { id: customer.id, idClientWorkspace: customer.idClientWorkspace! },
+    //                 });
+    //                 events.push(ev);
+    //             }
+    //             return events;
+    //         });
+
+    //         return {
+    //             ok: true as const,
+    //             appointment: {
+    //                 startLocalISO: startWS.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+    //                 endLocalISO: endWS.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+    //                 timeZoneClient,
+    //                 timeZoneWorkspace,
+    //                 totalDurationMin: totalDuration,
+    //             },
+    //             assignments: assignment.map((a) => ({
+    //                 serviceId: a.serviceId,
+    //                 userId: a.userId,
+    //                 startUTC: a.start.toISOString(),
+    //                 endUTC: a.end.toISOString(),
+    //                 startLocalClient: a.start.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+    //                 endLocalClient: a.end.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+    //             })),
+    //             created,
+    //         };
+    //     } catch (error: any) {
+    //         console.error("Error en EventV2Service:", error);
+    //         throw new CustomError("Error al crear evento", error);
+    //     }
+    // }
 
 
 
@@ -2862,7 +2731,6 @@ export class EventV2Service {
         // 1) Hold del slot (scoped por workspace + bookingPage + service)
         const acquired = await rr.acquireHold({
             idWorkspace,
-            idBookingPage,
             idService,
             startISO: start.toISOString(),
             endISO: end.toISOString(),
@@ -2873,8 +2741,7 @@ export class EventV2Service {
         // 2) Weighted Smooth RR (usa pesos 0–100; default 100)
         const chosen = await rr.pickWeightedSmoothRR({
             idWorkspace,
-            idBookingPage,
-            // idService, // es global
+            idService,
             eligibles,
             weights: weightsMap,
             stateTTLSec: TIME_SECONDS.WEEK * 2
@@ -2884,7 +2751,6 @@ export class EventV2Service {
             // si no pudimos elegir, liberamos el hold
             await rr.releaseHold({
                 idWorkspace,
-                idBookingPage,
                 idService,
                 startISO: start.toISOString(),
                 endISO: end.toISOString(),
@@ -2922,6 +2788,7 @@ export class EventV2Service {
                     servicePriceSnapshot: true,
                     serviceDiscountSnapshot: true,
                     serviceDurationSnapshot: true,
+                    serviceMaxParticipantsSnapshot: true,
 
                     // Relaciones con select específico
                     eventParticipant: {
@@ -2946,6 +2813,60 @@ export class EventV2Service {
             };
         } catch (error: any) {
             throw new CustomError("EventService.getEventDataById", error);
+        }
+    }
+
+    getGroupDataById = async (idGroup: string, idWorkspace: string) => {
+        try {
+            const events = await prisma.event.findMany({
+                where: {
+                    idWorkspaceFk: idWorkspace,
+                    idGroup: idGroup,
+                    deletedDate: null
+                },
+                select: {
+                    // Campos específicos del evento que quieres devolver
+                    id: true,
+                    title: true,
+                    description: true,
+                    startDate: true,
+                    endDate: true,
+                    idUserPlatformFk: true,
+                    idServiceFk: true,
+                    eventPurposeType: true,
+                    eventSourceType: true,
+                    eventStatusType: true,
+                    allDay: true,
+                    idGroup: true,
+
+                    // timeZone: true,
+                    serviceNameSnapshot: true,
+                    servicePriceSnapshot: true,
+                    serviceDiscountSnapshot: true,
+                    serviceDurationSnapshot: true,
+                    serviceMaxParticipantsSnapshot: true,
+
+                    // Relaciones con select específico
+                    eventParticipant: {
+                        where: { deletedDate: null },
+                        select: {
+                            id: true,
+                            idClientFk: true,
+                            idClientWorkspaceFk: true,
+                            eventStatusType: true,
+                        },
+                    },
+                },
+            });
+
+            console.log("Fetched group events:", events);
+
+            return {
+                item: events,
+                count: events.length
+            };
+        } catch (error: any) {
+            throw new CustomError("EventService.getGroupDataById", error);
         }
     }
 }

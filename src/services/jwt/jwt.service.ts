@@ -209,10 +209,10 @@ export class JWTService {
 
     //     // console.log("verificar token en cookies")
     //     // console.log("req.cookies", req.cookies)
-    //     // console.log("req.cookies", req.cookies['booking.rbc.token'])
+    //     // console.log("req.cookies", req.cookies['booking_rbc_token'])
 
     //     // Obtener el token de las cookies
-    //     const cookieToken = req.cookies['booking.rbc.token'];
+    //     const cookieToken = req.cookies['booking_rbc_token'];
 
     //     // console.log("cookieToken", cookieToken)
     //     if (cookieToken) {
@@ -241,7 +241,7 @@ export class JWTService {
         }
 
         // 2) Cookie
-        const cookieToken = req.cookies?.["booking.rbc.token"]
+        const cookieToken = req.cookies?.["booking_rbc_token"]
             ?? req.cookies?.["booking_rbc_client_token"];
 
         if (cookieToken) {

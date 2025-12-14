@@ -5,6 +5,7 @@ import { SendLogPayload } from "../interfaces";
 import { HandleDeleteCompanyAction, HandleUserAction } from "../interfaces/action.interface";
 import { RequestNotificationPayload } from "../pubsub/interfaces";
 import { ServiceForEvent } from "../../@database/service/dto/my-service";
+import { RequestDeleteRecords } from "../pubsub/consumer/deleteRecords/interfaces";
 
 // Definimos los payloads que las acciones pueden llevar
 export interface ActionPayloads {
@@ -123,19 +124,7 @@ export interface ActionPayloads {
 
     // MS-Login - Ms-Calendar - MsClient - Ms-Notification
     // Payload para eliminar registros de una tabla
-    requestDeleteRecords: {
-        table: 'clients'
-        | 'companies'
-        | 'workspaces'
-        | 'users'
-        | 'clientWorkspaces'
-        | 'userWorkspaces-byWorkspace'
-        | 'userWorkspaces-byUser'
-        | 'calendarEvents'
-        ;
-        ids: string[]; // Array de IDs a borrar
-        idRelation?: string; // ID de la relación si es necesario
-    };
+    requestDeleteRecords: RequestDeleteRecords;
 
     // Usado solo en MS-Calendar
     requestRecurrenceJob: {

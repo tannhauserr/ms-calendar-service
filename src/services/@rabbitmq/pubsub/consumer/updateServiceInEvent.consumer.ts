@@ -3,6 +3,8 @@ import { RecurrenceScope } from "../../../@database/recurrence-rule/types";
 import { RabbitMQKeys } from "../../keys/rabbitmq.keys";
 import { RabbitPubSubService } from "../facade-pubsub/rabbit-pubsub.service";
 import prisma from "../../../../lib/prisma";
+import { ActionKey } from "../../../../models/notification/util/action-to-senctions";
+import { createNotification } from "../../../../models/notification/util/trigger/for-action";
 
 
 
@@ -76,24 +78,56 @@ export async function updateServiceInEventConsumer(): Promise<void> {
                 // 1) Creamos fecha “ahora” para filtrar sólo eventos no transcurridos
                 const now = new Date();
 
+                const where = {
+                    idServiceFk: payload.id,
+                    endDate: { gt: now },
+                };
+
+
                 // 2) Actualizamos todos los eventos con idServiceFk = payload.id y endDate > now
-                const { count } = await prisma.event.updateMany({
-                    where: {
-                        idServiceFk: payload.id,
-                        endDate: { gt: now }
-                    },
-                    data: {
-                        serviceNameSnapshot: payload.name ?? undefined,
-                        servicePriceSnapshot: payload.price ?? undefined,
-                        serviceDiscountSnapshot: payload.discount ?? undefined,
-                        serviceDurationSnapshot: payload.duration ?? undefined, // duración en minutos
-                        // opcional: llevar registro de cuántas veces hemos actualizado
-                        numberUpdates: { increment: 1 }
+                const [events] = await prisma.$transaction([
+                    prisma.event.findMany({
+                        where,
+                        // IMPORTANTE: solo los campos que necesita createNotification
+                        select: {
+                            id: true,
+                            idWorkspaceFk: true,
+                            idUserPlatformFk: true,
+                            eventParticipant: true,
+                            createdDate: true,
+                            updatedDate: true,
+                            startDate: true,
+                            endDate: true,
+                            idGroup: true,
+                            idServiceFk: true,
+                        },
+
+                    }),
+                    prisma.event.updateMany({
+                        where,
+                        data: {
+                            serviceNameSnapshot: payload.name ?? undefined,
+                            servicePriceSnapshot: payload.price ?? undefined,
+                            serviceDiscountSnapshot: payload.discount ?? undefined,
+                            serviceDurationSnapshot: payload.duration ?? undefined,
+                            numberUpdates: { increment: 1 },
+                        },
+                    }),
+                ]);
+
+                console.log(`✅ [Service-in-event] Updated ${events.length} events`);
+
+                if (payload.sendNotification && events.length > 0) {
+                    const action: ActionKey = "update"; // o la clave que toque en tu sistema
+
+                    // 3) Notificar por cada evento afectado
+                    for (const ev of events) {
+                        await createNotification(ev, {
+                            actionSectionType: action,
+                        });
                     }
-                });
+                }
 
-
-                console.log(`✅ [Service-in-event] Done`);
                 return ack();
             } catch (err) {
                 console.error(`❌ [Service-in-event] Error`, err);
