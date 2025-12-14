@@ -30,6 +30,7 @@ export function toPrismaEventScalars(
         servicePriceSnapshot: e?.servicePriceSnapshot || e?.service?.price || null,
         serviceNameSnapshot: e?.serviceNameSnapshot || e?.service?.name || null,
         serviceDurationSnapshot: e?.serviceDurationSnapshot || e?.service?.duration || null,
+        serviceMaxParticipantsSnapshot: e?.serviceMaxParticipantsSnapshot || e?.service?.maxParticipants || null,
     };
 }
 
@@ -60,8 +61,10 @@ export function toPrismaEventUpdate(
         servicePriceSnapshot: e?.servicePriceSnapshot || e?.service?.price || null,
         serviceNameSnapshot: e?.serviceNameSnapshot || e?.service?.name || null,
         serviceDurationSnapshot: e?.serviceDurationSnapshot || e?.service?.duration || null,
+        serviceMaxParticipantsSnapshot: e?.serviceMaxParticipantsSnapshot || e?.service?.maxParticipants || null,
         // NO scalars de FK aquí
 
+        // No incluir idGroup, ya que es algo que nunca se cambiaría en un update
 
     };
 }

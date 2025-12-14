@@ -38,6 +38,7 @@ export type StoreNotificationCreatedV1 = {
         workspaceId?: string;
         companyId?: string;
         eventId?: string;
+        bookingId: string;
 
         kind:
         | "booking"

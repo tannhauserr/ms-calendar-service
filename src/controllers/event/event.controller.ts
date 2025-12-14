@@ -1,28 +1,21 @@
 import { Response } from "../../models/messages/response";
-import { BusinessHourService } from "../../services/@database/all-business-services/business-hours/business-hours.service";
-import { TemporaryBusinessHourService } from "../../services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service";
-import { WorkerBusinessHourService } from "../../services/@database/all-business-services/worker-business-hours/worker-business-hours.service";
 import { EventV2Service } from "../../services/@database/event/eventv2.service";
 
 import { CONSOLE_COLOR } from "../../constant/console-color";
-import * as RPC from "../../services/@rabbitmq/rpc/functions";
-import { JWTService } from "../../services/jwt/jwt.service";
-import { getBookingPageByIds, getServiceByIds } from "../../services/@service-token-client/api-ms/bookingPage.ms";
-import { getWorkspacesByIds } from "../../services/@service-token-client/api-ms/auth.ms";
 import { EventForBackend } from "../../services/@database/event/dto/EventForBackend";
-import { _publishForAction } from "../../models/notification/util/trigger/for-action";
-import { Event } from "@prisma/client";
-import { getClientWorkspacesByIds } from "../../services/@service-token-client/api-ms/client.ms";
-import { buildIcs, IcsMeta } from "../../services/@database/event/util/build-ics";
 import { deleteRecordsRoutingKeys, publishDeleteRecordsMessage } from "../../services/@rabbitmq/pubsub/functions";
+import { getServiceByIds } from "../../services/@service-token-client/api-ms/bookingPage.ms";
+import { getClientWorkspacesByIds } from "../../services/@service-token-client/api-ms/client.ms";
+import { JWTService } from "../../services/jwt/jwt.service";
+import { create } from "domain";
+import { createNotification } from "../../models/notification/util/trigger/for-action";
+import { EventStatusType } from "@prisma/client";
+import { ActionKey } from "../../models/notification/util/action-to-senctions";
 
 export class EventController {
     public eventService: EventV2Service;
     private jwtService: JWTService;
 
-    private businessHoursService = new BusinessHourService();
-    private workerHoursService = new WorkerBusinessHourService();
-    private temporaryHoursService = new TemporaryBusinessHourService();
 
     constructor() {
         this.jwtService = JWTService.instance;
@@ -37,12 +30,6 @@ export class EventController {
             await this.jwtService.verify(token);
 
             const result = await this.eventService.addEventV2(body);
-
-
-
-
-
-
 
             res.status(200).json(Response.build("Evento creado", 200, true, result));
         } catch (err: any) {
@@ -209,59 +196,59 @@ export class EventController {
 
 
 
-    addFromWeb = async (req: any, res: any) => {
-        try {
-            // Todo lo previo viene resuelto en middlewares:
-            const ctx = req.booking!.ctx;
+    // addFromWeb = async (req: any, res: any) => {
+    //     try {
+    //         // Todo lo previo viene resuelto en middlewares:
+    //         const ctx = req.booking!.ctx;
 
-            // deps para el caso de uso
-            const deps = {
-                timeZoneWorkspace: ctx.timeZoneWorkspace,
+    //         // deps para el caso de uso
+    //         const deps = {
+    //             timeZoneWorkspace: ctx.timeZoneWorkspace,
 
-                businessHoursService: this.businessHoursService,
-                workerHoursService: this.workerHoursService,
-                temporaryHoursService: this.temporaryHoursService,
-                bookingConfig: ctx.config ?? { slot: { alignMode: "service" } },
-                // cache: si tienes uno, pasarlo aquí
-            };
+    //             businessHoursService: this.businessHoursService,
+    //             workerHoursService: this.workerHoursService,
+    //             temporaryHoursService: this.temporaryHoursService,
+    //             bookingConfig: ctx.config ?? { slot: { alignMode: "service" } },
+    //             // cache: si tienes uno, pasarlo aquí
+    //         };
 
-            // payload final para el servicio
-            const servicePayload = {
-                ...ctx.input,
-                customer: {
-                    id: ctx.customer!.idClient,
-                    idClientWorkspace: ctx.customer!.idClientWorkspace,
-                    name: ctx.input.customer.name,
-                    phone: ctx.input.customer.phone,
-                    email: ctx.input.customer.email,
-                },
-            };
+    //         // payload final para el servicio
+    //         const servicePayload = {
+    //             ...ctx.input,
+    //             customer: {
+    //                 id: ctx.customer!.idClient,
+    //                 idClientWorkspace: ctx.customer!.idClientWorkspace,
+    //                 name: ctx.input.customer.name,
+    //                 phone: ctx.input.customer.phone,
+    //                 email: ctx.input.customer.email,
+    //             },
+    //         };
 
-            const result: any = await this.eventService.addEventFromWeb(servicePayload, deps);
+    //         const result: any = await this.eventService.addEventFromWeb(servicePayload, deps);
 
-            // ▶️ Respuesta “amigable”
-            let status = 201;
-            let ok = true;
-            let message = "Evento creado";
+    //         // ▶️ Respuesta “amigable”
+    //         let status = 201;
+    //         let ok = true;
+    //         let message = "Evento creado";
 
-            if (result.outcome === "joined") {
-                status = 201;
-                ok = true;
-                message = "Te has unido al evento";
-            } else if (result.outcome === "already-in") {
-                status = 200; // idempotente
-                ok = false;   // para que el front no trate como creación
-                message = "Ya estabas inscrito en este evento";
-            }
+    //         if (result.outcome === "joined") {
+    //             status = 201;
+    //             ok = true;
+    //             message = "Te has unido al evento";
+    //         } else if (result.outcome === "already-in") {
+    //             status = 200; // idempotente
+    //             ok = false;   // para que el front no trate como creación
+    //             message = "Ya estabas inscrito en este evento";
+    //         }
 
-            console.log("result de addFromWeb", result);
+    //         console.log("result de addFromWeb", result);
 
-            return res.status(status).json(Response.build(message, status, ok, result));
-        } catch (err: any) {
-            console.error(CONSOLE_COLOR.BgRed, "[EventController.addFromWeb]", err?.message, CONSOLE_COLOR.Reset);
-            return res.status(500).json({ message: err?.message ?? "Unexpected error" });
-        }
-    };
+    //         return res.status(status).json(Response.build(message, status, ok, result));
+    //     } catch (err: any) {
+    //         console.error(CONSOLE_COLOR.BgRed, "[EventController.addFromWeb]", err?.message, CONSOLE_COLOR.Reset);
+    //         return res.status(500).json({ message: err?.message ?? "Unexpected error" });
+    //     }
+    // };
 
     public update = async (req: any, res: any, next: any) => {
         try {
@@ -276,6 +263,19 @@ export class EventController {
 
 
             res.status(200).json(Response.build("Evento actualizado", 200, true, result));
+        } catch (err: any) {
+            res.status(500).json({ message: err.message });
+        }
+    }
+
+
+    public markCommentAsRead = async (req: any, res: any, next: any) => {
+        try {
+            const { idEvent, idWorkspace } = req.body;
+            const token = req.token;
+            await this.jwtService.verify(token);
+            const result = await this.eventService.markCommentAsRead(idEvent, idWorkspace);
+            res.status(200).json(Response.build("Comentario marcado como leído", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
         }
@@ -431,98 +431,6 @@ export class EventController {
         }
     };
 
-    //  public getEventExtraData = async (req: any, res: any, _next: any) => {
-    //         try {
-
-    //             console.log("getEventExtraData called");
-    //             const { idList } = req.body;           // ⬅️ asegúrate de mandar el id del local
-    //             const { idCompany, idWorkspace } = req.params;
-
-    //             if (!Array.isArray(idList) || idList.length === 0) {
-    //                 return res.status(400).json({ message: 'Faltan ids de evento' });
-    //             }
-    //             if (!idWorkspace) {
-    //                 return res.status(400).json({ message: 'Falta el id del establecimiento' });
-    //             }
-
-    //             // 1) Seguridad JWT
-    //             const token = req.token;
-    //             await this.jwtService.verify(token);
-
-    //             // 2) Datos “crudos” (participantes, recurrenceRule, servicio)
-    //             const events = await this.eventService.getEventExtraData(idList);
-
-    //             // 2.1) Enriquecer con datos adicionales (si es necesario)
-
-    //             console.log("Eventos encontrados:", events);
-
-    //             // 3) Colecciona todos los ids de cliente
-    //             const allClientIds = events
-    //                 .flatMap(ev => ev.eventParticipant.map(p => p.idClientFk))
-    //                 .filter((id): id is string => !!id);                  // quita null/undefined
-
-    //             const uniqueClientIds = [...new Set(allClientIds)];
-
-    //             // 4) Pide a MS-clientes vía RPC -> devuelve nombre, avatar, etc.
-    //             const clientWorkspaceRPCList =
-    //                 await RPC.getClientstByIdClientAndIdWorkspace(
-    //                     idWorkspace,
-    //                     uniqueClientIds,
-    //                 );
-
-    //             // 5) Mapea a Map para lookup O(1)
-    //             const clientMap = new Map(
-    //                 clientWorkspaceRPCList.map(c => [c.idClientFk, c]),
-    //             );
-
-    //             // 6) Enriquecemos cada evento
-    //             // const eventsWithClients = events.map(ev => ({
-    //             //     ...ev,
-    //             //     eventParticipant: ev.eventParticipant.map(p => ({
-    //             //         ...p,
-    //             //         client: clientMap.get(p.idClientFk) ?? null,        // ⬅️ aquí queda el objeto cliente
-    //             //     })),
-    //             // }));
-
-    //             // 6) Enriquecemos cada evento, pero recortando el objeto client
-    //             const eventsWithClients = events.map(ev => ({
-    //                 ...ev,
-    //                 eventParticipant: ev.eventParticipant.map(p => {
-    //                     // busca el objeto completo
-    //                     const fullClient = clientMap.get(p.idClientFk) ?? null;
-
-    //                     // recórtalo al shape que quieres
-    //                     const client = fullClient
-    //                         ? {
-    //                             name: fullClient.name,
-    //                             surname1: fullClient.surname1,
-    //                             surname2: fullClient.surname2,
-    //                             image: fullClient.image,
-    //                         }
-    //                         : null;
-
-    //                     return {
-    //                         ...p,
-    //                         client,
-    //                     };
-    //                 }),
-    //             }));
-
-
-    //             // 7) Respuesta
-    //             res.status(200)
-    //                 .json(
-    //                     Response.build(
-    //                         'Datos extra de eventos encontrados',
-    //                         200,
-    //                         true,
-    //                         eventsWithClients,
-    //                     ),
-    //                 );
-    //         } catch (err: any) {
-    //             res.status(500).json({ message: err.message });
-    //         }
-    //     };
 
     /**
      * Se devuelve los cancelados y los activos
@@ -580,10 +488,10 @@ export class EventController {
 
 
             // Borramos las notificaciones relacionadas
-            publishDeleteRecordsMessage({
-                table: 'calendarEvents',
-                ids: idList,
-            }, deleteRecordsRoutingKeys.notification); 
+            // publishDeleteRecordsMessage({
+            //     table: 'calendarEvents',
+            //     ids: idList,
+            // }, deleteRecordsRoutingKeys.notification);
 
 
             res.status(200).json(Response.build("Evento eliminado exitosamente", 200, true, result));
@@ -594,18 +502,83 @@ export class EventController {
     }
 
 
+    // changeEventStatus = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { id, status, allGroup = false } = req.body;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+
+    //         // Está preparado por si era pendiente y pasa a confirmado/aceptado o cancelado
+    //         // manda las notificaciones correspondientes
+    //         const result = await this.eventService.changeEventStatus(id, status, allGroup);
+    //         res.status(200).json(Response.build("Estado del evento actualizado", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json({ message: err.message });
+    //     }
+    // }
+
+
     changeEventStatus = async (req: any, res: any, next: any) => {
         try {
-            const { id, status } = req.body;
+            const { id, status, allGroup = false } = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.eventService.changeEventStatus(id, status);
-            res.status(200).json(Response.build("Estado del evento actualizado", 200, true, result));
+            console.log("Cambio de estado solicitado:", { id, status, allGroup });
+
+            const result = await this.eventService.changeEventStatus(
+                id,
+                status as EventStatusType,
+                allGroup
+            );
+
+            if (!result) {
+                return res
+                    .status(400)
+                    .json(Response.build("Transición no permitida o sin cambios", 400, false, null));
+            }
+
+            const { events, notifyEvents } = result;
+
+            // 1) Resolver la acción de notificación según el nuevo estado
+            let actionSectionType: ActionKey | null = null;
+
+            if (
+                status === EventStatusType.ACCEPTED ||
+                status === EventStatusType.CONFIRMED
+            ) {
+                actionSectionType = "acceptRequest";     // ← tu clave para aceptar
+            } else if (
+                status === EventStatusType.CANCELLED ||
+                status === EventStatusType.CANCELLED_BY_CLIENT ||
+                status === EventStatusType.CANCELLED_BY_CLIENT_REMOVED
+            ) {
+                actionSectionType = "rejectRequest";     // ← la que uses para cancelar
+            }
+
+            console.log("Eventos a notificar22:", notifyEvents);
+            console.log("Tipo de acción de notificación:", actionSectionType);
+            // Si no hay acción o no hay nada que notificar, respondemos y listo
+            if (!actionSectionType || !notifyEvents.length) {
+                return res
+                    .status(200)
+                    .json(Response.build("Estado del evento actualizado", 200, true, events));
+            }
+
+            // 2) Caso simple: de momento, una notificación usando el primer evento notificable
+            await createNotification(notifyEvents[0], {
+                actionSectionType,
+            });
+
+            return res
+                .status(200)
+                .json(Response.build("Estado del evento actualizado", 200, true, events));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
         }
-    }
+    };
+
+
 
     changeEventStatusByParticipant = async (req: any, res: any, next: any) => {
         try {
@@ -630,6 +603,11 @@ export class EventController {
 
 
 
+    // Entre microservicios
+    // Entre microservicios
+    // Entre microservicios
+    // Entre microservicios
+    // Entre microservicios
     // Entre microservicios
 
     getEventDataById = async (req: any, res: any) => {
@@ -659,6 +637,30 @@ export class EventController {
 
 
 
+    getGroupDataById = async (req: any, res: any) => {
+        try {
+            console.log(`${CONSOLE_COLOR.FgYellow} /event/group/data called ${CONSOLE_COLOR.Reset}`);
+            const { idGroup, idWorkspace } = req.body;
+
+            console.log("idGroup", idGroup);
+            console.log("idWorkspace", idWorkspace);
+            if (!idGroup) {
+                return res.status(400).json({ ok: false, message: "idGroup (string) is required" });
+            }
+            if (!idWorkspace) {
+                return res.status(400).json({ ok: false, message: "idWorkspace (string) is required" });
+            }
+
+            const { item, count } = await this.eventService.getGroupDataById(idGroup, idWorkspace);
+
+            console.log("voy a devolver esto", item);
+            console.log(`${CONSOLE_COLOR.FgGreen} /event/group/data completed ${CONSOLE_COLOR.Reset}`, { count });
+            return res.status(200).json({ ok: true, item, count });
+        } catch (err: any) {
+            console.error(err);
+            return res.status(500).json({ ok: false, message: err?.message || "Internal error" });
+        }
+    }
 
 
 }

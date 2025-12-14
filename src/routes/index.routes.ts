@@ -54,6 +54,9 @@ router.use("/api", require('./temporary-business-hour.routes'));
 router.use("/api", require('./worker-absence.routes'));
 
 
+// Health check
+router.get("/health", (_req, res) => res.status(200).json({ ok: true }));
+
 // public
 
 // router.use("/api/public", require('./category/public-category.routes'));

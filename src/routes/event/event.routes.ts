@@ -87,6 +87,19 @@ router.post('/events/update-:id', [
 ], controller.update);
 
 
+// Marcar comentario de cliente como leído, es solo para roles de usuario normal
+router.post('/events/mark-as-read', [
+    JWTService.authCookieOrBearer,
+    OnlyAdminMiddleware.allowRoles(['ROLE_OWNER', 'ROLE_ADMIN', 'ROLE_MANAGER', "ROLE_USER"]),
+    OnlyAdminMiddleware.accessAuthorized,
+    CheckCompanyMiddleware.checkCompanyInEvent,
+    // TODO: Ahora si se puede actualizar pasado
+    // EventMiddleware.preventPastEvent,
+    // EventMiddleware.checkEventConflict,
+    // EventMiddleware.validateEventStatusChange_DESFASADO
+], controller.markCommentAsRead);
+
+
 // Borrar un evento
 router.post('/events/delete',
     [

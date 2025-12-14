@@ -116,7 +116,8 @@ export const EVENT_RULES: Record<NotificationEvent, EventRule> = {
             },
         },
         uiHint: "twoLanes",
-        defaultRelativeTo: "booking.createdAt",
+        // tenía createdAt, pero es mejor update ya que algunas veces el aceptar es después de creada
+        defaultRelativeTo: "booking.updatedAt",
     },
 
     /* ──────────────────────────────

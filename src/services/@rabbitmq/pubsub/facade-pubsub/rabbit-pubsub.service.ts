@@ -228,7 +228,7 @@ export class RabbitPubSubService {
                 headers: options.headers,
             }
         );
-        console.log(`Mensaje publicado a exchange ${exchangeKey} con routingKey ${routingKey}:`, message);
+        // console.log(`Mensaje publicado a exchange ${exchangeKey} con routingKey ${routingKey}:`, message);
     }
 
     // // Consumir mensajes de una cola que ha sido enlazada a un exchange, usando un callback tipado

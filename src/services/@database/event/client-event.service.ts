@@ -16,12 +16,10 @@ import {
     type AvailabilityDepsSpecial,
 } from "../event/availability-special.service";
 
-import { IRedisRoundRobinStrategy } from "../../@redis/cache/interfaces/interfaces";
 import { OnlineBookingConfig } from "../../@redis/cache/interfaces/models/booking-config";
 import { RedisStrategyFactory } from "../../@redis/cache/strategies/redisStrategyFactory";
 import { _getServicesSnapshotById } from "./util/getInfoServices";
-import { getGenericSpecialEvent2 } from "../../../utils/get-genetic/calendar-event/getGenericSpecialEvent2";
-import { Pagination } from "../../../models/pagination";
+import { IRedisRoundRobinStrategy } from "../../@redis/cache/strategies/roundRobin/interfaces";
 
 
 // ────────────────────────────────────────────────────────────
@@ -41,6 +39,7 @@ type AddFromWebInput = {
     }>;
     excludeEventId?: string;
     note?: string;
+    isCommentRead?: boolean;
     customer: {
         id: string;                    // id del cliente (plataforma)
         idClient?: string;             // alias mismo id si lo usas así
@@ -49,6 +48,7 @@ type AddFromWebInput = {
         email?: string;
         phone?: string;
     };
+
 };
 
 type UpdateMode = "single" | "group";
@@ -61,6 +61,7 @@ type UpdateFromWebInput = AddFromWebInput & {
 
 type AddFromWebDeps = {
     timeZoneWorkspace: string;
+    autoConfirmClientBookings?: boolean;
     businessHoursService: {
         getBusinessHoursFromRedis(idCompany: string, idWorkspace: string): Promise<any>;
     };
@@ -102,99 +103,116 @@ type ClientAppointment = {
 
 export class ClientEventService {
 
-    // /**
-    //  * Obtiene los eventos de un cliente en un workspace específico.
-    //  * Versión directa sin getGenericSpecialEvent2.
-    //  */
-    // async getEvents(
-    //     page: number,
-    //     itemsPerPage: number,
-    //     idClientWorkspace: string,
-    //     idWorkspace: string
-    // ): Promise<any> {
-    //     try {
-    //         const skip = (page - 1) * itemsPerPage;
 
-    //         // Contar total de eventos del cliente
-    //         const total = await prisma.event.count({
-    //             where: {
-    //                 idWorkspaceFk: idWorkspace,
-    //                 eventParticipant: {
-    //                     some: {
-    //                         idClientWorkspaceFk: idClientWorkspace,
-    //                         deletedDate: null,
-    //                     },
-    //                 },
-    //                 eventStatusType: {
-    //                     notIn: ['CANCELLED', 'CANCELLED_BY_CLIENT_REMOVED'],
-    //                 },
-    //                 deletedDate: null,
-    //             },
-    //         });
+    cancelEventFromWeb = async (
+        idEvent: string,
+        idClientWorkspace: string,
+        idWorkspace: string,
+    ): Promise<void> => {
+        try {
+            // Verificar que el evento pertenece al cliente y obtener información completa
+            const event = await prisma.event.findFirst({
+                where: {
+                    id: idEvent,
+                    idWorkspaceFk: idWorkspace,
+                    eventParticipant: {
+                        some: {
+                            idClientWorkspaceFk: idClientWorkspace,
+                            deletedDate: null,
+                        },
+                    },
+                    deletedDate: null,
+                },
+                select: {
+                    id: true,
+                    eventStatusType: true,
+                    serviceMaxParticipantsSnapshot: true,
+                    eventParticipant: {
+                        where: {
+                            deletedDate: null,
+                        },
+                        select: {
+                            id: true,
+                            idClientWorkspaceFk: true,
+                            eventStatusType: true,
+                        },
+                    },
+                },
+            });
 
-    //         // Obtener eventos paginados
-    //         const events = await prisma.event.findMany({
-    //             where: {
-    //                 idWorkspaceFk: idWorkspace,
-    //                 eventParticipant: {
-    //                     some: {
-    //                         idClientWorkspaceFk: idClientWorkspace,
-    //                         deletedDate: null,
-    //                     },
-    //                 },
-    //                 eventStatusType: {
-    //                     notIn: ['CANCELLED', 'CANCELLED_BY_CLIENT_REMOVED'],
-    //                 },
-    //                 deletedDate: null,
-    //             },
-    //             select: {
-    //                 id: true,
-    //                 title: true,
-    //                 description: true,
-    //                 startDate: true,
-    //                 endDate: true,
-    //                 idUserPlatformFk: true,
-    //                 idServiceFk: true,
-    //                 eventStatusType: true,
-    //                 eventPurposeType: true,
-    //                 eventSourceType: true,
-    //                 allDay: true,
-    //                 timeZone: true,
-    //                 serviceNameSnapshot: true,
-    //                 servicePriceSnapshot: true,
-    //                 serviceDiscountSnapshot: true,
-    //                 serviceDurationSnapshot: true,
-    //                 commentClient: true,
-    //                 eventParticipant: {
-    //                     where: {
-    //                         deletedDate: null,
-    //                     },
-    //                     select: {
-    //                         id: true,
-    //                         idClientFk: true,
-    //                         idClientWorkspaceFk: true,
-    //                         eventStatusType: true,
-    //                     },
-    //                 },
-    //             },
-    //             orderBy: {
-    //                 startDate: 'desc',
-    //             },
-    //             skip,
-    //             take: itemsPerPage,
-    //         });
+            if (!event) {
+                throw new Error('Evento no encontrado o no pertenece al cliente');
+            }
 
-    //         return {
-    //             rows: events,
-    //             total,
-    //             page,
-    //             itemsPerPage,
-    //             totalPages: Math.ceil(total / itemsPerPage),
-    //         };
-    //     } catch (error: any) {
-    //         throw new CustomError('ClientEventService.getEvents', error);
-    //     }
-    // }
+            if (event.eventStatusType === 'CANCELLED' || event.eventStatusType === 'CANCELLED_BY_CLIENT_REMOVED') {
+                // El evento general ya está cancelado
+                return;
+            }
+
+            // Determinar si es servicio individual o grupal
+            const maxParticipants = event.serviceMaxParticipantsSnapshot ?? 1;
+            const isGroupService = maxParticipants > 1;
+            const totalParticipants = event.eventParticipant.length;
+
+            // Encontrar el participante del cliente
+            const clientParticipant = event.eventParticipant.find(
+                (p) => p.idClientWorkspaceFk === idClientWorkspace
+            );
+
+            if (!clientParticipant) {
+                throw new Error('Participante no encontrado en el evento');
+            }
+
+            if (clientParticipant.eventStatusType === 'CANCELLED_BY_CLIENT') {
+                // Este cliente ya se había dado de baja
+                return;
+            }
+
+            if (isGroupService) {
+                // Servicio GRUPAL (clase): solo cancelar participación del cliente
+                await prisma.eventParticipant.update({
+                    where: { id: clientParticipant.id },
+                    data: {
+                        eventStatusType: 'CANCELLED_BY_CLIENT',
+                        // deletedDate: new Date(),
+                    },
+                });
+
+                // Si este era el último participante activo, cancelar el evento completo
+                const activeParticipants = event.eventParticipant.filter(
+                    (p) => p.id !== clientParticipant.id && p.eventStatusType !== 'CANCELLED_BY_CLIENT'
+                );
+
+                if (activeParticipants.length === 0) {
+                    await prisma.event.update({
+                        where: { id: idEvent },
+                        data: {
+                            eventStatusType: 'PENDING',
+                        },
+                    });
+                }
+            } else {
+                // Servicio INDIVIDUAL: cancelar el evento completo
+                await prisma.$transaction([
+                    prisma.eventParticipant.update({
+                        where: { id: clientParticipant.id },
+                        data: {
+                            eventStatusType: 'CANCELLED_BY_CLIENT',
+                        },
+                    }),
+                    prisma.event.update({
+                        where: { id: idEvent },
+                        data: {
+                            eventStatusType: 'CANCELLED_BY_CLIENT',
+                        },
+                    }),
+                ]);
+            }
+
+        } catch (error: any) {
+            throw new CustomError('ClientEventService.cancelEventFromWeb', error);
+        }
+    };
 
     /**
  * Obtiene las citas de un cliente en un workspace,
@@ -252,7 +270,7 @@ export class ClientEventService {
                 },
             },
             eventStatusType: {
-                notIn: ["CANCELLED", "CANCELLED_BY_CLIENT_REMOVED"] as any,
+                notIn: ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_CLIENT_REMOVED"] as any,
             },
             deletedDate: null,
         } as const;
@@ -282,6 +300,7 @@ export class ClientEventService {
                 servicePriceSnapshot: true,
                 serviceDiscountSnapshot: true,
                 serviceDurationSnapshot: true,
+                serviceMaxParticipantsSnapshot: true,
                 commentClient: true,
                 eventParticipant: {
                     where: { deletedDate: null },
@@ -315,6 +334,7 @@ export class ClientEventService {
             idEvent: string;
             idService?: string | null;
             serviceName: string;
+            maxParticipants?: number | null;
             durationMin: number | null;
             price: number | null;
             staffId?: string | null;
@@ -364,6 +384,7 @@ export class ClientEventService {
                 idEvent: ev.id,
                 idService: ev.idServiceFk,
                 serviceName: ev.serviceNameSnapshot ?? ev.title ?? "",
+                maxParticipants: ev.serviceMaxParticipantsSnapshot ?? null,
                 durationMin: ev.serviceDurationSnapshot ?? null,
                 price: ev.servicePriceSnapshot ?? null,
                 staffId: ev.idUserPlatformFk,
@@ -421,59 +442,165 @@ export class ClientEventService {
  * Obtiene UNA cita (booking lógico) a partir de un idEvent,
  * agrupando por (idGroup ?? id) y devolviendo un ClientAppointment.
  */
-    async getEventByIdAndClientWorkspaceAndWorkspace(
-        idEvent: string,
+    // async getEventByIdAndClientWorkspaceAndWorkspace(
+    //     idEvent: string,
+    //     idClientWorkspace: string,
+    //     idWorkspace: string
+    // ): Promise<ClientAppointment | null> {
+    //     try {
+    //         // 1) Resolver el evento base y su bookingId (idGroup ?? id)
+    //         const baseEvent = await prisma.event.findFirst({
+    //             where: {
+    //                 id: idEvent,
+    //                 idWorkspaceFk: idWorkspace,
+    //                 deletedDate: null,
+    //                 eventParticipant: {
+    //                     some: {
+    //                         idClientWorkspaceFk: idClientWorkspace,
+    //                         deletedDate: null,
+    //                     },
+    //                 },
+    //             },
+    //             select: {
+    //                 id: true,
+    //                 idGroup: true,
+    //             },
+    //         });
+
+    //         if (!baseEvent) {
+    //             return null;
+    //         }
+
+    //         const bookingId = baseEvent.idGroup ?? baseEvent.id;
+
+    //         // 2) Traer TODOS los eventos que pertenecen a ese booking lógico
+    //         const events = await prisma.event.findMany({
+    //             where: {
+    //                 idWorkspaceFk: idWorkspace,
+    //                 deletedDate: null,
+    //                 eventStatusType: {
+    //                     notIn: ["CANCELLED", "CANCELLED_BY_CLIENT_REMOVED"] as any,
+    //                 },
+    //                 eventParticipant: {
+    //                     some: {
+    //                         idClientWorkspaceFk: idClientWorkspace,
+    //                         deletedDate: null,
+    //                     },
+    //                 },
+    //                 OR: [
+    //                     { idGroup: bookingId },
+    //                     {
+    //                         AND: [
+    //                             { id: bookingId },
+    //                             { idGroup: null },
+    //                         ],
+    //                     },
+    //                 ],
+    //             },
+    //             select: {
+    //                 id: true,
+    //                 idGroup: true,
+    //                 title: true,
+    //                 description: true,
+    //                 startDate: true,
+    //                 endDate: true,
+    //                 idUserPlatformFk: true,
+    //                 idServiceFk: true,
+    //                 eventStatusType: true,
+    //                 eventPurposeType: true,
+    //                 eventSourceType: true,
+    //                 allDay: true,
+    //                 timeZone: true,
+    //                 serviceNameSnapshot: true,
+    //                 servicePriceSnapshot: true,
+    //                 serviceDiscountSnapshot: true,
+    //                 serviceDurationSnapshot: true,
+    //                 serviceMaxParticipantsSnapshot: true,
+    //                 commentClient: true,
+    //                 eventParticipant: {
+    //                     where: { deletedDate: null },
+    //                     select: {
+    //                         id: true,
+    //                         idClientFk: true,
+    //                         idClientWorkspaceFk: true,
+    //                         eventStatusType: true,
+    //                     },
+    //                 },
+    //             },
+    //             orderBy: { startDate: "asc" },
+    //         }); if (!events.length) {
+    //             return null;
+    //         }
+
+    //         // 3) Reutilizar tu agrupador actual
+    //         //    Da igual el scope, solo tenemos 1 booking en estos events
+    //         const grouped = this._buildClientBookingsFromEvents(
+    //             "upcoming", // o "past", da igual para 1 booking
+    //             events,
+    //             1,
+    //             events.length || 10
+    //         );
+
+    //         const row = grouped.rows[0];
+    //         if (!row) return null;
+
+    //         // 4) Mapear BookingRow -> ClientAppointment
+    //         const appointment: ClientAppointment = {
+    //             bookingId: row.bookingId,
+    //             primaryEventId: row.primaryEventId,
+    //             startDate: row.startDate.toISOString(),
+    //             endDate: row.endDate.toISOString(),
+    //             status: row.status,
+    //             commentClient: row.commentClient ?? null,
+    //             timeZone: row.timeZone,
+    //             services: row.services.map((s) => ({
+    //                 idEvent: s.idEvent,
+    //                 idService: s.idService ?? "",
+    //                 serviceName: s.serviceName,
+    //                 maxParticipants: s?.maxParticipants ?? 1,
+    //                 durationMin: s.durationMin ?? 0,
+
+    //                 price: s.price ?? 0,
+    //                 staffId: s.staffId ?? undefined,
+    //             })),
+    //         };
+
+    //         return appointment;
+    //     } catch (error: any) {
+    //         throw new CustomError("ClientEventService.getEventByIdAsBooking", error);
+    //     }
+    // }
+
+
+    async getEventByGroupIdAndClientWorkspaceAndWorkspace(
+        bookingId: string,          // ← idGroup que viene del front
         idClientWorkspace: string,
         idWorkspace: string
     ): Promise<ClientAppointment | null> {
         try {
-            // 1) Resolver el evento base y su bookingId (idGroup ?? id)
-            const baseEvent = await prisma.event.findFirst({
-                where: {
-                    id: idEvent,
-                    idWorkspaceFk: idWorkspace,
-                    deletedDate: null,
-                    eventParticipant: {
-                        some: {
-                            idClientWorkspaceFk: idClientWorkspace,
-                            deletedDate: null,
-                        },
-                    },
-                },
-                select: {
-                    id: true,
-                    idGroup: true,
-                },
-            });
 
-            if (!baseEvent) {
-                return null;
-            }
-
-            const bookingId = baseEvent.idGroup ?? baseEvent.id;
-
-            // 2) Traer TODOS los eventos que pertenecen a ese booking lógico
+            const EXCLUDED_STATUSES = ["CANCELLED", "CANCELLED_BY_CLIENT_REMOVED"];
+            // 1) Traer TODOS los eventos que pertenecen a ese booking lógico
             const events = await prisma.event.findMany({
                 where: {
                     idWorkspaceFk: idWorkspace,
                     deletedDate: null,
-                    eventStatusType: {
-                        notIn: ["CANCELLED", "CANCELLED_BY_CLIENT_REMOVED"] as any,
-                    },
+                    eventStatusType: { notIn: EXCLUDED_STATUSES as any },
                     eventParticipant: {
                         some: {
                             idClientWorkspaceFk: idClientWorkspace,
                             deletedDate: null,
                         },
                     },
+                    // Aunque el front envíe idGroup, mantengo OR con id por compatibilidad
                     OR: [
                         { idGroup: bookingId },
-                        {
-                            AND: [
-                                { id: bookingId },
-                                { idGroup: null },
-                            ],
-                        },
+                        // {
+                        //     AND: [
+                        //         { id: bookingId },
+                        //         { idGroup: null },
+                        //     ],
+                        // },
                     ],
                 },
                 select: {
@@ -494,6 +621,7 @@ export class ClientEventService {
                     servicePriceSnapshot: true,
                     serviceDiscountSnapshot: true,
                     serviceDurationSnapshot: true,
+                    serviceMaxParticipantsSnapshot: true,
                     commentClient: true,
                     eventParticipant: {
                         where: { deletedDate: null },
@@ -512,19 +640,20 @@ export class ClientEventService {
                 return null;
             }
 
-            // 3) Reutilizar tu agrupador actual
-            //    Da igual el scope, solo tenemos 1 booking en estos events
+            // 2) Reutilizamos el agrupador actual
             const grouped = this._buildClientBookingsFromEvents(
-                "upcoming", // o "past", da igual para 1 booking
+                "upcoming", // scope irrelevante, solo hay un booking
                 events,
                 1,
                 events.length || 10
             );
 
             const row = grouped.rows[0];
-            if (!row) return null;
+            if (!row) {
+                return null;
+            }
 
-            // 4) Mapear BookingRow -> ClientAppointment
+            // 3) Mapear BookingRow -> ClientAppointment (mismo result que ahora)
             const appointment: ClientAppointment = {
                 bookingId: row.bookingId,
                 primaryEventId: row.primaryEventId,
@@ -537,6 +666,7 @@ export class ClientEventService {
                     idEvent: s.idEvent,
                     idService: s.idService ?? "",
                     serviceName: s.serviceName,
+                    maxParticipants: s.maxParticipants ?? 1,
                     durationMin: s.durationMin ?? 0,
                     price: s.price ?? 0,
                     staffId: s.staffId ?? undefined,
@@ -545,10 +675,12 @@ export class ClientEventService {
 
             return appointment;
         } catch (error: any) {
-            throw new CustomError("ClientEventService.getEventByIdAsBooking", error);
+            throw new CustomError(
+                "ClientEventService.getEventByGroupIdAndClientWorkspaceAndWorkspace",
+                error
+            );
         }
     }
-
 
     /**
      * Obtiene un evento específico por ID verificando que pertenezca al cliente.
@@ -638,10 +770,9 @@ export class ClientEventService {
 
         const rr = RedisStrategyFactory.getStrategy("roundRobin") as IRedisRoundRobinStrategy;
 
-        // 1) Hold del slot (scoped por workspace + bookingPage + service)
+        // 1) Hold del slot (scoped por workspace + service)
         const acquired = await rr.acquireHold({
             idWorkspace,
-            idBookingPage,
             idService,
             startISO: start.toISOString(),
             endISO: end.toISOString(),
@@ -652,7 +783,7 @@ export class ClientEventService {
         // 2) Weighted Smooth RR
         const chosen = await rr.pickWeightedSmoothRR({
             idWorkspace,
-            idBookingPage,
+            idService,
             eligibles,
             weights: weightsMap,
             stateTTLSec: TIME_SECONDS.WEEK * 2,
@@ -661,7 +792,6 @@ export class ClientEventService {
         if (!chosen) {
             await rr.releaseHold({
                 idWorkspace,
-                idBookingPage,
                 idService,
                 startISO: start.toISOString(),
                 endISO: end.toISOString(),
@@ -693,14 +823,20 @@ export class ClientEventService {
             };
             timeZoneWorkspace: string;
             note?: string | null;
+            isCommentRead?: boolean;
             customer: { id: string; idClientWorkspace: string };
+            autoConfirmClientBookings: boolean;
         }
     ): Promise<{ event: Event; action: "created" | "joined" | "already-in" }> {
-        const { idWorkspace, idCompany, seg, svc, timeZoneWorkspace, note, customer } = params;
+        const { idWorkspace, idCompany, seg, svc, timeZoneWorkspace, note, isCommentRead, customer, autoConfirmClientBookings } = params;
         const startDate = seg.start.toDate();
         const endDate = seg.end.toDate();
         const capacity = Math.max(1, svc.maxParticipants ?? 1);
         const isGroup = capacity > 1;
+
+        // Determinar el estado según configuración
+        const eventStatus = autoConfirmClientBookings ? 'ACCEPTED' : 'PENDING';
+        const participantStatus = autoConfirmClientBookings ? 'ACCEPTED' : 'PENDING';
 
         // Lock por (pro+servicio+inicio)
         await tx.$executeRawUnsafe(
@@ -763,6 +899,7 @@ export class ClientEventService {
                     idEventFk: existing.id,
                     idClientFk: customer.id,
                     idClientWorkspaceFk: customer.idClientWorkspace,
+                    eventStatusType: participantStatus,
                 },
             });
 
@@ -790,17 +927,23 @@ export class ClientEventService {
                 startDate,
                 endDate,
                 title: svc.name ?? "Cita",
-                description: note ?? null,
+
                 timeZone: timeZoneWorkspace,
                 eventPurposeType: "APPOINTMENT",
+                eventStatusType: eventStatus,
+                commentClient: note ?? null,
+                isCommentRead: isCommentRead ?? false,
+
                 serviceNameSnapshot: svc.name ?? null,
                 servicePriceSnapshot: typeof svc.price === "number" ? svc.price : null,
                 serviceDiscountSnapshot: typeof svc.discount === "number" ? svc.discount : null,
                 serviceDurationSnapshot: typeof svc.duration === "number" ? svc.duration : null,
+                serviceMaxParticipantsSnapshot: typeof svc.maxParticipants === "number" ? svc.maxParticipants : null,
                 eventParticipant: {
                     create: {
                         idClientFk: customer.id,
                         idClientWorkspaceFk: customer.idClientWorkspace,
+                        eventStatusType: participantStatus,
                     },
                 },
             },
@@ -808,481 +951,6 @@ export class ClientEventService {
 
         return { event: ev, action: "created" };
     }
-
-    // /**
-    //  * Crea evento(s) desde la booking page pública.
-    //  * Respeta disponibilidad, RR, grupales y lead time.
-    //  */
-    // async addEventFromWeb(input: AddFromWebInput, deps: AddFromWebDeps) {
-    //     try {
-    //         const {
-    //             idCompany, idWorkspace, timeZoneClient, startLocalISO,
-    //             attendees, excludeEventId, note, customer,
-    //         } = input;
-
-    //         const {
-    //             timeZoneWorkspace,
-    //             businessHoursService,
-    //             workerHoursService,
-    //             temporaryHoursService,
-    //             bookingConfig,
-    //             cache,
-    //         } = deps;
-
-    //         console.log(CONSOLE_COLOR.FgMagenta, "[addEventFromWeb] input:", input, CONSOLE_COLOR.Reset);
-
-    //         if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany/idWorkspace");
-    //         if (!timeZoneWorkspace) throw new Error("Falta timeZoneWorkspace");
-    //         if (!timeZoneClient) throw new Error("Falta timeZoneClient");
-    //         if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(startLocalISO))
-    //             throw new Error("startLocalISO debe ser YYYY-MM-DDTHH:mm:ss");
-    //         if (!Array.isArray(attendees) || attendees.length === 0)
-    //             throw new Error("attendees vacío");
-    //         if (!customer?.id) throw new Error("Falta customer.id");
-    //         if (!customer?.idClientWorkspace)
-    //             throw new Error("Falta customer.idClientWorkspace");
-
-    //         const startClient = moment.tz(startLocalISO, "YYYY-MM-DDTHH:mm:ss", timeZoneClient);
-    //         if (!startClient.isValid()) throw new Error("startLocalISO inválido");
-
-    //         const startWS = startClient.clone().tz(timeZoneWorkspace);
-    //         const dateWS = startWS.format("YYYY-MM-DD");
-
-    //         // Día pasado
-    //         const todayWS = moment().tz(timeZoneWorkspace).startOf("day");
-    //         if (startWS.clone().startOf("day").isBefore(todayWS, "day")) {
-    //             console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Día pasado en TZ workspace", CONSOLE_COLOR.Reset);
-    //             return { ok: false };
-    //         }
-
-    //         // Lead-time / hora pasada hoy
-    //         const { roundedNow, isToday } = computeSlotConfig({
-    //             intervalMinutes: 5,
-    //             timeZoneWorkspace,
-    //             dayStartLocal: startWS.clone().startOf("day"),
-    //         });
-
-    //         if (isToday && startWS.isBefore(roundedNow)) {
-    //             console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] Hora pasada en TZ workspace", CONSOLE_COLOR.Reset);
-    //             return { ok: false };
-    //         }
-
-    //         // 1) Quién puede hacer qué servicio
-    //         const userIdsByService = new Map<string, string[]>();
-    //         for (const a of attendees) {
-    //             if (a.staffId) {
-    //                 userIdsByService.set(a.serviceId, [a.staffId]);
-    //             } else {
-    //                 const users = await getUsersWhoCanPerformService_SPECIAL(
-    //                     idWorkspace,
-    //                     a.serviceId,
-    //                     a.categoryId,
-    //                     cache
-    //                 );
-    //                 userIdsByService.set(a.serviceId, users);
-    //             }
-    //         }
-
-    //         const allUserIds = Array.from(
-    //             new Set(Array.from(userIdsByService.values()).flat())
-    //         );
-
-    //         if (!allUserIds.length) {
-    //             console.log(CONSOLE_COLOR.BgRed, "[addEventFromWeb] No hay profesionales elegibles", CONSOLE_COLOR.Reset);
-    //             return { ok: false };
-    //         }
-
-    //         // 2) Ventanas reales del día (business + worker + temporales)
-    //         const businessHours = await businessHoursService.getBusinessHoursFromRedis(
-    //             idCompany,
-    //             idWorkspace
-    //         );
-    //         const workerHoursMap = await workerHoursService.getWorkerHoursFromRedis(
-    //             allUserIds,
-    //             idWorkspace
-    //         );
-    //         const temporaryHoursMap = await temporaryHoursService.getTemporaryHoursFromRedis(
-    //             allUserIds,
-    //             idWorkspace,
-    //             { date: dateWS }
-    //         );
-
-    //         const events = await getEventsOverlappingRange_SPECIAL(
-    //             idWorkspace,
-    //             allUserIds,
-    //             dateWS,
-    //             dateWS,
-    //             excludeEventId
-    //         );
-    //         const eventsByUser = groupEventsByUser_SPECIAL(events);
-
-    //         type MM = { start: moment.Moment; end: moment.Moment };
-
-    //         // Slots de negocio
-    //         const weekDay = startWS.format("dddd").toUpperCase() as any;
-    //         const bizShifts: string[][] = (() => {
-    //             const biz = (businessHours as any)?.[weekDay];
-    //             return biz === null ? [] : Array.isArray(biz) ? biz : [];
-    //         })();
-
-    //         // Shifts por user
-    //         const shiftsByUserLocal: Record<string, MM[]> = {};
-    //         for (const uid of allUserIds) {
-    //             let workShifts: string[][] = [];
-    //             const tmp = (temporaryHoursMap as any)?.[uid]?.[dateWS];
-    //             if (tmp === null) workShifts = [];
-    //             else if (Array.isArray(tmp) && tmp.length > 0) workShifts = tmp;
-    //             else {
-    //                 const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
-    //                 if (workerDay === null) workShifts = [];
-    //                 else if (Array.isArray(workerDay) && workerDay.length > 0) workShifts = workerDay;
-    //                 else workShifts = bizShifts;
-    //             }
-    //             shiftsByUserLocal[uid] = (workShifts || []).map(([s, e]) => ({
-    //                 start: moment.tz(`${dateWS}T${s}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-    //                 end: moment.tz(`${dateWS}T${e}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-    //             }));
-    //         }
-
-    //         // Free windows por user
-    //         const freeWindowsByUser: Record<string, MM[]> = {};
-    //         for (const uid of allUserIds) {
-    //             const busy = (eventsByUser[uid] || []).map((ev) => ({
-    //                 start: moment(ev.startDate).tz(timeZoneWorkspace),
-    //                 end: moment(ev.endDate).tz(timeZoneWorkspace),
-    //             }));
-    //             const raw = shiftsByUserLocal[uid] || [];
-    //             const free: MM[] = [];
-
-    //             for (const sh of raw) {
-    //                 const startClamped = isToday
-    //                     ? moment.max(sh.start, roundedNow)
-    //                     : sh.start.clone();
-    //                 if (!startClamped.isBefore(sh.end)) continue;
-    //                 free.push(
-    //                     ...subtractBusyFromShift_SPECIAL(startClamped, sh.end, busy)
-    //                 );
-    //             }
-
-    //             freeWindowsByUser[uid] = mergeTouchingWindows_SPECIAL(free);
-    //         }
-
-    //         // 3) Snapshot servicios (para duración y capacidad)
-    //         const serviceById = await _getServicesSnapshotById({
-    //             idCompany,
-    //             idWorkspace,
-    //             attendees,
-    //         });
-
-    //         // Pesos RR (0–100; default 100) desde bookingConfig.resources.ids
-    //         const rawIds = Array.isArray(bookingConfig?.resources?.ids)
-    //             ? (bookingConfig!.resources!.ids as unknown as [string, number][])
-    //             : [];
-
-    //         const weightsMap: Record<string, number> = Object.fromEntries(
-    //             rawIds.map(([id, w]) => [id, Number.isFinite(w) ? w : 100])
-    //         );
-
-    //         // === Asignación ===
-
-    //         let assignment: Array<{
-    //             serviceId: string;
-    //             userId: string;
-    //             start: moment.Moment;
-    //             end: moment.Moment;
-    //         }> = [];
-
-    //         // Caso: 1 servicio grupal
-    //         const isSingleGroup =
-    //             attendees.length === 1 &&
-    //             Math.max(
-    //                 1,
-    //                 serviceById[attendees[0].serviceId]?.maxParticipants ?? 1
-    //             ) > 1;
-
-    //         if (isSingleGroup) {
-    //             const svcReq = attendees[0];
-    //             const svcSnap = serviceById[svcReq.serviceId];
-    //             const dur =
-    //                 svcReq.durationMin ?? (svcSnap?.duration ?? 0);
-    //             const endWS = startWS.clone().add(dur, "minutes");
-    //             const elig = userIdsByService.get(svcReq.serviceId) ?? [];
-
-    //             // 1) Intentar unirse a evento existente
-    //             if (elig.length) {
-    //                 const overlappingEvents = await prisma.event.findMany({
-    //                     where: {
-    //                         idWorkspaceFk: idWorkspace,
-    //                         idServiceFk: svcReq.serviceId,
-    //                         idUserPlatformFk: { in: elig },
-    //                         startDate: { lt: endWS.toDate() },
-    //                         endDate: { gt: startWS.toDate() },
-    //                         ...(excludeEventId
-    //                             ? { id: { not: excludeEventId } }
-    //                             : {}),
-    //                         deletedDate: null,
-    //                     },
-    //                     orderBy: { startDate: "asc" },
-    //                     select: {
-    //                         id: true,
-    //                         idUserPlatformFk: true,
-    //                         startDate: true,
-    //                         endDate: true,
-    //                         eventParticipant: {
-    //                             where: { deletedDate: null },
-    //                             select: {
-    //                                 idClientFk: true,
-    //                                 idClientWorkspaceFk: true,
-    //                             },
-    //                         },
-    //                     },
-    //                 });
-
-    //                 const pick = (() => {
-    //                     if (!overlappingEvents.length) return null;
-    //                     const exact = overlappingEvents.find(
-    //                         (ev) =>
-    //                             moment(ev.startDate).isSame(startWS, "minute") &&
-    //                             moment(ev.endDate).isSame(endWS, "minute")
-    //                     );
-    //                     if (exact) return exact;
-    //                     return overlappingEvents
-    //                         .map((ev) => ({
-    //                             ev,
-    //                             d: Math.abs(
-    //                                 moment(ev.startDate).diff(
-    //                                     startWS,
-    //                                     "minutes"
-    //                                 )
-    //                             ),
-    //                         }))
-    //                         .sort((a, b) => a.d - b.d)[0].ev;
-    //                 })();
-
-    //                 if (pick && pick.idUserPlatformFk) {
-    //                     const capacity = Math.max(
-    //                         1,
-    //                         svcSnap?.maxParticipants ?? 1
-    //                     );
-    //                     const booked = pick.eventParticipant.length;
-    //                     const hasSeat = booked < capacity;
-
-    //                     const alreadyIn = pick.eventParticipant.some(
-    //                         (p) =>
-    //                             p.idClientFk === customer.id ||
-    //                             p.idClientWorkspaceFk ===
-    //                             customer.idClientWorkspace
-    //                     );
-
-    //                     if (hasSeat && !alreadyIn) {
-    //                         assignment = [
-    //                             {
-    //                                 serviceId: svcReq.serviceId,
-    //                                 userId: pick.idUserPlatformFk,
-    //                                 start: startWS
-    //                                     .clone()
-    //                                     .seconds(0)
-    //                                     .milliseconds(0),
-    //                                 end: endWS
-    //                                     .clone()
-    //                                     .seconds(0)
-    //                                     .milliseconds(0),
-    //                             },
-    //                         ];
-    //                     }
-    //                 }
-    //             }
-
-    //             // 2) Si no había evento con plazas, crear nuevo con RR
-    //             if (assignment.length === 0) {
-    //                 const eligAvail = (userIdsByService.get(
-    //                     svcReq.serviceId
-    //                 ) ?? []).filter((uid) =>
-    //                     (freeWindowsByUser[uid] ?? []).some(
-    //                         (w) =>
-    //                             startWS.isSameOrAfter(w.start) &&
-    //                             endWS.isSameOrBefore(w.end)
-    //                     )
-    //                 );
-
-    //                 const chosen = await this.chooseStaffWithRR(
-    //                     idWorkspace,
-    //                     undefined,
-    //                     svcReq.serviceId,
-    //                     startWS.toDate(),
-    //                     endWS.toDate(),
-    //                     eligAvail,
-    //                     weightsMap
-    //                 );
-
-    //                 if (!chosen) {
-    //                     console.log(
-    //                         CONSOLE_COLOR.BgRed,
-    //                         "[addEventFromWeb] Grupo: ningún pro disponible para el slot",
-    //                         CONSOLE_COLOR.Reset
-    //                     );
-    //                     return { ok: false };
-    //                 }
-
-    //                 assignment = [
-    //                     {
-    //                         serviceId: svcReq.serviceId,
-    //                         userId: chosen,
-    //                         start: startWS
-    //                             .clone()
-    //                             .seconds(0)
-    //                             .milliseconds(0),
-    //                         end: endWS
-    //                             .clone()
-    //                             .seconds(0)
-    //                             .milliseconds(0),
-    //                     },
-    //                 ];
-    //             }
-    //         } else {
-    //             // Caso: 1 servicio individual simple
-    //             const isSingleIndividual =
-    //                 attendees.length === 1 &&
-    //                 Math.max(
-    //                     1,
-    //                     serviceById[attendees[0].serviceId]?.maxParticipants ??
-    //                     1
-    //                 ) === 1;
-
-    //             if (isSingleIndividual) {
-    //                 const svcReq = attendees[0];
-    //                 const dur =
-    //                     svcReq.durationMin ??
-    //                     (serviceById[svcReq.serviceId]?.duration ?? 0);
-    //                 const endWS = startWS.clone().add(dur, "minutes");
-
-    //                 const eligAvail = (userIdsByService.get(
-    //                     svcReq.serviceId
-    //                 ) ?? []).filter((uid) =>
-    //                     (freeWindowsByUser[uid] ?? []).some(
-    //                         (w) =>
-    //                             startWS.isSameOrAfter(w.start) &&
-    //                             endWS.isSameOrBefore(w.end)
-    //                     )
-    //                 );
-
-    //                 const chosen = await this.chooseStaffWithRR(
-    //                     idWorkspace,
-    //                     undefined,
-    //                     svcReq.serviceId,
-    //                     startWS.toDate(),
-    //                     endWS.toDate(),
-    //                     eligAvail,
-    //                     weightsMap
-    //                 );
-
-    //                 if (!chosen) {
-    //                     console.log(
-    //                         CONSOLE_COLOR.BgRed,
-    //                         "[addEventFromWeb] Individual: ningún pro disponible para el slot",
-    //                         CONSOLE_COLOR.Reset
-    //                     );
-    //                     return { ok: false };
-    //                 }
-
-    //                 assignment = [
-    //                     {
-    //                         serviceId: svcReq.serviceId,
-    //                         userId: chosen,
-    //                         start: startWS
-    //                             .clone()
-    //                             .seconds(0)
-    //                             .milliseconds(0),
-    //                         end: endWS
-    //                             .clone()
-    //                             .seconds(0)
-    //                             .milliseconds(0),
-    //                     },
-    //                 ];
-    //             } else {
-    //                 // Multi-servicio: aquí puedes enchufar tu assignSequentially_SPECIAL
-    //                 // o la lógica que ya usabas para combos complejos.
-    //                 // Si quieres, lo integramos en este recorte también.
-    //                 throw new Error(
-    //                     "Multi-servicio desde web no soportado en esta versión recortada."
-    //                 );
-    //             }
-    //         }
-
-    //         if (!assignment.length) {
-    //             return { ok: false };
-    //         }
-
-    //         const totalDuration = attendees.reduce(
-    //             (acc, a) => acc + a.durationMin,
-    //             0
-    //         );
-    //         const endWS = startWS.clone().add(totalDuration, "minutes");
-
-    //         // Transacción: crear/join events según asignación
-    //         const created = await prisma.$transaction(async (tx) => {
-    //             const events = [];
-    //             for (const seg of assignment) {
-    //                 const svc = serviceById[seg.serviceId];
-    //                 if (!svc)
-    //                     throw new Error(
-    //                         "Servicio no disponible o no pertenece a este workspace."
-    //                     );
-
-    //                 const ev = await this.createOrJoinGroupEvent(tx, {
-    //                     idWorkspace,
-    //                     idCompany,
-    //                     seg,
-    //                     svc,
-    //                     timeZoneWorkspace,
-    //                     note,
-    //                     customer: {
-    //                         id: customer.id,
-    //                         idClientWorkspace: customer.idClientWorkspace!,
-    //                     },
-    //                 });
-    //                 events.push(ev);
-    //             }
-    //             return events;
-    //         });
-
-    //         return {
-    //             ok: true as const,
-    //             appointment: {
-    //                 startLocalISO: startWS
-    //                     .clone()
-    //                     .tz(timeZoneClient)
-    //                     .format("YYYY-MM-DDTHH:mm:ss"),
-    //                 endLocalISO: endWS
-    //                     .clone()
-    //                     .tz(timeZoneClient)
-    //                     .format("YYYY-MM-DDTHH:mm:ss"),
-    //                 timeZoneClient,
-    //                 timeZoneWorkspace,
-    //                 totalDurationMin: totalDuration,
-    //             },
-    //             assignments: assignment.map((a) => ({
-    //                 serviceId: a.serviceId,
-    //                 userId: a.userId,
-    //                 startUTC: a.start.toISOString(),
-    //                 endUTC: a.end.toISOString(),
-    //                 startLocalClient: a.start
-    //                     .clone()
-    //                     .tz(timeZoneClient)
-    //                     .format("YYYY-MM-DDTHH:mm:ss"),
-    //                 endLocalClient: a.end
-    //                     .clone()
-    //                     .tz(timeZoneClient)
-    //                     .format("YYYY-MM-DDTHH:mm:ss"),
-    //             })),
-    //             created,
-    //         };
-    //     } catch (error: any) {
-    //         console.error("Error en EventV2Service.addEventFromWeb:", error);
-    //         throw new CustomError("Error al crear evento", error);
-    //     }
-    // }
-
 
     // ───────────────── helpers internos ─────────────────
 
@@ -1324,11 +992,11 @@ export class ClientEventService {
         try {
             const {
                 idCompany, idWorkspace, timeZoneClient, startLocalISO,
-                attendees, excludeEventId, note, customer,
+                attendees, excludeEventId, note, isCommentRead, customer,
             } = input;
             const {
                 timeZoneWorkspace, businessHoursService, workerHoursService,
-                temporaryHoursService, bookingConfig, cache,
+                temporaryHoursService, bookingConfig, cache, autoConfirmClientBookings
             } = deps;
 
             console.log(CONSOLE_COLOR.FgMagenta, "[addEventFromWeb] input:", input, CONSOLE_COLOR.Reset);
@@ -1473,7 +1141,7 @@ export class ClientEventService {
 
             // Cuando hay más de un servicio (todos individuales) queremos un idGroup
             // que será EL ID DEL PRIMER EVENTO creado.
-            const shouldCreateGroupId = onlyIndividual && attendees.length > 1;
+            // const shouldCreateGroupId = onlyIndividual && attendees.length > 1;
 
             let assignment: Array<{ serviceId: string; userId: string; start: moment.Moment; end: moment.Moment }> = [];
 
@@ -1660,7 +1328,10 @@ export class ClientEventService {
                 return createdItem as any;
             }
 
-            // ───────────── Calendar & transacción (group-aware) ─────────────
+
+
+            // NUEVO: siempre asignamos idGroup a TODOS los eventos creados en este bloque,
+            // usando el id del primero como booking code si no viene ya uno asignado.
             const created = await prisma.$transaction(async (tx) => {
                 const eventsCreated: any[] = [];
 
@@ -1675,47 +1346,49 @@ export class ClientEventService {
                         svc,
                         timeZoneWorkspace,
                         note,
+                        isCommentRead,
                         customer: {
                             id: customer.id,
                             idClientWorkspace: customer.idClientWorkspace!,
                         },
-                        // OJO: aquí NO pasamos idGroup, no tiene nada que ver con clases.
+                        autoConfirmClientBookings,
+                        // ya no usamos shouldCreateGroupId aquí
                     });
 
                     eventsCreated.push(result);
                 }
 
-                // Si es multi-servicio individual → usar el id del PRIMER evento
-                // como idGroup y asignarlo a TODOS.
-                if (shouldCreateGroupId && eventsCreated.length > 1) {
-                    const coreEvents = eventsCreated
-                        .map((c) => getCoreEvent(c))
-                        .filter((e) => e && typeof e.id === "string") as {
-                            id: string;
-                            idGroup?: string | null;
-                        }[];
+                // 🟢 SIEMPRE: asegurar idGroup tipo "booking code" para TODOS los eventos de este bloque
+                const coreEvents = eventsCreated
+                    .map((c) => getCoreEvent(c))
+                    .filter((e) => e && typeof e.id === "string") as {
+                        id: string;
+                        idGroup?: string | null;
+                    }[];
 
-                    if (coreEvents.length > 1) {
-                        const firstId = coreEvents[0].id;
-                        const ids = coreEvents.map((e) => e.id);
+                if (coreEvents.length > 0) {
+                    // Si ya viene idGroup del primero, lo respetamos.
+                    // Si no, usamos su propio id como booking code.
+                    const targetGroupId = coreEvents[0].idGroup ?? coreEvents[0].id;
+                    const ids = coreEvents.map((e) => e.id);
 
-                        await tx.event.updateMany({
-                            where: { id: { in: ids } },
-                            data: { idGroup: firstId },
-                        });
+                    await tx.event.updateMany({
+                        where: { id: { in: ids } },
+                        data: { idGroup: targetGroupId },
+                    });
 
-                        // Sincronizamos también las copias en memoria
-                        for (const item of eventsCreated) {
-                            const ev = getCoreEvent(item);
-                            if (ev && ids.includes(ev.id!)) {
-                                ev.idGroup = firstId;
-                            }
+                    // Sincronizar copias en memoria
+                    for (const item of eventsCreated) {
+                        const ev = getCoreEvent(item);
+                        if (ev && ids.includes(ev.id!)) {
+                            ev.idGroup = targetGroupId;
                         }
                     }
                 }
 
                 return eventsCreated;
             });
+
 
             // Intentamos extraer un posible objeto notification retornado por createOrJoinGroupEvent
             const notifications = (created as any[])
@@ -1732,8 +1405,13 @@ export class ClientEventService {
                     idGroup?: string | null;
                 }[];
 
+            // const groupId =
+            //     shouldCreateGroupId && coreEventsForGroup.length > 0
+            //         ? coreEventsForGroup[0].idGroup ?? coreEventsForGroup[0].id
+            //         : null;
+
             const groupId =
-                shouldCreateGroupId && coreEventsForGroup.length > 0
+                coreEventsForGroup.length > 0
                     ? coreEventsForGroup[0].idGroup ?? coreEventsForGroup[0].id
                     : null;
 
@@ -1758,7 +1436,8 @@ export class ClientEventService {
                 // Nuevo: devolvemos también el objeto notification (si existe)
                 notification: primaryNotification,
                 notifications,
-                // Para que el front pueda saber si es multi-servicio agrupado
+                // OLD = Para que el front pueda saber si es multi-servicio agrupado
+                // NUEVO = siempre devolvemos idGroup si existe, funciona como un idBooking
                 idGroup: groupId,
             };
         } catch (error: any) {
@@ -1796,6 +1475,7 @@ export class ClientEventService {
                 attendees,
                 idEvent,
                 note,
+                isCommentRead,
                 customer,
                 deletedEventIds = [], // NUEVO
             } = input;
@@ -1812,7 +1492,11 @@ export class ClientEventService {
             console.log(
                 CONSOLE_COLOR.FgMagenta,
                 `[updateEventFromWebBase][${mode}] input:`,
-                { ...input, attendeesLen: attendees?.length, deletedEventIdsLen: deletedEventIds?.length ?? 0 },
+                {
+                    ...input,
+                    attendeesLen: attendees?.length,
+                    deletedEventIdsLen: deletedEventIds?.length ?? 0,
+                },
                 CONSOLE_COLOR.Reset
             );
 
@@ -1828,7 +1512,11 @@ export class ClientEventService {
             if (!customer?.id) throw new Error("Falta customer.id");
             if (!customer?.idClientWorkspace) throw new Error("Falta customer.idClientWorkspace");
 
-            const startClient = moment.tz(startLocalISO, "YYYY-MM-DDTHH:mm:ss", timeZoneClient);
+            const startClient = moment.tz(
+                startLocalISO,
+                "YYYY-MM-DDTHH:mm:ss",
+                timeZoneClient
+            );
             if (!startClient.isValid()) throw new Error("startLocalISO inválido");
 
             const startWS = startClient.clone().tz(timeZoneWorkspace);
@@ -1837,11 +1525,16 @@ export class ClientEventService {
             // Día pasado
             const todayWS = moment().tz(timeZoneWorkspace).startOf("day");
             if (startWS.clone().startOf("day").isBefore(todayWS, "day")) {
-                console.log(CONSOLE_COLOR.BgRed, "[updateEventFromWebBase] Día pasado en TZ workspace", CONSOLE_COLOR.Reset);
+                console.log(
+                    CONSOLE_COLOR.BgRed,
+                    "[updateEventFromWebBase] Día pasado en TZ workspace",
+                    CONSOLE_COLOR.Reset
+                );
                 return {
                     ok: false as const,
                     code: "BOOKING_ERR_DAY_IN_PAST",
-                    message: "El día seleccionado ya ha pasado en la zona horaria del negocio."
+                    message:
+                        "El día seleccionado ya ha pasado en la zona horaria del negocio.",
                 };
             }
 
@@ -1853,11 +1546,16 @@ export class ClientEventService {
             });
 
             if (isToday && startWS.isBefore(roundedNow)) {
-                console.log(CONSOLE_COLOR.BgRed, "[updateEventFromWebBase] Hora pasada en TZ workspace", CONSOLE_COLOR.Reset);
+                console.log(
+                    CONSOLE_COLOR.BgRed,
+                    "[updateEventFromWebBase] Hora pasada en TZ workspace",
+                    CONSOLE_COLOR.Reset
+                );
                 return {
                     ok: false as const,
                     code: "BOOKING_ERR_TIME_PASSED",
-                    message: "La hora seleccionada ya ha pasado hoy en la zona horaria del negocio."
+                    message:
+                        "La hora seleccionada ya ha pasado hoy en la zona horaria del negocio.",
                 };
             }
 
@@ -1871,13 +1569,18 @@ export class ClientEventService {
                     },
                 },
             });
-            if (!original || original.deletedDate) throw new Error("Evento original no encontrado");
-            if (original.idWorkspaceFk !== idWorkspace) throw new Error("El evento original no pertenece a este workspace");
+            if (!original || original.deletedDate)
+                throw new Error("Evento original no encontrado");
+            if (original.idWorkspaceFk !== idWorkspace)
+                throw new Error("El evento original no pertenece a este workspace");
 
             const isOwner = original.eventParticipant.some(
-                (p) => p.idClientFk === customer.id || p.idClientWorkspaceFk === customer.idClientWorkspace
+                (p) =>
+                    p.idClientFk === customer.id ||
+                    p.idClientWorkspaceFk === customer.idClientWorkspace
             );
-            if (!isOwner) throw new Error("Este cliente no está asociado al evento original");
+            if (!isOwner)
+                throw new Error("Este cliente no está asociado al evento original");
 
             // ⬇️ bookingId estable para notificaciones / dedupe
             const bookingId = original.idGroup ?? original.id;
@@ -1885,7 +1588,11 @@ export class ClientEventService {
             // Detectar grupo
             const groupId = original.idGroup ?? original.id;
             const groupEvents = await prisma.event.findMany({
-                where: { idWorkspaceFk: idWorkspace, idGroup: groupId, deletedDate: null },
+                where: {
+                    idWorkspaceFk: idWorkspace,
+                    idGroup: groupId,
+                    deletedDate: null,
+                },
                 orderBy: { startDate: "asc" },
             });
             const originalEvents = groupEvents.length ? groupEvents : [original];
@@ -1903,29 +1610,99 @@ export class ClientEventService {
                 originalEvents.length === 1 &&
                 explicitDeletes.size === 0;
 
-            // Cargamos snapshot de SOLO lo necesario en cada ruta
+            // ───────────── Snapshot de servicios / RR ─────────────
             const needServiceIds = [...new Set(attendees.map((a) => a.serviceId))];
 
             const [serviceById, weightsMap] = await Promise.all([
                 _getServicesSnapshotById({ idCompany, idWorkspace, attendees }),
                 (async () => {
                     const rawIds = Array.isArray(bookingConfig?.resources?.ids)
-                        ? (bookingConfig!.resources!.ids as unknown as [string, number][])
+                        ? (bookingConfig!.resources!.ids as unknown as [
+                            string,
+                            number
+                        ][])
                         : [];
-                    return Object.fromEntries(rawIds.map(([id, w]) => [id, Number.isFinite(w) ? w : 100]));
+                    return Object.fromEntries(
+                        rawIds.map(([id, w]) => [
+                            id,
+                            Number.isFinite(w) ? w : 100,
+                        ])
+                    );
                 })(),
             ]);
 
-            // Validar que no hay servicios grupales (pending)
-            for (const sid of needServiceIds) {
-                const snap = serviceById[sid];
-                const capacity = Math.max(1, snap?.maxParticipants ?? 1);
-                if (capacity > 1) {
-                    throw new Error("Edición de servicios grupales (capacity>1) pendiente de implementar.");
-                }
+            // ───────────── Validar servicios (no cambiar tipo ni id) ─────────────
+            // Conjunto de servicios originales de la reserva (antes de editar)
+            const originalServiceIds = new Set(
+                originalEvents
+                    .map((e) => e.idServiceFk)
+                    .filter((id): id is string => !!id)
+            );
+
+            // Conjunto de servicios que llegan desde el cliente al editar
+            const requestedServiceIds = new Set(needServiceIds);
+
+            // Misma cardinalidad y mismos ids => no ha cambiado el "pack" de servicios
+            const sameServiceSet =
+                originalServiceIds.size === requestedServiceIds.size &&
+                [...originalServiceIds].every((id) => requestedServiceIds.has(id));
+
+            // Recordatorio: Group en este caso significa clase = más de un participante en el mismo evento
+            if (mode === "group" && !sameServiceSet) {
+                // No se permite cambiar los servicios, da igual single o clase (uno o varios)
+                return {
+                    ok: false as const,
+                    code: "BOOKING_ERR_SERVICE_CHANGED_ON_EDIT",
+                    message:
+                        "Solo puedes cambiar la fecha y hora de la cita, no los servicios.",
+                };
             }
 
-            // ───────────── Ruta rápida SINGLE ─────────────
+            // ───────────── Detectar edición "pura" de clase ─────────────
+            const classServiceId = needServiceIds.length === 1 ? needServiceIds[0] : null;
+            const classSnap = classServiceId ? serviceById[classServiceId] : undefined;
+            const classCapacity =
+                classSnap != null
+                    ? Math.max(1, classSnap.maxParticipants ?? 1)
+                    : 1;
+
+            // Edición de CLASE soportada cuando:
+            // - solo hay 1 servicio
+            // - ese servicio tiene capacity > 1 (clase)
+            // - el cliente está editando 1 attendee
+            // - solo hay 1 Event físico en el grupo (la sesión de clase)
+            // - no hay deletes explícitos
+            const isPureClassEdit =
+                !!classServiceId &&
+                classCapacity > 1 &&
+                attendees.length === 1 &&
+                originalEvents.length === 1 &&
+                explicitDeletes.size === 0;
+
+            if (isPureClassEdit) {
+                // Mover solo la participación del cliente a otra sesión (misma clase)
+                return await this._handlePureClassEdit({
+                    idCompany,
+                    idWorkspace,
+                    timeZoneClient,
+                    timeZoneWorkspace,
+                    startWS,
+                    attendees,
+                    original,
+                    bookingId,
+                    groupId,
+                    serviceById,
+                    weightsMap,
+                    cache,
+                    customer: {
+                        id: customer.id,
+                        idClientWorkspace: customer.idClientWorkspace!,
+                    },
+                    note,
+                });
+            }
+
+            // ───────────── Ruta rápida SINGLE (servicio individual) ─────────────
             if (fastPathSingle) {
                 const svcReq = attendees[0];
                 const svcSnap = serviceById[svcReq.serviceId];
@@ -1944,25 +1721,51 @@ export class ClientEventService {
                     userIdsByService.set(svcReq.serviceId, users);
                 }
 
-                const allUserIds = Array.from(new Set(Array.from(userIdsByService.values()).flat()));
+                const allUserIds = Array.from(
+                    new Set(Array.from(userIdsByService.values()).flat())
+                );
                 if (!allUserIds.length) {
-                    console.log(CONSOLE_COLOR.BgRed, "[update][single] No hay profesionales elegibles", CONSOLE_COLOR.Reset);
+                    console.log(
+                        CONSOLE_COLOR.BgRed,
+                        "[update][single] No hay profesionales elegibles",
+                        CONSOLE_COLOR.Reset
+                    );
                     return {
                         ok: false as const,
                         code: "BOOKING_ERR_NO_ELIGIBLE_STAFF",
-                        message: "No hay profesionales elegibles para el servicio seleccionado."
+                        message:
+                            "No hay profesionales elegibles para el servicio seleccionado.",
                     };
                 }
 
                 // Ventanas + eventos del día (excluye el propio idEvent)
-                const [businessHours, workerHoursMap, temporaryHoursMap, overlapping] = await Promise.all([
-                    businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace),
-                    workerHoursService.getWorkerHoursFromRedis(allUserIds, idWorkspace),
-                    temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idWorkspace, { date: dateWS }),
-                    getEventsOverlappingRange_SPECIAL(idWorkspace, allUserIds, dateWS, dateWS, idEvent),
-                ]);
+                const [businessHours, workerHoursMap, temporaryHoursMap, overlapping] =
+                    await Promise.all([
+                        businessHoursService.getBusinessHoursFromRedis(
+                            idCompany,
+                            idWorkspace
+                        ),
+                        workerHoursService.getWorkerHoursFromRedis(
+                            allUserIds,
+                            idWorkspace
+                        ),
+                        temporaryHoursService.getTemporaryHoursFromRedis(
+                            allUserIds,
+                            idWorkspace,
+                            { date: dateWS }
+                        ),
+                        getEventsOverlappingRange_SPECIAL(
+                            idWorkspace,
+                            allUserIds,
+                            dateWS,
+                            dateWS,
+                            idEvent
+                        ),
+                    ]);
 
-                const events = (overlapping || []).filter((ev: any) => !originalIds.has(ev.id));
+                const events = (overlapping || []).filter(
+                    (ev: any) => !originalIds.has(ev.id)
+                );
                 const eventsByUser = groupEventsByUser_SPECIAL(events);
 
                 type MM = { start: moment.Moment; end: moment.Moment };
@@ -1981,12 +1784,24 @@ export class ClientEventService {
                     else {
                         const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
                         if (workerDay === null) workShifts = [];
-                        else if (Array.isArray(workerDay) && workerDay.length > 0) workShifts = workerDay;
+                        else if (
+                            Array.isArray(workerDay) &&
+                            workerDay.length > 0
+                        )
+                            workShifts = workerDay;
                         else workShifts = bizShifts;
                     }
                     shiftsByUserLocal[uid] = (workShifts || []).map(([s, e]) => ({
-                        start: moment.tz(`${dateWS}T${s}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-                        end: moment.tz(`${dateWS}T${e}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
+                        start: moment.tz(
+                            `${dateWS}T${s}`,
+                            "YYYY-MM-DDTHH:mm:ss",
+                            timeZoneWorkspace
+                        ),
+                        end: moment.tz(
+                            `${dateWS}T${e}`,
+                            "YYYY-MM-DDTHH:mm:ss",
+                            timeZoneWorkspace
+                        ),
                     }));
                 }
 
@@ -1999,27 +1814,44 @@ export class ClientEventService {
                     const raw = shiftsByUserLocal[uid] || [];
                     const free: MM[] = [];
                     for (const sh of raw) {
-                        const startClamped = isToday ? moment.max(sh.start, roundedNow) : sh.start.clone();
+                        const startClamped = isToday
+                            ? moment.max(sh.start, roundedNow)
+                            : sh.start.clone();
                         if (!startClamped.isBefore(sh.end)) continue;
-                        free.push(...subtractBusyFromShift_SPECIAL(startClamped, sh.end, busy));
+                        free.push(
+                            ...subtractBusyFromShift_SPECIAL(
+                                startClamped,
+                                sh.end,
+                                busy
+                            )
+                        );
                     }
-                    freeWindowsByUser[uid] = mergeTouchingWindows_SPECIAL(free);
+                    freeWindowsByUser[uid] =
+                        mergeTouchingWindows_SPECIAL(free);
                 }
 
                 const dur = svcReq.durationMin ?? (svcSnap.duration ?? 0);
                 const endWS = startWS.clone().add(dur, "minutes");
 
-                const eligAvail = (userIdsByService.get(svcReq.serviceId) ?? []).filter((uid) =>
-                    (freeWindowsByUser[uid] ?? []).some(
-                        (w) => startWS.isSameOrAfter(w.start) && endWS.isSameOrBefore(w.end)
-                    )
+                const eligAvail = (userIdsByService.get(svcReq.serviceId) ?? []).filter(
+                    (uid) =>
+                        (freeWindowsByUser[uid] ?? []).some(
+                            (w) =>
+                                startWS.isSameOrAfter(w.start) &&
+                                endWS.isSameOrBefore(w.end)
+                        )
                 );
                 if (!eligAvail.length) {
-                    console.log(CONSOLE_COLOR.BgRed, "[update][single] Ningún pro disponible para el slot", CONSOLE_COLOR.Reset);
+                    console.log(
+                        CONSOLE_COLOR.BgRed,
+                        "[update][single] Ningún pro disponible para el slot",
+                        CONSOLE_COLOR.Reset
+                    );
                     return {
                         ok: false as const,
                         code: "BOOKING_ERR_NO_AVAILABLE_WINDOW",
-                        message: "Ningún profesional tiene ese hueco disponible."
+                        message:
+                            "Ningún profesional tiene ese hueco disponible.",
                     };
                 }
 
@@ -2033,11 +1865,16 @@ export class ClientEventService {
                     weightsMap
                 );
                 if (!chosen) {
-                    console.log(CONSOLE_COLOR.BgRed, "[update][single] RR no pudo elegir pro", CONSOLE_COLOR.Reset);
+                    console.log(
+                        CONSOLE_COLOR.BgRed,
+                        "[update][single] RR no pudo elegir pro",
+                        CONSOLE_COLOR.Reset
+                    );
                     return {
                         ok: false as const,
                         code: "BOOKING_ERR_RR_NO_CANDIDATE",
-                        message: "No se pudo seleccionar un profesional para el slot."
+                        message:
+                            "No se pudo seleccionar un profesional para el slot.",
                     };
                 }
 
@@ -2063,7 +1900,9 @@ export class ClientEventService {
                         select: { id: true },
                     });
                     if (overlapping) {
-                        throw new Error("Ese profesional ya tiene otro evento en ese horario.");
+                        throw new Error(
+                            "Ese profesional ya tiene otro evento en ese horario."
+                        );
                     }
 
                     const ev = await tx.event.update({
@@ -2073,14 +1912,34 @@ export class ClientEventService {
                             idUserPlatformFk: seg.userId,
                             startDate: seg.start.toDate(),
                             endDate: seg.end.toDate(),
-                            description: note ?? null,
+
+                            commentClient: note ?? null,
+                            isCommentRead: isCommentRead ?? false,
                             timeZone: timeZoneWorkspace,
                             eventPurposeType: "APPOINTMENT",
                             // snapshots
-                            serviceNameSnapshot: serviceById[seg.serviceId]?.name ?? null,
-                            servicePriceSnapshot: typeof serviceById[seg.serviceId]?.price === "number" ? serviceById[seg.serviceId]!.price! : null,
-                            serviceDiscountSnapshot: typeof serviceById[seg.serviceId]?.discount === "number" ? serviceById[seg.serviceId]!.discount! : null,
-                            serviceDurationSnapshot: typeof serviceById[seg.serviceId]?.duration === "number" ? serviceById[seg.serviceId]!.duration! : null,
+                            serviceNameSnapshot:
+                                serviceById[seg.serviceId]?.name ?? null,
+                            servicePriceSnapshot:
+                                typeof serviceById[seg.serviceId]?.price ===
+                                    "number"
+                                    ? serviceById[seg.serviceId]!.price!
+                                    : null,
+                            serviceDiscountSnapshot:
+                                typeof serviceById[seg.serviceId]?.discount ===
+                                    "number"
+                                    ? serviceById[seg.serviceId]!.discount!
+                                    : null,
+                            serviceDurationSnapshot:
+                                typeof serviceById[seg.serviceId]?.duration ===
+                                    "number"
+                                    ? serviceById[seg.serviceId]!.duration!
+                                    : null,
+                            serviceMaxParticipantsSnapshot:
+                                typeof serviceById[seg.serviceId]
+                                    ?.maxParticipants === "number"
+                                    ? serviceById[seg.serviceId]!.maxParticipants!
+                                    : null,
                             idGroup: groupId,
                         },
                     });
@@ -2097,8 +1956,14 @@ export class ClientEventService {
                         type: "single-service" as const,
                     },
                     appointment: {
-                        startLocalISO: startWS.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-                        endLocalISO: endWS.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+                        startLocalISO: startWS
+                            .clone()
+                            .tz(timeZoneClient)
+                            .format("YYYY-MM-DDTHH:mm:ss"),
+                        endLocalISO: endWS
+                            .clone()
+                            .tz(timeZoneClient)
+                            .format("YYYY-MM-DDTHH:mm:ss"),
                         timeZoneClient,
                         timeZoneWorkspace,
                         totalDurationMin: dur,
@@ -2109,8 +1974,14 @@ export class ClientEventService {
                             userId: seg.userId,
                             startUTC: seg.start.toISOString(),
                             endUTC: seg.end.toISOString(),
-                            startLocalClient: seg.start.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-                            endLocalClient: seg.end.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+                            startLocalClient: seg.start
+                                .clone()
+                                .tz(timeZoneClient)
+                                .format("YYYY-MM-DDTHH:mm:ss"),
+                            endLocalClient: seg.end
+                                .clone()
+                                .tz(timeZoneClient)
+                                .format("YYYY-MM-DDTHH:mm:ss"),
                         },
                     ],
                     created: [],
@@ -2139,27 +2010,53 @@ export class ClientEventService {
                     userIdsByService.set(a.serviceId, users);
                 }
             }
-            const allUserIds = Array.from(new Set(Array.from(userIdsByService.values()).flat()));
+            const allUserIds = Array.from(
+                new Set(Array.from(userIdsByService.values()).flat())
+            );
             if (!allUserIds.length) {
-                console.log(CONSOLE_COLOR.BgRed, "[update][multi] No hay profesionales elegibles", CONSOLE_COLOR.Reset);
+                console.log(
+                    CONSOLE_COLOR.BgRed,
+                    "[update][multi] No hay profesionales elegibles",
+                    CONSOLE_COLOR.Reset
+                );
                 return {
                     ok: false as const,
                     code: "BOOKING_ERR_NO_ELIGIBLE_STAFF",
-                    message: "No hay profesionales elegibles para los servicios seleccionados."
+                    message:
+                        "No hay profesionales elegibles para los servicios seleccionados.",
                 };
             }
 
             // Ventanas + eventos en paralelo
-            const [businessHours, workerHoursMap, temporaryHoursMap, overlapping] = await Promise.all([
-                businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace),
-                workerHoursService.getWorkerHoursFromRedis(allUserIds, idWorkspace),
-                temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idWorkspace, { date: dateWS }),
-                getEventsOverlappingRange_SPECIAL(idWorkspace, allUserIds, dateWS, dateWS, undefined),
-            ]);
+            const [businessHours, workerHoursMap, temporaryHoursMap, overlapping] =
+                await Promise.all([
+                    businessHoursService.getBusinessHoursFromRedis(
+                        idCompany,
+                        idWorkspace
+                    ),
+                    workerHoursService.getWorkerHoursFromRedis(
+                        allUserIds,
+                        idWorkspace
+                    ),
+                    temporaryHoursService.getTemporaryHoursFromRedis(
+                        allUserIds,
+                        idWorkspace,
+                        { date: dateWS }
+                    ),
+                    getEventsOverlappingRange_SPECIAL(
+                        idWorkspace,
+                        allUserIds,
+                        dateWS,
+                        dateWS,
+                        undefined
+                    ),
+                ]);
 
             // Excluir TODO el grupo original y cualquier explicit delete del cálculo de ocupación
             const toIgnore = new Set([...originalIds, ...explicitDeletes]);
-            const events = (overlapping || []).filter((ev: any) => !toIgnore.has(ev.id));
+            const events = (overlapping || []).filter(
+                (ev: any) => !toIgnore.has(ev.id)
+            );
             const eventsByUser = groupEventsByUser_SPECIAL(events);
 
             type MM2 = { start: moment.Moment; end: moment.Moment };
@@ -2178,12 +2075,21 @@ export class ClientEventService {
                 else {
                     const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay2];
                     if (workerDay === null) workShifts = [];
-                    else if (Array.isArray(workerDay) && workerDay.length > 0) workShifts = workerDay;
+                    else if (Array.isArray(workerDay) && workerDay.length > 0)
+                        workShifts = workerDay;
                     else workShifts = bizShifts2;
                 }
                 shiftsByUserLocal2[uid] = (workShifts || []).map(([s, e]) => ({
-                    start: moment.tz(`${dateWS}T${s}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
-                    end: moment.tz(`${dateWS}T${e}`, "YYYY-MM-DDTHH:mm:ss", timeZoneWorkspace),
+                    start: moment.tz(
+                        `${dateWS}T${s}`,
+                        "YYYY-MM-DDTHH:mm:ss",
+                        timeZoneWorkspace
+                    ),
+                    end: moment.tz(
+                        `${dateWS}T${e}`,
+                        "YYYY-MM-DDTHH:mm:ss",
+                        timeZoneWorkspace
+                    ),
                 }));
             }
 
@@ -2196,15 +2102,28 @@ export class ClientEventService {
                 const raw = shiftsByUserLocal2[uid] || [];
                 const free: MM2[] = [];
                 for (const sh of raw) {
-                    const startClamped = isToday ? moment.max(sh.start, roundedNow) : sh.start.clone();
+                    const startClamped = isToday
+                        ? moment.max(sh.start, roundedNow)
+                        : sh.start.clone();
                     if (!startClamped.isBefore(sh.end)) continue;
-                    free.push(...subtractBusyFromShift_SPECIAL(startClamped, sh.end, busy));
+                    free.push(
+                        ...subtractBusyFromShift_SPECIAL(
+                            startClamped,
+                            sh.end,
+                            busy
+                        )
+                    );
                 }
                 freeWindowsByUser2[uid] = mergeTouchingWindows_SPECIAL(free);
             }
 
             // Plan secuencial de segmentos
-            type Seg = { serviceId: string; userId: string; start: moment.Moment; end: moment.Moment };
+            type Seg = {
+                serviceId: string;
+                userId: string;
+                start: moment.Moment;
+                end: moment.Moment;
+            };
             let cursor = startWS.clone();
             const chosenSegments: Seg[] = [];
             for (const a of attendees) {
@@ -2214,17 +2133,26 @@ export class ClientEventService {
                 const segStart = cursor.clone().seconds(0).milliseconds(0);
                 const segEnd = cursor.clone().add(dur, "minutes").seconds(0).milliseconds(0);
 
-                const eligAvail = (userIdsByService.get(a.serviceId) ?? []).filter((uid) =>
-                    (freeWindowsByUser2[uid] ?? []).some(
-                        (w) => segStart.isSameOrAfter(w.start) && segEnd.isSameOrBefore(w.end)
-                    )
+                const eligAvail = (userIdsByService.get(a.serviceId) ?? []).filter(
+                    (uid) =>
+                        (freeWindowsByUser2[uid] ?? []).some(
+                            (w) =>
+                                segStart.isSameOrAfter(w.start) &&
+                                segEnd.isSameOrBefore(w.end)
+                        )
                 );
                 if (!eligAvail.length) {
-                    console.log(CONSOLE_COLOR.BgRed, "[update][multi] No encaja un segmento", { serviceId: a.serviceId }, CONSOLE_COLOR.Reset);
+                    console.log(
+                        CONSOLE_COLOR.BgRed,
+                        "[update][multi] No encaja un segmento",
+                        { serviceId: a.serviceId },
+                        CONSOLE_COLOR.Reset
+                    );
                     return {
                         ok: false as const,
                         code: "BOOKING_ERR_MULTI_SEGMENT_DOES_NOT_FIT",
-                        message: "Un segmento no encuentra hueco disponible en la secuencia."
+                        message:
+                            "Un segmento no encuentra hueco disponible en la secuencia.",
                     };
                 }
 
@@ -2238,23 +2166,38 @@ export class ClientEventService {
                     weightsMap
                 );
                 if (!chosen) {
-                    console.log(CONSOLE_COLOR.BgRed, "[update][multi] RR no pudo elegir pro", CONSOLE_COLOR.Reset);
+                    console.log(
+                        CONSOLE_COLOR.BgRed,
+                        "[update][multi] RR no pudo elegir pro",
+                        CONSOLE_COLOR.Reset
+                    );
                     return {
                         ok: false as const,
                         code: "BOOKING_ERR_MULTI_RR_NO_CANDIDATE",
-                        message: "No se pudo seleccionar profesional para uno de los segmentos."
+                        message:
+                            "No se pudo seleccionar profesional para uno de los segmentos.",
                     };
                 }
 
-                chosenSegments.push({ serviceId: a.serviceId, userId: chosen, start: segStart, end: segEnd });
+                chosenSegments.push({
+                    serviceId: a.serviceId,
+                    userId: chosen,
+                    start: segStart,
+                    end: segEnd,
+                });
                 cursor = segEnd.clone();
             }
 
             // Diff contra originales (quitando los explicitDeletes de la lista de candidatos a update)
-            const originalsKept = originalEvents.filter((e) => !explicitDeletes.has(e.id));
+            const originalsKept = originalEvents.filter(
+                (e) => !explicitDeletes.has(e.id)
+            );
             const toUpdate = Math.min(originalsKept.length, chosenSegments.length);
 
-            const totalDurationMin = chosenSegments.reduce((acc, s) => acc + s.end.diff(s.start, "minutes"), 0);
+            const totalDurationMin = chosenSegments.reduce(
+                (acc, s) => acc + s.end.diff(s.start, "minutes"),
+                0
+            );
             const endWS = startWS.clone().add(totalDurationMin, "minutes");
 
             // ───── TX: aplicar UPDATE / CREATE / DELETE ─────
@@ -2273,7 +2216,9 @@ export class ClientEventService {
                         select: { id: true },
                     });
                     if (overlapping) {
-                        throw new Error("Un profesional tiene otro evento en el horario planificado.");
+                        throw new Error(
+                            "Un profesional tiene otro evento en el horario planificado."
+                        );
                     }
                 }
 
@@ -2292,14 +2237,27 @@ export class ClientEventService {
                             startDate: seg.start.toDate(),
                             endDate: seg.end.toDate(),
                             timeZone: timeZoneWorkspace,
-                            description: note ?? null,
+
+                            commentClient: note ?? null,
+                            isCommentRead: isCommentRead ?? false,
                             eventPurposeType: "APPOINTMENT",
                             idGroup: groupId,
                             // snapshots
                             serviceNameSnapshot: snap?.name ?? null,
-                            servicePriceSnapshot: typeof snap?.price === "number" ? snap!.price! : null,
-                            serviceDiscountSnapshot: typeof snap?.discount === "number" ? snap!.discount! : null,
-                            serviceDurationSnapshot: typeof snap?.duration === "number" ? snap!.duration! : null,
+                            servicePriceSnapshot:
+                                typeof snap?.price === "number" ? snap!.price! : null,
+                            serviceDiscountSnapshot:
+                                typeof snap?.discount === "number"
+                                    ? snap!.discount!
+                                    : null,
+                            serviceDurationSnapshot:
+                                typeof snap?.duration === "number"
+                                    ? snap!.duration!
+                                    : null,
+                            serviceMaxParticipantsSnapshot:
+                                typeof snap?.maxParticipants === "number"
+                                    ? snap!.maxParticipants!
+                                    : null,
                         },
                     });
                     updated.push(ev);
@@ -2322,12 +2280,25 @@ export class ClientEventService {
                             timeZone: timeZoneWorkspace,
                             eventPurposeType: "APPOINTMENT",
                             idGroup: groupId,
+                            commentClient: note ?? null,
+                            isCommentRead: false,
                             // snapshots
                             serviceNameSnapshot: snap?.name ?? null,
-                            servicePriceSnapshot: typeof snap?.price === "number" ? snap!.price! : null,
-                            serviceDiscountSnapshot: typeof snap?.discount === "number" ? snap!.discount! : null,
-                            serviceDurationSnapshot: typeof snap?.duration === "number" ? snap!.duration! : null,
-                            description: note ?? null,
+                            servicePriceSnapshot:
+                                typeof snap?.price === "number" ? snap!.price! : null,
+                            serviceDiscountSnapshot:
+                                typeof snap?.discount === "number"
+                                    ? snap!.discount!
+                                    : null,
+                            serviceDurationSnapshot:
+                                typeof snap?.duration === "number"
+                                    ? snap!.duration!
+                                    : null,
+                            serviceMaxParticipantsSnapshot:
+                                typeof snap?.maxParticipants === "number"
+                                    ? snap!.maxParticipants!
+                                    : null,
+                            // description: note ?? null,
                         },
                     });
 
@@ -2352,7 +2323,10 @@ export class ClientEventService {
                 if (toSoftDeleteIds.size) {
                     const now = new Date();
                     for (const id of toSoftDeleteIds) {
-                        await tx.event.update({ where: { id }, data: { deletedDate: now } });
+                        await tx.event.update({
+                            where: { id },
+                            data: { deletedDate: now },
+                        });
                         deleted.push(id);
                     }
                 }
@@ -2362,7 +2336,9 @@ export class ClientEventService {
 
             // ⬇️ tipo para notification según nº de segmentos tras el plan
             const notificationType =
-                chosenSegments.length <= 1 ? ("single-service" as const) : ("several-services" as const);
+                chosenSegments.length <= 1
+                    ? ("single-service" as const)
+                    : ("several-services" as const);
 
             return {
                 ok: true as const,
@@ -2376,8 +2352,14 @@ export class ClientEventService {
                     outcome: "rebuild_group",
                     fromEventId: original.id,
                     appointment: {
-                        startLocalISO: startWS.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-                        endLocalISO: endWS.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+                        startLocalISO: startWS
+                            .clone()
+                            .tz(timeZoneClient)
+                            .format("YYYY-MM-DDTHH:mm:ss"),
+                        endLocalISO: endWS
+                            .clone()
+                            .tz(timeZoneClient)
+                            .format("YYYY-MM-DDTHH:mm:ss"),
                         timeZoneClient,
                         timeZoneWorkspace,
                         totalDurationMin: totalDurationMin,
@@ -2387,17 +2369,259 @@ export class ClientEventService {
                         userId: a.userId,
                         startUTC: a.start.toISOString(),
                         endUTC: a.end.toISOString(),
-                        startLocalClient: a.start.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
-                        endLocalClient: a.end.clone().tz(timeZoneClient).format("YYYY-MM-DDTHH:mm:ss"),
+                        startLocalClient: a.start
+                            .clone()
+                            .tz(timeZoneClient)
+                            .format("YYYY-MM-DDTHH:mm:ss"),
+                        endLocalClient: a.end
+                            .clone()
+                            .tz(timeZoneClient)
+                            .format("YYYY-MM-DDTHH:mm:ss"),
                     })),
                     ...result,
-                }
+                },
             };
         } catch (error: any) {
-            console.error("Error en EventV2Service.updateEventFromWebBase:", error);
+            console.error(
+                "Error en EventV2Service.updateEventFromWebBase:",
+                error
+            );
             throw new CustomError("Error al actualizar evento", error);
         }
     }
+
+
+    private async _handlePureClassEdit(params: {
+        idCompany: string;
+        idWorkspace: string;
+        timeZoneClient: string;
+        timeZoneWorkspace: string;
+        startWS: moment.Moment;
+        attendees: any[];
+        original: any;
+        bookingId: string;
+        groupId: string;
+        serviceById: Record<string, any>;
+        weightsMap: Record<string, number>;
+        cache: any;
+        customer: { id: string; idClientWorkspace: string };
+        note?: string | null;
+    }) {
+        const {
+            idCompany,
+            idWorkspace,
+            timeZoneClient,
+            timeZoneWorkspace,
+            startWS,
+            attendees,
+            original,
+            bookingId,
+            // groupId = es un id booking, general para todos los eventos. Se puede repetir en varios eventos (más de un servicio)
+            // En clases nunca se repetirá porque las clases siempre son un servicio
+            groupId, // ahora mismo no lo usamos, pero lo dejamos por si acaso
+            serviceById,
+            weightsMap,
+            cache,
+            customer,
+            note,
+        } = params;
+
+        // Sólo 1 servicio (ya garantizado en isPureClassEdit)
+        const svcReq = attendees[0];
+        const svcSnap = serviceById[svcReq.serviceId];
+        if (!svcSnap) throw new Error("Servicio no disponible en snapshot");
+
+        const dur = svcReq.durationMin ?? (svcSnap.duration ?? 0);
+        const endWS = startWS.clone().add(dur, "minutes");
+
+        // Resolver profesionales elegibles
+        const userIdsByService = new Map<string, string[]>();
+        if (svcReq.staffId) {
+            userIdsByService.set(svcReq.serviceId, [svcReq.staffId]);
+        } else {
+            const users = await getUsersWhoCanPerformService_SPECIAL(
+                idWorkspace,
+                svcReq.serviceId,
+                svcReq.categoryId,
+                cache
+            );
+            userIdsByService.set(svcReq.serviceId, users);
+        }
+
+        const allUserIds = Array.from(
+            new Set(Array.from(userIdsByService.values()).flat())
+        );
+        if (!allUserIds.length) {
+            return {
+                ok: false as const,
+                code: "BOOKING_ERR_NO_ELIGIBLE_STAFF",
+                message: "No hay profesionales elegibles para el servicio seleccionado.",
+            };
+        }
+
+        // Elegimos pro con RR (no recalculamos ventanas aquí, confiamos en que el slot viene validado)
+        const eligAvail = allUserIds;
+        const chosen = await this.chooseStaffWithRR(
+            idWorkspace,
+            undefined,
+            svcReq.serviceId,
+            startWS.toDate(),
+            endWS.toDate(),
+            eligAvail,
+            weightsMap
+        );
+        if (!chosen) {
+            return {
+                ok: false as const,
+                code: "BOOKING_ERR_RR_NO_CANDIDATE",
+                message: "No se pudo seleccionar un profesional para el slot.",
+            };
+        }
+
+        const seg = {
+            serviceId: svcReq.serviceId,
+            userId: chosen,
+            start: startWS.clone().seconds(0).milliseconds(0),
+            end: endWS.clone().seconds(0).milliseconds(0),
+        };
+
+        // ───────────────── TX: mover participación de la clase ─────────────────
+        const { targetEvent, action, deletedEventIds } = await prisma.$transaction(
+            async (tx) => {
+                // Participantes activos actuales en esa clase
+                const activeParticipants = await tx.eventParticipant.findMany({
+                    where: { idEventFk: original.id, deletedDate: null },
+                    select: {
+                        id: true,
+                        idClientFk: true,
+                        idClientWorkspaceFk: true,
+                    },
+                });
+
+                const mine = activeParticipants.filter(
+                    (p) =>
+                        (p.idClientFk && p.idClientFk === customer.id) ||
+                        (p.idClientWorkspaceFk &&
+                            p.idClientWorkspaceFk === customer.idClientWorkspace)
+                );
+                if (!mine.length) {
+                    throw new Error(
+                        "Este cliente no está asociado al evento original (class edit)."
+                    );
+                }
+
+                const now = new Date();
+                const deletedEventIds: string[] = [];
+
+                if (activeParticipants.length === 1) {
+                    // Solo este cliente estaba en la clase → podemos “mover” la sesión entera
+                    await tx.event.update({
+                        where: { id: original.id },
+                        data: { deletedDate: now },
+                    });
+                    await tx.eventParticipant.updateMany({
+                        where: { idEventFk: original.id, deletedDate: null },
+                        data: { deletedDate: now },
+                    });
+                    deletedEventIds.push(original.id);
+                } else {
+                    // Hay más gente en la clase → solo sacamos a este cliente
+                    await tx.eventParticipant.updateMany({
+                        where: {
+                            idEventFk: original.id,
+                            deletedDate: null,
+                            OR: [
+                                { idClientFk: customer.id },
+                                { idClientWorkspaceFk: customer.idClientWorkspace },
+                            ],
+                        },
+                        data: { deletedDate: now },
+                    });
+                }
+
+                // Crear o unirse a la nueva sesión de la misma clase
+                // NOTA: En updates de clases, mantenemos el estado original del evento/participante
+                // No aplicamos autoConfirmClientBookings aquí porque estamos MOVIENDO participación,
+                // no creando una reserva nueva desde cero.
+                const { event: targetEventRaw, action } =
+                    await this.createOrJoinGroupEvent(tx, {
+                        idCompany,
+                        idWorkspace,
+                        seg,
+                        svc: {
+                            id: svcSnap.id,
+                            name: svcSnap.name,
+                            price: svcSnap.price,
+                            discount: svcSnap.discount,
+                            duration: svcSnap.duration,
+                            maxParticipants: svcSnap.maxParticipants,
+                        },
+                        timeZoneWorkspace,
+                        note: note ?? null,
+                        customer,
+                        autoConfirmClientBookings: true, // Mantener estado ACCEPTED al mover participación
+                    });
+
+                // 🟢 Asegurar idGroup "booking code" también en la nueva sesión
+                const targetEvent =
+                    targetEventRaw?.idGroup === groupId
+                        ? targetEventRaw
+                        : await tx.event.update({
+                            where: { id: targetEventRaw.id },
+                            data: { idGroup: groupId },
+                        });
+
+                return { targetEvent, action, deletedEventIds };
+            }
+        );
+
+        // ───────────────── Respuesta ─────────────────
+        return {
+            ok: true as const,
+            outcome: "move_single_participant_in_class" as const,
+            fromEventId: original.id,
+            notification: {
+                idBooking: bookingId,
+                type: "single-service" as const,
+            },
+            appointment: {
+                startLocalISO: seg.start
+                    .clone()
+                    .tz(timeZoneClient)
+                    .format("YYYY-MM-DDTHH:mm:ss"),
+                endLocalISO: seg.end
+                    .clone()
+                    .tz(timeZoneClient)
+                    .format("YYYY-MM-DDTHH:mm:ss"),
+                timeZoneClient,
+                timeZoneWorkspace,
+                totalDurationMin: dur,
+            },
+            assignments: [
+                {
+                    serviceId: seg.serviceId,
+                    userId: seg.userId,
+                    startUTC: seg.start.toISOString(),
+                    endUTC: seg.end.toISOString(),
+                    startLocalClient: seg.start
+                        .clone()
+                        .tz(timeZoneClient)
+                        .format("YYYY-MM-DDTHH:mm:ss"),
+                    endLocalClient: seg.end
+                        .clone()
+                        .tz(timeZoneClient)
+                        .format("YYYY-MM-DDTHH:mm:ss"),
+                },
+            ],
+            created: action === "created" ? [targetEvent] : [],
+            updated:
+                action === "joined" || action === "already-in"
+                    ? [targetEvent]
+                    : [],
+            deleted: deletedEventIds,
+        };
+    }
+
 
     // private async updateEventFromWebBase(
     //     input: UpdateFromWebInput,
@@ -3007,6 +3231,7 @@ export class ClientEventService {
      * Punto de entrada para actualizar citas individuales desde la web pública.
      */
     async updateSingleEventFromWeb(input: UpdateFromWebInput, deps: AddFromWebDeps) {
+        console.log(`${CONSOLE_COLOR.FgCyan}[updateSingleEventFromWeb] input SINGLE:`, input, `${CONSOLE_COLOR.Reset}`);
         return this.updateEventFromWebBase(input, deps, "single");
     }
 
@@ -3015,6 +3240,7 @@ export class ClientEventService {
      * (Pendiente de implementar la lógica específica de grupos)
      */
     async updateGroupEventFromWeb(input: UpdateFromWebInput, deps: AddFromWebDeps) {
+        console.log(`${CONSOLE_COLOR.FgCyan}[updateGroupEventFromWeb] input GROUP:`, input, `${CONSOLE_COLOR.Reset}`);
         // TODO: implementar lógica de actualización para eventos grupales:
         // - mover plaza de un grupo a otro
         // - controlar capacidad, etc.

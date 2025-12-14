@@ -27,7 +27,7 @@ router.post('/events/available-times',
     [
         BookingGuardsMiddleware.BaseValidationAndNormalize(),
         BookingGuardsMiddleware.ResolveWorkspace(),
-        BookingGuardsMiddleware.ResolveBookingPage(),
+        // BookingGuardsMiddleware.ResolveBookingPage(),
     ],
     controller.publicGetAvailableTimeSlots);
 
@@ -47,6 +47,9 @@ function safeEq(a: string, b: string) {
 }
 
 router.get("/events/ics/:idEvent", controller.getICS);
+
+// Se manda el idBooking, que es el idGroup (puede ser uno o varios eventos asociados)
+router.get("/events/ics-group/:idGroup", controller.getICSByGroup);
 
 
 module.exports = router;

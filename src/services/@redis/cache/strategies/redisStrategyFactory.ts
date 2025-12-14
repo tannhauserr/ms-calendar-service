@@ -9,7 +9,7 @@ import { BusinessHoursStrategy } from "./businessHours/businessHours.strategy";
 import { ChannelCalendarStrategy } from "./channelCalendar/channelCalendar.strategy";
 import { ClientWorkspaceBriefStrategy } from "./clientBrief/client-brief.strategy";
 import { GoogleOAuthStrategy } from "./googleOAuth/googleOAuth.strategy";
-import { RoundRobinStrategy } from "./roundRobin/roundRobinStrategy";
+import { RoundRobinStrategy } from "./roundRobin/round-robin.strategy";
 import { ServiceBriefStrategy } from "./ServiceBrief/serviceBrief.strategy";
 import { TemporaryHoursStrategy } from "./temporaryHours/temporaryHours.strategy";
 import { UserColorStrategy } from "./useColor/useColor.strategy";
@@ -48,12 +48,13 @@ export class RedisStrategyFactory {
                 return new BookingPageBriefStrategy();
             case 'serviceBrief':
                 return new ServiceBriefStrategy();
-            case 'clientWorkspaceBrief':
-                return new ClientWorkspaceBriefStrategy();
+
             case 'workspaceBrief':
                 return new WorkspaceBriefStrategy();
             case 'userBrief':
                 return new UserBriefStrategy();
+            case 'clientWorkspaceBrief':
+                return new ClientWorkspaceBriefStrategy();
 
 
             // Otros casos para diferentes estrategias...

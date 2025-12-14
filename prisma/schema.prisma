@@ -383,7 +383,8 @@ model Event {
   idWorkspaceFk      String
   idServiceFk        String?
   idUserPlatformFk   String?
-  commentClient      String?         @db.VarChar(300)
+  commentClient      String?         @db.VarChar(512)
+  isCommentRead      Boolean         @default(false)
   eventSourceType    EventSourceType @default(PLATFORM)
   isEditableByClient Boolean         @default(true)
   numberUpdates      Int?            @default(0)
@@ -448,15 +449,8 @@ model EventLineItem {
   id        String @id @default(uuid())
   idEventFk String
 
-  // si es un servicio
-  idServiceFk String?
-
   // si es un addon (id que venga del ms catálogo)
-  idAddonFk          String?
-  // a qué línea de servicio pertenece este addon
-  idParentLineItemFk String?
-
-  lineItemType EventLineItemType @default(SERVICE)
+  idAddonFk String?
 
   // snapshots genéricos (sirven para servicio o addon)
   itemNameSnapshot     String? @db.VarChar(100)
@@ -472,33 +466,8 @@ model EventLineItem {
   event Event @relation(fields: [idEventFk], references: [id], onDelete: Cascade)
 
   @@index([idEventFk])
-  @@index([idParentLineItemFk])
   @@map("eventLineItems")
 }
-
-// model NotificationPlan {
-//   id            String @id @default(uuid())
-//   idEventFk     String
-//   idWorkspaceFk String
-//   idCompanyFk   String
-
-//   actionSectionType ActionSectionType
-
-//   eventStartDate DateTime   @db.Timestamptz(6)
-//   status         PlanStatus @default(planned)
-//   dedupeKey      String     @unique
-//   sentDate       DateTime?
-
-//   createdDate DateTime @default(now()) @db.Timestamptz(3)
-//   updatedDate DateTime @updatedAt @db.Timestamptz(3)
-
-//   event Event @relation(fields: [idEventFk], references: [id], onDelete: Cascade)
-
-//   // @@index([status, eventStartDate])
-//   @@index([idEventFk, status])
-//   @@index([idEventFk])
-//   @@map("notificationPlans")
-// }
 
 model RecurrenceRule {
   id                   String               @id @default(uuid())
@@ -763,23 +732,6 @@ enum RecurrenceStatusType {
   ACTIVE
   PAUSED
   CANCELLED
-}
-
-enum PlanStatus {
-  planned
-  queued
-}
-
-enum ActionSectionType {
-  add
-  addFromRecurrence
-  addFromClientWithRequest
-  update
-  cancel
-  rejectRequest
-  acceptRequest
-  markNoShow
-  end
 }
 
 enum EventLineItemType {

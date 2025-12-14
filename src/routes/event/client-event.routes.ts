@@ -58,7 +58,7 @@ router.post('/events/client-web/available-times',
         JWTService.authCookieOrBearer,
         BookingGuardsMiddleware.BaseValidationAndNormalize(),
         BookingGuardsMiddleware.ResolveWorkspace(),
-        BookingGuardsMiddleware.ResolveBookingPage(),
+        // BookingGuardsMiddleware.ResolveBookingPage(),
     ],
     publicEventController.publicGetAvailableTimeSlots
 );
@@ -70,7 +70,7 @@ router.post(
         JWTService.authCookieOrBearer,                 // auth
         BookingGuardsMiddleware.BaseValidationAndNormalize(),    // valida + normaliza input -> ctx.input
         BookingGuardsMiddleware.ResolveWorkspace(),              // resuelve workspace + config + tz -> ctx.workspace/config/timeZoneWorkspace
-        BookingGuardsMiddleware.ResolveBookingPage(),
+        // BookingGuardsMiddleware.ResolveBookingPage(),
         BookingGuardsMiddleware.ResolveClientWorkspace(),        // resuelve idClientWorkspace -> ctx.customer
         BookingGuardsMiddleware.EnforceTimeRules(),              // reglas de ventana / lead times / etc. -> ctx.when
         BookingGuardsMiddleware.EnforceUserLimits(),             // límites por usuario -> bloquea si excede
@@ -89,6 +89,14 @@ router.post('/events/client-update', [
     //   A la hora de editar un evento no se aplican los límites de usuario
     // BookingGuardsMiddleware.EnforceUserLimits(),
 ], controller.updateFromWeb);
+
+
+router.post('/events/client-cancel', [
+    JWTService.authCookieOrBearer,
+    BookingGuardsMiddleware.BaseContextSimple(),    // valida + normaliza input -> ctx.input
+    BookingGuardsMiddleware.ResolveWorkspace(),              // resuelve workspace + config + tz -> ctx.workspace/config/timeZoneWorkspace
+    BookingGuardsMiddleware.ResolveClientWorkspace(),        // resuelve idClientWorkspace -> ctx.customer
+], controller.cancelEventFromWeb);
 
 
 

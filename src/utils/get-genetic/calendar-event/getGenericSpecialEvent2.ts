@@ -129,7 +129,9 @@ async function getGenericSpecialEvent2(
     if (notCancelled) {
         // where = { ...where, deletedDate: null, eventStatusType: { not: EventStatusType.CANCELLED } };
         where = {
-            ...where, deletedDate: null, eventStatusType: {
+            ...where, 
+            deletedDate: null, 
+            eventStatusType: {
                 notIn: [
                     EventStatusType.CANCELLED,
                     EventStatusType.CANCELLED_BY_CLIENT_REMOVED
