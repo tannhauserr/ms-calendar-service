@@ -24,13 +24,24 @@ const client = axios.create({
         : {},
 });
 
-
-attachServiceAuth(client, TARGET_MS_NAME, THIS_MS_NAME);
 client.interceptors.request.use((cfg) => {
-    const hasAuth = !!cfg.headers?.Authorization;
-    console.log("[ms-client-ws] →", cfg.method?.toUpperCase(), cfg.url, { hasAuth });
+    const h: any = cfg.headers;
+    const auth =
+        (typeof h?.get === "function" ? h.get("Authorization") : undefined) ??
+        h?.Authorization ??
+        h?.authorization;
+
+    console.log("[ms-client-file] →", cfg.method?.toUpperCase(), cfg.baseURL + (cfg.url ?? ""), {
+        hasAuth: Boolean(auth),
+        authPrefix: typeof auth === "string" ? auth.slice(0, 20) : undefined,
+    });
+
     return cfg;
 });
+
+
+// Enganchamos el interceptor aquí (aud=receiver, sub=this)
+// attachServiceAuth(client, TARGET_MS_NAME, THIS_MS_NAME);
 
 const normEmail = (s?: string) => (s ?? "").trim().toLowerCase();
 

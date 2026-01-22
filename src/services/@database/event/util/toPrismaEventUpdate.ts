@@ -10,21 +10,14 @@ export function toPrismaEventScalars(
 ): Omit<Prisma.EventUncheckedCreateInput,
     "id" | "createdDate" | "updatedDate" | "deletedDate"> {
     return {
+        idGroup: e.idGroup as string,
         title: e.title,
         description: e.description,
         startDate: new Date(e.startDate),
         endDate: new Date(e.endDate),
         idUserPlatformFk: e.idUserPlatformFk,
-        commentClient: e.commentClient ?? null,
-        eventSourceType: e.eventSourceType,
         eventPurposeType: e.eventPurposeType,
-        isEditableByClient: e.isEditableByClient,
-        numberUpdates: e.numberUpdates,
-        eventStatusType: e.eventStatusType,
         idServiceFk: e.idServiceFk ?? null,
-        // idCalendarFk: e.idCalendarFk,
-        idWorkspaceFk: e.idWorkspaceFk,
-        idCompanyFk: e.idCompanyFk,
 
         serviceDiscountSnapshot: e?.serviceDiscountSnapshot || e?.service?.discount || null,
         servicePriceSnapshot: e?.servicePriceSnapshot || e?.service?.price || null,
@@ -46,16 +39,9 @@ export function toPrismaEventUpdate(
         endDate: new Date(e.endDate),
 
         idUserPlatformFk: e.idUserPlatformFk,
-        idWorkspaceFk: e.idWorkspaceFk,
-        idCompanyFk: e.idCompanyFk,
         idServiceFk: e.idServiceFk ?? null,
 
-        commentClient: e.commentClient ?? null,
-        eventSourceType: e.eventSourceType,
         eventPurposeType: e.eventPurposeType,
-        isEditableByClient: e.isEditableByClient,
-        numberUpdates: e.numberUpdates,
-        eventStatusType: e.eventStatusType,
 
         serviceDiscountSnapshot: e?.serviceDiscountSnapshot || e?.service?.discount || null,
         servicePriceSnapshot: e?.servicePriceSnapshot || e?.service?.price || null,
@@ -76,10 +62,10 @@ export function buildNestedUpdates(
     participants?: EventForBackend['eventParticipant'],
     participantsToDelete?: EventForBackend['eventParticipantDelete']
 ): Pick<
-    Prisma.EventUpdateInput,
+    Prisma.GroupEventsUpdateInput,
     'eventParticipant'
 > {
-    const ops: Partial<Prisma.EventUpdateInput> = {};
+    const ops: Partial<Prisma.GroupEventsUpdateInput> = {};
 
 
 
@@ -115,5 +101,4 @@ export function buildNestedUpdates(
 
     return ops as any;
 }
-
 

@@ -436,10 +436,12 @@ export class NewStrategy implements RecurrenceStrategy {
             // 2) Notificación para la nueva instancia de recurrencia
             const action: ActionKey = "addFromRecurrence";
 
-            createNotification(ev,
-                {
+            const idGroup = (ev as any)?.idGroup;
+            if (idGroup) {
+                createNotification(idGroup, {
                     actionSectionType: action,
                 });
+            }
         }
 
     }
@@ -524,10 +526,12 @@ export class NewStrategy implements RecurrenceStrategy {
                 // 6.2 Crear NotificationPlan (siempre nuevo)
                 const action: ActionKey = "addFromRecurrence";
 
-                createNotification(ev,
-                    {
+                const idGroup = (ev as any)?.idGroup;
+                if (idGroup) {
+                    createNotification(idGroup, {
                         actionSectionType: action,
                     });
+                }
             });
         }
     }

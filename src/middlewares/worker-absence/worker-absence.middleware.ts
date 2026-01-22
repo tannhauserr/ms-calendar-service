@@ -15,12 +15,9 @@ export class WorkerAbsenceMiddleware {
             const { idUserFk, startDate, endDate } = req.body;
 
             // Validamos los parámetros necesarios
-            if (!idUserFk || !startDate || !endDate) {
-                return res.status(400).json({
-                    message: "Faltan parámetros obligatorios: idUserFk, startDate o endDate",
-                    ok: false,
-                });
-            }
+            if (!idUserFk) return res.status(400).json(Response.build("El idUserFk es obligatorio", 400, false));
+            if (!startDate) return res.status(400).json(Response.build("La startDate es obligatoria", 400, false));
+            if (!endDate) return res.status(400).json(Response.build("La endDate es obligatoria", 400, false));
 
             // Convertimos las fechas a objetos Date para asegurarnos de que estén en el formato correcto
             const start = moment(startDate).startOf("day").toDate();

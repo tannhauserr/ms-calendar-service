@@ -4,7 +4,8 @@ import { EventForBackend } from "../../@database/event/dto/EventForBackend";
 import { SendLogPayload } from "../interfaces";
 import { HandleDeleteCompanyAction, HandleUserAction } from "../interfaces/action.interface";
 import { RequestNotificationPayload } from "../pubsub/interfaces";
-import { ServiceForEvent } from "../../@database/service/dto/my-service";
+// import { ServiceForEvent } from "../../@database/service/dto/my-service";
+import { UpdateServiceInEvent } from "../interfaces/updateServiceInEvent/update-service-in-event";
 import { RequestDeleteRecords } from "../pubsub/consumer/deleteRecords/interfaces";
 
 // Definimos los payloads que las acciones pueden llevar
@@ -136,7 +137,7 @@ export interface ActionPayloads {
 
     // // Usado solo en MS-Calendar y MS-BookingPage
     requestUpdateServiceInEvent: {
-        payload: ServiceForEvent
+        payload: UpdateServiceInEvent
     }
 
 

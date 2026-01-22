@@ -6,7 +6,7 @@
 // import CustomError from "../../models/custom-error/CustomError";
 // import { IRedisBookingPageBriefStrategy, IRedisSavedWorkspaceStrategy, IRedisWorkspaceBriefStrategy } from "../../services/@redis/cache/interfaces/interfaces";
 // import { RedisStrategyFactory } from "../../services/@redis/cache/strategies/redisStrategyFactory";
-// import * as RPC from "../../services/@rabbitmq/rpc/functions";
+// 
 // import { BookingPageStatusType } from "../../services/@redis/cache/interfaces/models/booking-brief";
 // import { getBookingPageByIds } from "../../services/@service-token-client/api-ms/bookingPage.ms";
 // import { TIME_SECONDS } from "../../constant/time";
@@ -869,7 +869,7 @@
 
 
 // // middlewares/booking-guards.middleware.ts
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
 import moment from "moment-timezone";
 import { CONSOLE_COLOR } from "../../constant/console-color";
 import prisma from "../../lib/prisma";
@@ -879,20 +879,19 @@ import {
     IRedisWorkspaceBriefStrategy,
 } from "../../services/@redis/cache/interfaces/interfaces";
 import { RedisStrategyFactory } from "../../services/@redis/cache/strategies/redisStrategyFactory";
-import * as RPC from "../../services/@rabbitmq/rpc/functions";
-import { BookingPageStatusType } from "../../services/@redis/cache/interfaces/models/booking-brief";
-import { getBookingPageByIds } from "../../services/@service-token-client/api-ms/bookingPage.ms";
+
 import { TIME_SECONDS } from "../../constant/time";
+import { Response as ResponseBuild } from "../../models/messages/response";
+import {
+    ClientWorkspaceBrief,
+} from "../../services/@redis/cache/interfaces/models/client-brief";
 import { getWorkspacesByIds } from "../../services/@service-token-client/api-ms/auth.ms";
+import { getBookingPageByIds } from "../../services/@service-token-client/api-ms/bookingPage.ms";
 import {
     createClientWorkspaceByClientAndWorkspace,
     getClientWorkspacesByClientIds,
 } from "../../services/@service-token-client/api-ms/client.ms";
 import { config } from "googleapis/build/src/apis/config";
-import {
-    ClientWorkspaceBrief,
-} from "../../services/@redis/cache/interfaces/models/client-brief";
-import { Response as ResponseBuild } from "../../models/messages/response";
 
 // Ajusta rutas de import a tu proyecto:
 
@@ -1028,15 +1027,18 @@ export class BookingGuardsMiddleware {
             try {
                 const p = req.body ?? {};
 
-                console.log("mira que es p cuando editas", p);
-
-                if (!p?.idCompany || !p?.idWorkspace || !p?.idBookingPage) {
+                if (!p?.idCompany || !p?.idWorkspace) {
                     return this.endBadRequest(
                         res,
                         400,
-                        "Faltan idCompany o idWorkspace o idBookingPage",
+                        "Faltan idCompany o idWorkspace",
                         "BookingGuards.BaseValidation" // code: 100
                     );
+                }
+
+                if (!p?.idBookingPage) {
+                    console.log(`${CONSOLE_COLOR.FgYellow}[BookingGuards.BaseValidation] idBookingPage no proporcionado, se asume null${CONSOLE_COLOR.Reset}`);
+                    console.log(`${CONSOLE_COLOR.FgYellow}[BookingGuards.BaseValidation] No es obligatorio, se asigna null${CONSOLE_COLOR.Reset}`);
                 }
 
                 const hasNew =
@@ -1093,6 +1095,7 @@ export class BookingGuardsMiddleware {
                     }
                 }
 
+                console.log("mira que es idCompany", p?.idCompany);
                 const input = {
                     idCompany: p.idCompany,
                     idWorkspace: p.idWorkspace,
@@ -1142,7 +1145,7 @@ export class BookingGuardsMiddleware {
             try {
                 const ctx = req.booking!.ctx;
                 const { idWorkspace } = ctx.input;
-                // console.log("resolviendo workspace para idWorkspace", idWorkspace);
+                console.log("resolviendo workspace para idWorkspace", idWorkspace);
                 const workspaceBriefStrategy =
                     RedisStrategyFactory.getStrategy(
                         "workspaceBrief"
@@ -1154,6 +1157,7 @@ export class BookingGuardsMiddleware {
                 if (!workspace) {
                     const workspaceRes = await getWorkspacesByIds([idWorkspace]);
                     console.log("buscando workspace en DB");
+                    console.log("mira que es workspaceRes", workspaceRes);
                     workspace = workspaceRes?.[0] ?? null;
                     if (workspace?.id) {
                         await workspaceBriefStrategy.setWorkspace(
@@ -1161,6 +1165,8 @@ export class BookingGuardsMiddleware {
                             TIME_SECONDS.HOUR
                         );
                     }
+                } else {
+                    console.log(`${CONSOLE_COLOR.FgGreen}[BookingGuards.ResolveWorkspace] Workspace encontrado en cache${CONSOLE_COLOR.Reset}`);
                 }
 
                 console.log("mira que es workspace", workspace?.id);
@@ -1174,10 +1180,11 @@ export class BookingGuardsMiddleware {
                 }
 
                 ctx.workspace = workspace;
-                ctx.config =
-                    workspace?.config || workspace?.generalConfigJson || {};
+                ctx.config = workspace?.generalConfigJson || {};
                 ctx.timeZoneWorkspace = workspace.timeZone;
 
+
+                console.log(`${CONSOLE_COLOR.FgCyan}[BookingGuards.ResolveWorkspace] Workspace resuelto${CONSOLE_COLOR.Reset}`, ctx.config);
                 return next();
             } catch (error: any) {
                 return next(
@@ -1191,6 +1198,9 @@ export class BookingGuardsMiddleware {
        2.5) BookingPage: configuración página reservas
        Código de error base previsto: 120 (BookingGuards.ResolveBookingPage)
        (Actualmente sin endBadRequest activo)
+
+
+       TODO: Esto está desfasado, ya no se usa BookingPage.
     ────────────────────────────────────── */
     static ResolveBookingPage() {
         return async (req: Request, res: Response, next: NextFunction) => {
@@ -1245,6 +1255,10 @@ export class BookingGuardsMiddleware {
             try {
                 const ctx = req.booking!.ctx;
                 const { idWorkspace, customer, idCompany } = ctx.input;
+
+                console.log("mira que es idWorkspace", idWorkspace);
+                console.log("mira que es idCompany", idCompany);
+
 
                 if (!customer?.id) {
                     return this.endBadRequest(
@@ -1532,11 +1546,13 @@ export class BookingGuardsMiddleware {
 
                 const reasons: string[] = [];
 
-                // Helper para calcular el identificador de "reserva" (booking)
-                const bookingKeyFromEvent = (ev: {
-                    id: string;
-                    idGroup: string | null;
-                }) => (ev.idGroup ? `g:${ev.idGroup}` : `e:${ev.id}`);
+                // En el nuevo modelo, EventParticipant cuelga del grupo (idGroup -> GroupEvents)
+                // por lo que el identificador de booking es siempre el idGroup.
+                const CANCELLED_GROUP_STATUSES = [
+                    "CANCELLED",
+                    "CANCELLED_BY_CLIENT",
+                    "CANCELLED_BY_CLIENT_REMOVED",
+                ] as const;
 
                 // ---- (B) Chequeo: límite de reservas por día (NO por servicios)
                 if (perUserPerDay > 0) {
@@ -1545,28 +1561,25 @@ export class BookingGuardsMiddleware {
                             where: {
                                 idClientWorkspaceFk: idClientWorkspace,
                                 deletedDate: null,
-                                event: {
+                                groupEvents: {
                                     deletedDate: null,
                                     startDate: { lt: dayEndUTC },
                                     endDate: { gt: dayStartUTC },
+                                    eventStatusType: {
+                                        notIn: CANCELLED_GROUP_STATUSES as any,
+                                    },
                                 },
                             },
                             select: {
-                                event: {
-                                    select: {
-                                        id: true,
-                                        idGroup: true,
-                                    },
-                                },
+                                idGroup: true,
                             },
                         });
 
                     const bookingIdsDay = new Set<string>();
 
                     for (const p of dayParticipations) {
-                        const ev = p.event;
-                        if (!ev) continue;
-                        bookingIdsDay.add(bookingKeyFromEvent(ev));
+                        if (!p?.idGroup) continue;
+                        bookingIdsDay.add(`g:${p.idGroup}`);
                     }
 
                     const countDayBookings = bookingIdsDay.size;
@@ -1585,28 +1598,25 @@ export class BookingGuardsMiddleware {
                             where: {
                                 idClientWorkspaceFk: idClientWorkspace,
                                 deletedDate: null,
-                                event: {
+                                groupEvents: {
                                     deletedDate: null,
                                     startDate: { lt: slotEndUTC },
                                     endDate: { gt: slotStartUTC },
+                                    eventStatusType: {
+                                        notIn: CANCELLED_GROUP_STATUSES as any,
+                                    },
                                 },
                             },
                             select: {
-                                event: {
-                                    select: {
-                                        id: true,
-                                        idGroup: true,
-                                    },
-                                },
+                                idGroup: true,
                             },
                         });
 
                     const bookingIdsOverlap = new Set<string>();
 
                     for (const p of overlappingParticipations) {
-                        const ev = p.event;
-                        if (!ev) continue;
-                        bookingIdsOverlap.add(bookingKeyFromEvent(ev));
+                        if (!p?.idGroup) continue;
+                        bookingIdsOverlap.add(`g:${p.idGroup}`);
                     }
 
                     const overlappingBookings = bookingIdsOverlap.size;
@@ -1716,6 +1726,15 @@ export class BookingGuardsMiddleware {
                     );
                 }
 
+                if (!p?.idCompany) {
+                    return this.endBadRequest(
+                        res,
+                        400,
+                        "Falta idCompany",
+                        "BookingGuards.BaseContextSimple" // code: 170
+                    );
+                }
+
                 // customer con al menos id (compatible con ResolveClientWorkspace)
                 const customer = p?.customer ?? {};
                 if (!customer?.id) {
@@ -1729,6 +1748,7 @@ export class BookingGuardsMiddleware {
 
                 // Construimos input "ligero"
                 const input: any = {
+                    idCompany: p.idCompany,
                     idWorkspace: p.idWorkspace,
                     idEvent: p.idEvent ?? undefined, // opcional
                     customer: {

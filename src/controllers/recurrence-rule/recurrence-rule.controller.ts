@@ -1,7 +1,7 @@
 import { Response } from "../../models/messages/response";
 import { RecurrenceRuleService, RecurrenceRuleWithClients } from "../../services/@database/recurrence-rule/recurrence-rule.service";
 import { JWTService } from "../../services/jwt/jwt.service";
-import * as RPC from "../../services/@rabbitmq/rpc/functions";
+
 
 export class RecurrenceRuleController {
     private recurrenceRuleService: RecurrenceRuleService;
@@ -110,28 +110,29 @@ export class RecurrenceRuleController {
                     rule.clients.map(c => c.idClientFk)
                 );
 
-            // 3) Elimino duplicados
-            const uniqueIdsClient = Array.from(new Set(allIds));
+            // // 3) Elimino duplicados
+            // const uniqueIdsClient = Array.from(new Set(allIds));
 
-            // 4) Obtengo datos de cliente por RPC
-            const clientWorkspaceRPCList = await RPC.getClientstByIdClientAndIdWorkspace(
-                idWorkspace,
-                uniqueIdsClient
-            );
+            // // 4) Obtengo datos de cliente por RPC
+            // const clientWorkspaceRPCList = await RPC.getClientstByIdClientAndIdWorkspace(
+            //     idWorkspace,
+            //     uniqueIdsClient
+            // );
 
-            // 5) Construyo mapa { idClientFk → datosRPC }
-            const clientMap = new Map(
-                clientWorkspaceRPCList.map(c => [c.idClientFk, c])
-            );
+            // // 5) Construyo mapa { idClientFk → datosRPC }
+            // const clientMap = new Map(
+            //     clientWorkspaceRPCList.map(c => [c.idClientFk, c])
+            // );
 
             // 6) Inyecto los datosRPC en cada regla
-            const recurrenceRulesWithClients = recurrenceRulesList.map(rule => ({
-                ...rule,
-                clients: rule.clients.map(c => ({
-                    ...c,
-                    client: clientMap.get(c.idClientFk) ?? null
-                }))
-            }));
+            // const recurrenceRulesWithClients = recurrenceRulesList.map(rule => ({
+            //     ...rule,
+            //     clients: rule.clients.map(c => ({
+            //         ...c,
+            //         client: clientMap.get(c.idClientFk) ?? null
+            //     }))
+            // }));
+            const recurrenceRulesWithClients = recurrenceRulesList;
 
             result.rows = recurrenceRulesWithClients;
             return res
@@ -191,12 +192,12 @@ export class RecurrenceRuleController {
 
     public getByCalendar = async (req: any, res: any, next: any) => {
         try {
-            const { calendarId } = req.body;
+            const { idWorkspace } = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
             const result = await this.recurrenceRuleService.getRulesByCalendar(
-                calendarId
+                idWorkspace
             );
             res
                 .status(200)

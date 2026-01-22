@@ -22,9 +22,23 @@ function validateIdsAreStrings(ids: unknown): ids is string[] {
     for (const v of ids) if (typeof v !== "string" || v.trim().length === 0) return false;
     return true;
 }
+
+
 function getRetryCount(msg: ConsumeMessage): number {
-    const deaths = (msg.properties.headers as any)?.["x-death"] as any[] | undefined;
-    return Array.isArray(deaths) && deaths[0]?.count > 0 ? deaths[0].count : 0;
+    const headers = (msg.properties.headers ?? {}) as any;
+
+    const xr = Number(headers["x-retry"]);
+    if (Number.isFinite(xr) && xr >= 0) return xr;
+
+    const deaths = headers["x-death"] as any[] | undefined;
+    if (!Array.isArray(deaths) || deaths.length === 0) return 0;
+
+    const retryDeath =
+        deaths.find((d) => typeof d?.queue === "string" && d.queue.includes(".retry")) ??
+        deaths[0];
+
+    const c = Number(retryDeath?.count);
+    return Number.isFinite(c) && c > 0 ? c : 0;
 }
 
 /* -------------------- Config -------------------- */
@@ -121,11 +135,14 @@ async function deleteSOFTRecordsConsumer(): Promise<void> {
                     `[Calendar-MS][Delete] Oversized message: ${ids.length} ids → republishing ${msgChunks.length} msgs`
                 );
                 for (const c of msgChunks) {
+                    const retries = getRetryCount(raw);
+
                     await rabbit.publishToExchange(
                         EXCHANGE,
                         ROUTING_KEY,
                         { table, ids: c, idRelation },
-                        { persistent: true }
+                        // Aquí mantenemos el header de retries
+                        { persistent: true, headers: { "x-retry": retries } }
                     );
                 }
                 return ack();
@@ -159,8 +176,30 @@ async function deleteSOFTRecordsConsumer(): Promise<void> {
                                 data: { deletedDate: now },
                             });
 
+                            // New schema: Company/workspace live on GroupEvents, not on Event.
+                            // Soft-delete bookings (groups) + their events + participants.
+                            await tx.groupEvents.updateMany({
+                                where: { idCompanyFk: { in: batch }, deletedDate: null },
+                                data: { deletedDate: now },
+                            });
+
                             await tx.event.updateMany({
-                                where: { idWorkspaceFk: { in: batch }, deletedDate: null },
+                                where: {
+                                    deletedDate: null,
+                                    groupEvents: {
+                                        is: { idCompanyFk: { in: batch }, deletedDate: null },
+                                    },
+                                },
+                                data: { deletedDate: now },
+                            });
+
+                            await tx.eventParticipant.updateMany({
+                                where: {
+                                    deletedDate: null,
+                                    groupEvents: {
+                                        is: { idCompanyFk: { in: batch }, deletedDate: null },
+                                    },
+                                },
                                 data: { deletedDate: now },
                             });
 
@@ -189,90 +228,179 @@ async function deleteSOFTRecordsConsumer(): Promise<void> {
                                 data: { deletedDate: now },
                             });
 
-                            // event ya lo manejas arriba por company o en otros flujos
+                            // New schema: workspace lives on GroupEvents.
+                            await tx.groupEvents.updateMany({
+                                where: { idWorkspaceFk: { in: batch }, deletedDate: null },
+                                data: { deletedDate: now },
+                            });
+
+                            await tx.event.updateMany({
+                                where: {
+                                    deletedDate: null,
+                                    groupEvents: {
+                                        is: { idWorkspaceFk: { in: batch }, deletedDate: null },
+                                    },
+                                },
+                                data: { deletedDate: now },
+                            });
+
+                            await tx.eventParticipant.updateMany({
+                                where: {
+                                    deletedDate: null,
+                                    groupEvents: {
+                                        is: { idWorkspaceFk: { in: batch }, deletedDate: null },
+                                    },
+                                },
+                                data: { deletedDate: now },
+                            });
                         });
                     }
                 } else if (table === "clientWorkspaces") {
                     const batches = chunkArray(ids, CHUNK);
                     for (const batch of batches) {
                         await prisma.$transaction(async (tx) => {
-                            // Solo marcar como borradas las relaciones de participantes futuros
+                            // 1) Eventos afectados = los eventos donde estos clientes eran participantes (y el evento aún no terminó)
+                            const affected = await tx.eventParticipant.findMany({
+                                where: {
+                                    idClientWorkspaceFk: { in: batch },
+                                    deletedDate: null,
+                                    groupEvents: {
+                                        is: {
+                                            deletedDate: null,
+                                            // Mejor que startDate>=now: evita borrar eventos “en curso”
+                                            endDate: { gt: now },
+                                        },
+                                    },
+                                },
+                                select: { idGroup: true },
+                            });
+
+                            const affectedEventIds = [...new Set(affected.map(a => a.idGroup))];
+                            if (affectedEventIds.length === 0) return;
+
+                            // 2) Soft-delete de esas participaciones (solo para eventos futuros/no terminados)
                             await tx.eventParticipant.updateMany({
                                 where: {
                                     idClientWorkspaceFk: { in: batch },
-                                    createdDate: { gte: now },
                                     deletedDate: null,
+                                    groupEvents: {
+                                        is: {
+                                            deletedDate: null,
+                                            // Mejor que startDate>=now: evita borrar eventos “en curso”
+                                            endDate: { gt: now },
+                                        },
+                                    },
                                 },
                                 data: { deletedDate: now },
                             });
 
-                            // Eventos que se queden sin participantes activos (soft)
-                            const eventsWithoutParticipants = await tx.event.findMany({
+                            // 3) Soft-delete SOLO de bookings afectados que se quedaron sin participantes activos
+                            // (Participantes ahora están en GroupEvents)
+                            const emptyGroups = await tx.groupEvents.findMany({
                                 where: {
+                                    id: { in: affectedEventIds },
                                     deletedDate: null,
-                                    eventParticipant: {
-                                        none: {
-                                            deletedDate: null,
-                                        },
-                                    },
+                                    endDate: { gt: now },
+                                    eventParticipant: { none: { deletedDate: null } },
                                 },
                                 select: { id: true },
                             });
 
-                            if (eventsWithoutParticipants.length > 0) {
-                                const eventIdsToSoftDelete = eventsWithoutParticipants.map((e) => e.id);
-                                await tx.event.updateMany({
-                                    where: {
-                                        id: { in: eventIdsToSoftDelete },
-                                        deletedDate: null,
-                                    },
-                                    data: { deletedDate: now },
-                                });
-                                console.log(
-                                    `[Calendar-MS][Delete] Soft-deleted ${eventIdsToSoftDelete.length} eventos sin participantes`
-                                );
+                            const groupsToDelete = emptyGroups.map((g) => g.id);
+                            if (groupsToDelete.length === 0) return;
+
+                            await tx.groupEvents.updateMany({
+                                where: { id: { in: groupsToDelete }, deletedDate: null },
+                                data: { deletedDate: now },
+                            });
+
+                            const r = await tx.event.updateMany({
+                                where: { idGroup: { in: groupsToDelete }, deletedDate: null },
+                                data: { deletedDate: now },
+                            });
+
+                            if (r.count > 0) {
+                                console.log(`[Calendar-MS][Delete] Soft-deleted ${r.count} eventos (booking quedó sin participantes)`);
                             }
                         });
                     }
                 } else if (table === "clients") {
                     const batches = chunkArray(ids, CHUNK);
+
                     for (const batch of batches) {
                         await prisma.$transaction(async (tx) => {
-                            // Solo marcar como borradas las relaciones de participantes futuros
+                            // 1) Eventos afectados = los eventos donde estos clientes eran participantes (y el evento aún no terminó)
+                            const affected = await tx.eventParticipant.findMany({
+                                where: {
+                                    idClientFk: { in: batch },
+                                    deletedDate: null,
+                                    // event: {
+                                    //     is: {
+                                    //         deletedDate: null,
+                                    //         // Mejor que startDate>=now: evita borrar eventos “en curso”
+                                    //         endDate: { gt: now },
+                                    //     },
+                                    // },
+                                    groupEvents: {
+                                        is: {
+                                            deletedDate: null,
+                                            endDate: { gt: now },
+                                        },
+                                    }
+                                },
+                                select: { idGroup: true },
+                            });
+
+                            const affectedEventIds = [...new Set(affected.map(a => a.idGroup))];
+                            if (affectedEventIds.length === 0) return;
+
+                            // 2) Soft-delete de esas participaciones (solo para eventos futuros/no terminados)
                             await tx.eventParticipant.updateMany({
                                 where: {
                                     idClientFk: { in: batch },
-                                    createdDate: { gte: now },
                                     deletedDate: null,
+                                    // event: {
+                                    //     is: {
+                                    //         deletedDate: null,
+                                    //         endDate: { gt: now },
+                                    //     },
+                                    // },
+                                    groupEvents: {
+                                        is: {
+                                            deletedDate: null,
+                                            endDate: { gt: now },
+                                        }
+                                    }
                                 },
                                 data: { deletedDate: now },
                             });
 
-                            // Eventos que se queden sin participantes activos (soft)
-                            const eventsWithoutParticipants = await tx.event.findMany({
+                            // 3) Soft-delete SOLO de bookings afectados que se quedaron sin participantes activos
+                            const emptyGroups = await tx.groupEvents.findMany({
                                 where: {
+                                    id: { in: affectedEventIds },
                                     deletedDate: null,
-                                    eventParticipant: {
-                                        none: {
-                                            deletedDate: null,
-                                        },
-                                    },
+                                    endDate: { gt: now },
+                                    eventParticipant: { none: { deletedDate: null } },
                                 },
                                 select: { id: true },
                             });
 
-                            if (eventsWithoutParticipants.length > 0) {
-                                const eventIdsToSoftDelete = eventsWithoutParticipants.map((e) => e.id);
-                                await tx.event.updateMany({
-                                    where: {
-                                        id: { in: eventIdsToSoftDelete },
-                                        deletedDate: null,
-                                    },
-                                    data: { deletedDate: now },
-                                });
-                                console.log(
-                                    `[Calendar-MS][Delete] Soft-deleted ${eventIdsToSoftDelete.length} eventos sin participantes`
-                                );
+                            const groupsToDelete = emptyGroups.map((g) => g.id);
+                            if (groupsToDelete.length === 0) return;
+
+                            await tx.groupEvents.updateMany({
+                                where: { id: { in: groupsToDelete }, deletedDate: null },
+                                data: { deletedDate: now },
+                            });
+
+                            const r = await tx.event.updateMany({
+                                where: { idGroup: { in: groupsToDelete }, deletedDate: null },
+                                data: { deletedDate: now },
+                            });
+
+                            if (r.count > 0) {
+                                console.log(`[Calendar-MS][Delete] Soft-deleted ${r.count} eventos (booking quedó sin participantes)`);
                             }
                         });
                     }
@@ -349,7 +477,7 @@ async function deleteSOFTRecordsConsumer(): Promise<void> {
                             await tx.event.deleteMany({
                                 where: {
                                     idUserPlatformFk: idRelation,
-                                    idWorkspaceFk: { in: batch },
+                                    groupEvents: { is: { idWorkspaceFk: { in: batch }, deletedDate: null } },
                                     eventPurposeType: { not: "APPOINTMENT" },
                                     deletedDate: null,
                                 }
@@ -392,7 +520,7 @@ async function deleteSOFTRecordsConsumer(): Promise<void> {
                             await tx.event.deleteMany({
                                 where: {
                                     idUserPlatformFk: { in: batch },
-                                    idWorkspaceFk: idRelation,
+                                    groupEvents: { is: { idWorkspaceFk: idRelation, deletedDate: null } },
                                     eventPurposeType: { not: "APPOINTMENT" },
                                     deletedDate: null,
                                 },

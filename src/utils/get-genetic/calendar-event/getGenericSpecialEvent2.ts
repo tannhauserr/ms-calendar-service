@@ -43,39 +43,22 @@ async function getGenericSpecialEvent2(
 
     // console.log("Get genetic special, filtos", filters)
 
-
-    if (page < 1) {
-        throw new Error('The page value must be greater than or equal to 1.');
-    }
-
-    if (itemsPerPage < 1) {
-        throw new Error('The itemsPerPage value must be greater than or equal to 1.');
-    }
-
-    // Procesar filtros
     let where: any = {};
-    // if (filters) {
-    //   where = processFilters(filters);
-    // }
-    if (filters) {
-        where = { ...where, ...processFilters(filters) };
+    if (filters && Object.keys(filters).length > 0) {
+        where = mergeDeep(where, processFilters(filters as any));
     }
 
-    if (filtersJson) {
-        where = { ...where, ...processFiltersJson(filtersJson) };
+    if (filtersJson && Object.keys(filtersJson).length > 0) {
+        where = mergeDeep(where, processFiltersJson(filtersJson));
     }
 
-    // console.log(JSON.stringify(where, null, 2))
-    // console.log("\n\n\n\n\n")
-
-    let orderQuery: any = {};
+    let orderQuery: any;
     if (orderBy) {
         if (orderBy.relation) {
-            // Ordenación en una tabla relacionada
             orderQuery = {
                 [orderBy.relation]: {
                     [orderBy.field]: orderBy.order,
-                },
+                }
             };
         } else {
             // Ordenación en la tabla principal
@@ -126,21 +109,46 @@ async function getGenericSpecialEvent2(
     // console.log("mira include", includeRelations)
 
 
-    if (notCancelled) {
-        // where = { ...where, deletedDate: null, eventStatusType: { not: EventStatusType.CANCELLED } };
-        where = {
-            ...where, 
-            deletedDate: null, 
-            eventStatusType: {
-                notIn: [
-                    EventStatusType.CANCELLED,
-                    EventStatusType.CANCELLED_BY_CLIENT_REMOVED
-                ]
-            }
+    if (modelName === "event") {
+        const cancelledStatusFilter = {
+            notIn: [
+                EventStatusType.CANCELLED,
+                EventStatusType.CANCELLED_BY_CLIENT_REMOVED,
+                EventStatusType.CANCELLED_BY_CLIENT,
+            ]
         };
 
+        const existingGroupFilter: any = (where as any).groupEvents;
+        const existingIs: any = existingGroupFilter?.is ?? {};
+
+        where = {
+            ...where,
+            deletedDate: null,
+            groupEvents: {
+                ...(existingGroupFilter?.isNot ? { isNot: existingGroupFilter.isNot } : {}),
+                is: {
+                    ...existingIs,
+                    deletedDate: null,
+                    ...(notCancelled ? { eventStatusType: cancelledStatusFilter } : {}),
+                },
+            }
+        };
     } else {
-        where = { ...where, deletedDate: null };
+        where = {
+            ...where,
+            deletedDate: null,
+            ...(notCancelled
+                ? {
+                    eventStatusType: {
+                        notIn: [
+                            EventStatusType.CANCELLED,
+                            EventStatusType.CANCELLED_BY_CLIENT_REMOVED,
+                            EventStatusType.CANCELLED_BY_CLIENT,
+                        ]
+                    },
+                }
+                : {}),
+        };
     }
 
 

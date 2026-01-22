@@ -1,6 +1,6 @@
 import {
     deleteSOFTRecordsConsumers,
-    recurrenceWorkerConsumer,
+    // recurrenceWorkerConsumer,
     updateServiceInEventConsumer
 } from "./consumer";
 
@@ -9,6 +9,6 @@ export const initializeConsumerPubSub_RabbitMQ = () => {
     deleteSOFTRecordsConsumers.deleteSOFTRecordsConsumer();
     deleteSOFTRecordsConsumers.deleteSOFTRecordsDLQConsumer();
 
-    recurrenceWorkerConsumer();
+    // recurrenceWorkerConsumer();
     updateServiceInEventConsumer();
 }

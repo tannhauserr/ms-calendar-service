@@ -11,11 +11,18 @@ const eventController = new EventController();
 const businessHoursController = new BusinessHourController();
 
 // Obtener event
-router.post('/event/data', [MicroserviceAuthMiddleware.verify], eventController.getEventDataById);
-router.post('/event/group/data', [MicroserviceAuthMiddleware.verify], eventController.getGroupDataById);  
+router.post('/event/data', [
+    // MicroserviceAuthMiddleware.verify
+], eventController.getEventDataById);
+
+router.post('/event/group/data', [
+    // MicroserviceAuthMiddleware.verif
+], eventController.getGroupDataById);  
 
 // obtener business hour a partir del id Workspace
-router.post('/business-hours/data', [MicroserviceAuthMiddleware.verify], businessHoursController.getBusinessHoursFromRedis_internalMS);
+router.post('/business-hours/data', [
+    // MicroserviceAuthMiddleware.verify
+], businessHoursController.getBusinessHoursFromRedis_internalMS);
 
 // BookingPages (batch)
 // router.post('/booking-pages/_batch', [MicroserviceAuthMiddleware.verify], bookingPageController.internalBatchByIds);

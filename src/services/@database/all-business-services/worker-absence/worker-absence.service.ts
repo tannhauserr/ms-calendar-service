@@ -57,10 +57,21 @@ export class WorkerAbsenceService {
                 if (!item.idWorkspaceFk) {
                     throw new Error("El idWorkspaceFk es requerido para obtener el calendario");
                 }
-             
+
 
                 const startDate = moment(item.startDate).startOf("day").toDate();
                 const endDate = moment(item.endDate).endOf("day").toDate();
+
+
+                const createdGroup = await tx.groupEvents.create({
+                    data: {
+                        title: item.title,
+                        idCompanyFk: item.idCompanyFk!,
+                        idWorkspaceFk: item.idWorkspaceFk!,
+                        startDate: startDate,
+                        endDate: endDate,
+                    }
+                });
 
                 // Crear el evento asociado, usando el id del calendario obtenido
                 const eventData: Prisma.EventCreateInput = {
@@ -69,15 +80,17 @@ export class WorkerAbsenceService {
                     startDate: startDate,
                     endDate: endDate,
                     idUserPlatformFk: item.idUserFk,
-                    // calendar: { connect: { id: calendar.id } },
-                    idWorkspaceFk: item.idWorkspaceFk!,
-                    idCompanyFk: item.idCompanyFk!,
-                    eventPurposeType: item.eventPurposeType,
-                    allDay: true
-                    // Otros campos que sean necesarios en tu lógica
-                };
-                const createdEvent = await tx.event.create({ data: eventData });
 
+                    eventPurposeType: item.eventPurposeType,
+                    allDay: true,
+                    // Otros campos que sean necesarios en tu lógica
+                    groupEvents: { connect: { id: createdGroup.id } },
+
+                };
+
+
+                const createdEvent = await tx.event.create({ data: eventData });
+                // TODO: Plantearse el borrar el workerAbsence y coger el listado en la tabla Events.
                 // Crear la ausencia conectando el evento creado
                 const createdAbsence = await tx.workerAbsence.create({
                     data: {

@@ -15,8 +15,8 @@ export interface TemplateNotification {
     channel: NotificationChannel;
     key: string;
     language: LanguageType;
-    subject?: string | null;        // email/webpush opcional
-    body?: string | null;           // email/sms/webpush opcional
+    subject?: string | null;        // email/push opcional
+    body?: string | null;           // email/sms/push opcional
     waTemplateName?: string | null; // whatsapp opcional
     isActive?: boolean;
 };

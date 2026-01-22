@@ -20,33 +20,19 @@ CREATE TYPE "WeekDayType" AS ENUM ('MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY',
 CREATE TYPE "RecurrenceStatusType" AS ENUM ('ACTIVE', 'PAUSED', 'CANCELLED');
 
 -- CreateEnum
-CREATE TYPE "PlanStatus" AS ENUM ('planned', 'queued');
-
--- CreateEnum
-CREATE TYPE "ActionSectionType" AS ENUM ('add', 'addFromRecurrence', 'addFromClientWithRequest', 'update', 'cancel', 'rejectRequest', 'acceptRequest', 'markNoShow', 'end');
-
--- CreateEnum
 CREATE TYPE "EventLineItemType" AS ENUM ('SERVICE', 'ADDON');
 
 -- CreateTable
 CREATE TABLE "events" (
     "id" TEXT NOT NULL,
+    "idGroup" TEXT NOT NULL,
     "title" VARCHAR(256) NOT NULL,
     "description" VARCHAR(512),
     "startDate" TIMESTAMPTZ(6) NOT NULL,
     "endDate" TIMESTAMPTZ(6) NOT NULL,
-    "idCompanyFk" TEXT NOT NULL,
-    "idWorkspaceFk" TEXT NOT NULL,
     "idServiceFk" TEXT,
     "idUserPlatformFk" TEXT,
-    "commentClient" VARCHAR(300),
-    "eventSourceType" "EventSourceType" NOT NULL DEFAULT 'PLATFORM',
-    "isEditableByClient" BOOLEAN NOT NULL DEFAULT true,
-    "numberUpdates" INTEGER DEFAULT 0,
-    "eventStatusType" "EventStatusType" NOT NULL DEFAULT 'PENDING',
-    "timeZone" VARCHAR(50) NOT NULL DEFAULT 'Europe/Madrid',
     "allDay" BOOLEAN NOT NULL DEFAULT false,
-    "idGroup" TEXT,
     "serviceNameSnapshot" VARCHAR(100),
     "servicePriceSnapshot" DOUBLE PRECISION,
     "serviceDiscountSnapshot" DOUBLE PRECISION,
@@ -62,9 +48,30 @@ CREATE TABLE "events" (
 );
 
 -- CreateTable
+CREATE TABLE "groupEvents" (
+    "id" TEXT NOT NULL,
+    "title" VARCHAR(100) NOT NULL,
+    "idCompanyFk" TEXT NOT NULL,
+    "idWorkspaceFk" TEXT NOT NULL,
+    "commentClient" VARCHAR(512),
+    "isCommentRead" BOOLEAN NOT NULL DEFAULT false,
+    "description" VARCHAR(512),
+    "eventSourceType" "EventSourceType" NOT NULL DEFAULT 'PLATFORM',
+    "isEditableByClient" BOOLEAN NOT NULL DEFAULT true,
+    "numberUpdates" INTEGER DEFAULT 0,
+    "eventStatusType" "EventStatusType" NOT NULL DEFAULT 'PENDING',
+    "timeZone" VARCHAR(50) NOT NULL DEFAULT 'Europe/Madrid',
+    "createdDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedDate" TIMESTAMP(3) NOT NULL,
+    "deletedDate" TIMESTAMP(3),
+
+    CONSTRAINT "groupEvents_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "eventParticipants" (
     "id" TEXT NOT NULL,
-    "idEventFk" TEXT NOT NULL,
+    "idGroup" TEXT NOT NULL,
     "idClientWorkspaceFk" TEXT,
     "idClientFk" TEXT,
     "eventStatusType" "EventStatusType" NOT NULL DEFAULT 'PENDING',
@@ -79,10 +86,7 @@ CREATE TABLE "eventParticipants" (
 CREATE TABLE "eventLineItems" (
     "id" TEXT NOT NULL,
     "idEventFk" TEXT NOT NULL,
-    "idServiceFk" TEXT,
     "idAddonFk" TEXT,
-    "idParentLineItemFk" TEXT,
-    "lineItemType" "EventLineItemType" NOT NULL DEFAULT 'SERVICE',
     "itemNameSnapshot" VARCHAR(100),
     "itemPriceSnapshot" DOUBLE PRECISION,
     "itemDiscountSnapshot" DOUBLE PRECISION,
@@ -193,9 +197,6 @@ CREATE TABLE "workerAbsences" (
 );
 
 -- CreateIndex
-CREATE INDEX "idx_events_availability_ws_user_start" ON "events"("idWorkspaceFk", "idUserPlatformFk", "startDate");
-
--- CreateIndex
 CREATE INDEX "idx_events_user_start_end" ON "events"("idUserPlatformFk", "startDate", "endDate");
 
 -- CreateIndex
@@ -211,10 +212,7 @@ CREATE INDEX "events_idServiceFk_idx" ON "events"("idServiceFk");
 CREATE INDEX "events_idUserPlatformFk_idx" ON "events"("idUserPlatformFk");
 
 -- CreateIndex
-CREATE INDEX "events_idWorkspaceFk_idx" ON "events"("idWorkspaceFk");
-
--- CreateIndex
-CREATE INDEX "eventParticipants_idEventFk_idx" ON "eventParticipants"("idEventFk");
+CREATE INDEX "groupEvents_idWorkspaceFk_idx" ON "groupEvents"("idWorkspaceFk");
 
 -- CreateIndex
 CREATE INDEX "eventParticipants_idClientWorkspaceFk_idx" ON "eventParticipants"("idClientWorkspaceFk");
@@ -223,13 +221,10 @@ CREATE INDEX "eventParticipants_idClientWorkspaceFk_idx" ON "eventParticipants"(
 CREATE INDEX "eventParticipants_idClientFk_idx" ON "eventParticipants"("idClientFk");
 
 -- CreateIndex
-CREATE INDEX "eventParticipants_idEventFk_eventStatusType_idx" ON "eventParticipants"("idEventFk", "eventStatusType");
+CREATE INDEX "eventParticipants_idGroup_eventStatusType_idx" ON "eventParticipants"("idGroup", "eventStatusType");
 
 -- CreateIndex
 CREATE INDEX "eventLineItems_idEventFk_idx" ON "eventLineItems"("idEventFk");
-
--- CreateIndex
-CREATE INDEX "eventLineItems_idParentLineItemFk_idx" ON "eventLineItems"("idParentLineItemFk");
 
 -- CreateIndex
 CREATE INDEX "recurrenceRules_idWorkspaceFk_idx" ON "recurrenceRules"("idWorkspaceFk");
@@ -268,7 +263,10 @@ CREATE INDEX "workerAbsences_idUserFk_idWorkspaceFk_idx" ON "workerAbsences"("id
 ALTER TABLE "events" ADD CONSTRAINT "events_idRecurrenceRuleFk_fkey" FOREIGN KEY ("idRecurrenceRuleFk") REFERENCES "recurrenceRules"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "eventParticipants" ADD CONSTRAINT "eventParticipants_idEventFk_fkey" FOREIGN KEY ("idEventFk") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "events" ADD CONSTRAINT "events_idGroup_fkey" FOREIGN KEY ("idGroup") REFERENCES "groupEvents"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "eventParticipants" ADD CONSTRAINT "eventParticipants_idGroup_fkey" FOREIGN KEY ("idGroup") REFERENCES "groupEvents"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "eventLineItems" ADD CONSTRAINT "eventLineItems_idEventFk_fkey" FOREIGN KEY ("idEventFk") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;

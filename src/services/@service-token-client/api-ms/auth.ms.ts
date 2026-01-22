@@ -24,16 +24,25 @@ const client = axios.create({
         ? { "x-internal-ms-secret": internalSecret }
         : {},
 });
-// 👉 Engancha el interceptor de token (aud = receptor, sub = este MS)
-attachServiceAuth(client, TARGET_MS_NAME, THIS_MS_NAME);
 
-// (Opcional) log para confirmar que se añade Authorization
 client.interceptors.request.use((cfg) => {
-    const hasAuth = !!cfg.headers?.Authorization;
-    console.log("[auth-ms-client] →", cfg.method?.toUpperCase(), cfg.url, { hasAuth });
+    const h: any = cfg.headers;
+    const auth =
+        (typeof h?.get === "function" ? h.get("Authorization") : undefined) ??
+        h?.Authorization ??
+        h?.authorization;
+
+    console.log("[ms-client-file] →", cfg.method?.toUpperCase(), cfg.baseURL + (cfg.url ?? ""), {
+        hasAuth: Boolean(auth),
+        authPrefix: typeof auth === "string" ? auth.slice(0, 20) : undefined,
+    });
+
     return cfg;
 });
 
+
+// Enganchamos el interceptor aquí (aud=receiver, sub=this)
+// attachServiceAuth(client, TARGET_MS_NAME, THIS_MS_NAME);
 
 /**
  * Obtiene snapshots de Users por IDs con cache-first
