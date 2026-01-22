@@ -1,6 +1,5 @@
 import { NextFunction } from "express";
 import { JWTService } from "../services/jwt/jwt.service";
-import { checkUserRoleRpc } from "../services/@rabbitmq/rpc/functions";
 import { RedisStrategyFactory } from '../services/@redis/cache/strategies/redisStrategyFactory';
 import { UserCompanyRoleStrategy } from "../services/@redis/cache/strategies/userCompanyRole/userCompanyRoleStrategy";
 import { TIME_SECONDS } from "../constant/time";
@@ -44,7 +43,7 @@ export class OnlyAdminMiddleware {
                         return;
                     } else {
                         // LOG: Se podría registrar un log con idUser, role e idCompanySelected que intentó acceder
-                        res.status(400).json({ message: "No tienes permisos para realizar esta acción (datos en cache no coinciden)" });
+                        res.status(400).json({ message: "[AUTH_001] No tienes permisos para realizar esta acción (datos en cache no coinciden)" });
                         return;
                     }
 
@@ -58,15 +57,17 @@ export class OnlyAdminMiddleware {
 
             }
 
+            // TODO: Ya no se usa el RPC
             // Llamamos al RPC para validar el rol del usuario en la base de datos
-            const { isValid, message } = await checkUserRoleRpc(idUser, role, idCompanySelected);
-            FACTORY.setUserCompanyRole(idUser, idCompanySelected, role, isValid, TIME_SECONDS.MINUTE * 20);
+            // const { isValid, message } = await checkUserRoleRpc(idUser, role, idCompanySelected);
+            // const isValid = roleSystemAllowed.includes(role) ? true : false;
+            // FACTORY.setUserCompanyRole(idUser, idCompanySelected, role, isValid, TIME_SECONDS.MINUTE * 20);
 
-            if (!isValid) {
-                // LOG: Se podría registrar un log con idUser, role e idCompanySelected que intentó acceder
-                res.status(400).json({ message: message || "No tienes permisos para realizar esta acción" });
-                return;
-            }
+            // if (!isValid) {
+            //     // LOG: Se podría registrar un log con idUser, role e idCompanySelected que intentó acceder
+            //     res.status(400).json({ message: "[AUTH_002] No tienes permisos para realizar esta acción" });
+            //     return;
+            // }
 
             // Si la verificación es exitosa, se procede al siguiente middleware o controlador
             next();
@@ -96,7 +97,7 @@ export class OnlyAdminMiddleware {
             const decode = await JWTService.instance.verify(token);
             if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
                 if (decode.role !== 'ROLE_ADMIN') {
-                    res.status(400).json({ message: "No tienes permisos para realizar esta acción" });
+                    res.status(400).json({ message: "[AUTH_003] No tienes permisos para realizar esta acción" });
                     return;
                 }
             }
@@ -115,7 +116,7 @@ export class OnlyAdminMiddleware {
             if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
 
                 if (decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
-                    res.status(400).json({ message: "No tienes permisos para realizar esta acción" });
+                    res.status(400).json({ message: "[AUTH_004] No tienes permisos para realizar esta acción" });
                     return;
                 }
             }
@@ -147,11 +148,11 @@ export class OnlyAdminMiddleware {
 
                 if (decode.role !== 'ROLE_ADMIN' && object?.myId !== decode.idUser) {
                     // LOG: Mandar petición log de que no tiene permisos para realizar esta acción
-                    res.status(400).json({ message: "No tienes permisos para realizar esta acción" });
+                    res.status(400).json({ message: "[AUTH_005] No tienes permisos para realizar esta acción" });
                     return;
                 } else if (decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
                     // LOG: Mandar petición log de que no tiene permisos para realizar esta acción
-                    res.status(400).json({ message: "No tienes permisos para realizar esta acción" });
+                    res.status(400).json({ message: "[AUTH_006] No tienes permisos para realizar esta acción" });
                     return;
                 }
             }
@@ -185,7 +186,7 @@ export class OnlyAdminMiddleware {
 
             if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
                 if (decode.role !== 'ROLE_ADMIN' && object?.myId !== decode.idUser) {
-                    res.status(400).json({ message: "No tienes permisos para realizar esta acción 222" });
+                    res.status(400).json({ message: "[AUTH_007] No tienes permisos para realizar esta acción" });
                     return;
                 }
             }
@@ -212,7 +213,7 @@ export class OnlyAdminMiddleware {
                 // Si no está dentro de los roles permitidos, 403
                 if (!permittedRoles.includes(decode.role)) {
                     return res.status(403).json({
-                        message: "No tienes permisos para esta acción"
+                        message: "[AUTH_008] No tienes permisos para esta acción"
                     });
                 }
 
@@ -227,7 +228,7 @@ export class OnlyAdminMiddleware {
                     // Comparar
                     if (req.body.myId !== decode.idUser) {
                         return res.status(403).json({
-                            message: "No puedes operar sobre un ID que no sea el tuyo"
+                            message: "[AUTH_009] No puedes operar sobre un ID que no sea el tuyo"
                         });
                     }
                 }

@@ -30,7 +30,9 @@ export class WorkerAbsenceController {
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workerAbsenceService.addWorkerAbsence(body);
+            const { idEventFk, ...rest } = body;
+
+            const result = await this.workerAbsenceService.addWorkerAbsence(rest);
             res.status(200).json(Response.build("Ausencia registrada", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });

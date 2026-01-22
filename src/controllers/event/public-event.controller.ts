@@ -32,91 +32,21 @@ export class PublicEventController {
     }
 
 
-    public publicAdd = async (req: any, res: any, next: any) => {
-        try {
-            const body = req.body;
-
-            const result = await this.eventService.addEventV2(body);
-
-            // TODO: Usad el send de RabbitMQ para crear notificación en su Microservicio
-            // Por hacer
-
-            res.status(200).json(Response.build("Evento creado", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json({ message: err.message });
-        }
-    }
-
-    // public publicGetAvailableDaysSlots = async (req: any, res: any) => {
+    // public publicAdd = async (req: any, res: any, next: any) => {
     //     try {
+    //         const body = req.body;
 
-    //         // body esperado:
-    //         // {
-    //         //   idCompany: string,
-    //         //   idWorkspace: string,
-    //         //   timezone: string,                    
-    //         //   range: { start: "YYYY-MM-DD", end: "YYYY-MM-DD" },
-    //         //   attendees: [{ serviceId, durationMin, staffId?: string|null, categoryId?: string }],
-    //         //   excludeEventId?: string
-    //         // }
+    //         const result = await this.eventService.addEventV2(body);
 
+    //         // TODO: Usad el send de RabbitMQ para crear notificación en su Microservicio
+    //         // Por hacer
 
-    //         const payload = req.body;
-    //         const savedWorkspace = RedisStrategyFactory.getStrategy('savedWorkspace') as IRedisSavedWorkspaceStrategy;
-    //         // 1) Workspace desde Redis (por id). Fallback a RPC y cache set.
-    //         let workspace: any = await savedWorkspace.getSavedWorkspaceByIdWorkspace(payload.idWorkspace);
-
-    //         // console.log("mira que es workspace cacheado", workspace);
-    //         if (!workspace) {
-    //             const rpcRes: any = await RPC.getEstablishmentByIdForFlow(payload.idWorkspace);
-    //             workspace = rpcRes?.workspace ?? null;
-
-    //             console.log("mira que es workspace desde rpc", workspace);
-    //             if (workspace?.id) {
-    //                 await savedWorkspace.setSavedWorkspaceByIdWorkspace(
-    //                     workspace?.id,
-    //                     workspace,
-    //                     TIME_SECONDS.HOUR
-    //                 );
-    //             }
-    //         }
-
-
-
-    //         const timeZoneWorkspace = workspace?.timeZone ?? null;
-    //         if (!timeZoneWorkspace) {
-    //             console.log("que ????")
-    //             // si la estructura viene como { workspace: {...} } desde RPC, ya la cubrimos arriba
-    //             // si no hay timezone, devolvemos 400 para evitar cálculos erróneos
-    //             return res.status(400).json({ message: "No se pudo resolver el timezone del workspace" });
-    //         }
-
-    //         const result = await this.eventService.publicGetAvailableDays(
-    //             {
-    //                 ...payload,
-    //                 timeZoneClient: payload.timezone,
-    //                 timeZoneWorkspace: timeZoneWorkspace,
-    //                 range: payload.range,
-    //                 // intervalMinutes: 10
-    //             },
-    //             {
-    //                 businessHoursService: this.businessHoursService,
-    //                 workerHoursService: this.workerHoursService,
-    //                 temporaryHoursService: this.temporaryHoursService,
-    //                 bookingConfig: workspace?.config,
-    //             }
-
-    //         );
-
-
-    //         console.log("mira que es result", result);
-    //         return res
-    //             .status(200)
-    //             .json(Response.build("Días disponibles", 200, true, result?.days || []));
+    //         res.status(200).json(Response.build("Evento creado", 200, true, result));
     //     } catch (err: any) {
-    //         return res.status(500).json({ message: err.message });
+    //         res.status(500).json({ message: err.message });
     //     }
     // }
+
 
     public publicGetAvailableDaysSlots = async (req: any, res: any) => {
         try {
@@ -204,9 +134,14 @@ export class PublicEventController {
 
             // console.log("mira que es payload en times get", payload);
             // Validación básica
-            if (!payload?.idCompany || !payload?.idWorkspace || !payload?.idBookingPage) {
-                return res.status(400).json({ message: "Faltan idCompany, idWorkspace o idBookingPage" });
+            if (!payload?.idCompany || !payload?.idWorkspace) {
+                return res.status(400).json({ message: "Faltan idCompany, idWorkspace" });
             }
+
+            if (!payload?.idBookingPage) {
+                console.log("[Aviso] idBookingPage no proporcionado. Ya no es necesario.");
+            }
+
             if (!payload?.date || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) {
                 return res.status(400).json({ message: "date debe ser YYYY-MM-DD" });
             }
@@ -281,7 +216,7 @@ export class PublicEventController {
 
             );
 
-            // console.log("mira que es result aaa", result);
+            console.log(`${CONSOLE_COLOR.FgGreen} [publicGetAvailableTimeSlots] result: ${JSON.stringify(result)} ${CONSOLE_COLOR.Reset}`);
 
             return res
                 .status(200)
@@ -316,8 +251,7 @@ export class PublicEventController {
             }
 
             // 1) Event
-            const event: Event & { eventParticipant: { id: string; idClientFk: string; idClientWorkspaceFk: string }[] }
-                = await this.eventService.getEventById(idEvent);
+            const event: any = await this.eventService.getEventById(idEvent);
 
             if (!event) {
                 return res.status(404).json({ ok: false, message: "Event not found" });
@@ -398,8 +332,7 @@ export class PublicEventController {
             }
 
             // 1) Events del grupo
-            const events: Array<Event & { eventParticipant: { id: string; idClientFk: string; idClientWorkspaceFk: string }[] }>
-                = await this.eventService.getEventByIdGroup(idGroup);
+            const events: any[] = await this.eventService.getEventByIdGroup(idGroup);
 
             if (!events || events.length === 0) {
                 return res.status(404).json({ ok: false, message: "No events found for this group" });
@@ -435,15 +368,15 @@ export class PublicEventController {
                 const serviceName = e.idServiceFk && serviceMap.has(e.idServiceFk)
                     ? serviceMap.get(e.idServiceFk)?.name
                     : e.title || 'Servicio';
-                
-                const startTime = new Date(e.startDate).toLocaleTimeString('es-ES', { 
-                    hour: '2-digit', 
+
+                const startTime = new Date(e.startDate).toLocaleTimeString('es-ES', {
+                    hour: '2-digit',
                     minute: '2-digit',
                     timeZone: workspace.timeZone || 'UTC'
                 });
-                
-                const endTime = new Date(e.endDate).toLocaleTimeString('es-ES', { 
-                    hour: '2-digit', 
+
+                const endTime = new Date(e.endDate).toLocaleTimeString('es-ES', {
+                    hour: '2-digit',
                     minute: '2-digit',
                     timeZone: workspace.timeZone || 'UTC'
                 });
@@ -484,7 +417,7 @@ export class PublicEventController {
             // 9) ICS meta para el grupo
             const icsMeta: IcsMeta = {
                 uid: `${idGroup}@reserflow`,
-                summary: events.length === 1 
+                summary: events.length === 1
                     ? eventDetails[0].split('. ')[1].split(' (')[0] // Solo el nombre del servicio
                     : `Reserva - ${events.length} servicios`,
                 description,

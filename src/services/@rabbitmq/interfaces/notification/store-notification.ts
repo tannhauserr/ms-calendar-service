@@ -60,7 +60,7 @@ export type StoreNotificationCreatedV1 = {
         expiresDate?: string;   // ISO 8601
 
         /** AHORA en raíz (no existe targets[]) */
-        channel: "email" | "whatsapp" | "sms" | "webpush" | "websocket";
+        channel: "email" | "whatsapp" | "sms" | "push" | "websocket";
         to?: { email?: string; phoneE164?: string; subscriptionId?: string };
 
         render?: {
@@ -107,7 +107,7 @@ export const StoreNotificationCreatedV1Schema = z.object({
         scheduledDate: z.string().datetime().optional(),
         expiresDate: z.string().datetime().optional(),
 
-        channel: z.enum(["email", "whatsapp", "sms", "webpush", "websocket"]),
+        channel: z.enum(["email", "whatsapp", "sms", "push", "websocket"]),
         to: z.object({
             email: z.string().email().optional(),
             phoneE164: z.string().optional(),

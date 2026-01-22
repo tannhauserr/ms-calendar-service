@@ -374,24 +374,25 @@ datasource db {
 // ────────────────────────────────────────────────────────────────────────────
 
 model Event {
-  id                 String          @id @default(uuid())
-  title              String          @db.VarChar(256)
-  description        String?         @db.VarChar(512)
-  startDate          DateTime        @db.Timestamptz(6)
-  endDate            DateTime        @db.Timestamptz(6)
-  idCompanyFk        String
-  idWorkspaceFk      String
-  idServiceFk        String?
-  idUserPlatformFk   String?
-  commentClient      String?         @db.VarChar(512)
-  isCommentRead      Boolean         @default(false)
-  eventSourceType    EventSourceType @default(PLATFORM)
-  isEditableByClient Boolean         @default(true)
-  numberUpdates      Int?            @default(0)
-  eventStatusType    EventStatusType @default(PENDING)
-  timeZone           String          @default("Europe/Madrid") @db.VarChar(50)
-  allDay             Boolean         @default(false)
-  idGroup            String?
+  id      String @id @default(uuid())
+  idGroup String
+
+  title            String   @db.VarChar(256)
+  description      String?  @db.VarChar(512)
+  startDate        DateTime @db.Timestamptz(6)
+  endDate          DateTime @db.Timestamptz(6)
+  // idCompanyFk      String
+  // idWorkspaceFk    String
+  idServiceFk      String?
+  idUserPlatformFk String?
+  // commentClient      String?         @db.VarChar(512)
+  // isCommentRead      Boolean         @default(false)
+  // eventSourceType  EventSourceType @default(PLATFORM)
+  // // isEditableByClient Boolean         @default(true)
+  // numberUpdates    Int?            @default(0)
+  // eventStatusType  EventStatusType @default(PENDING)
+  // timeZone         String   @default("Europe/Madrid") @db.VarChar(50)
+  allDay           Boolean  @default(false)
 
   // Snapshots de servicio en el momento de crear el evento
   serviceNameSnapshot            String? @db.VarChar(100)
@@ -411,23 +412,52 @@ model Event {
 
   workerAbsence         WorkerAbsence[]
   externalCalendarEvent ExternalCalendarEvent?
-  eventParticipant      EventParticipant[]
+  // eventParticipant      EventParticipant[]
   // notificationPlan      NotificationPlan[]
   eventLineItem         EventLineItem[]
+  groupEvents           GroupEvents?           @relation("groupEvents", fields: [idGroup], references: [id])
 
-  @@index([idWorkspaceFk, idUserPlatformFk, startDate], map: "idx_events_availability_ws_user_start")
   @@index([idUserPlatformFk, startDate, endDate], map: "idx_events_user_start_end")
   @@index([idUserPlatformFk, endDate], map: "idx_events_user_end")
   @@index([startDate], type: Brin, map: "idx_events_start_brin")
   @@index([idServiceFk])
   @@index([idUserPlatformFk])
-  @@index([idWorkspaceFk])
   @@map("events")
 }
 
+model GroupEvents {
+  id                 String          @id @default(uuid())
+  startDate          DateTime        @db.Timestamptz(6)
+  endDate            DateTime        @db.Timestamptz(6)
+  title              String          @db.VarChar(100)
+  idCompanyFk        String
+  idWorkspaceFk      String
+  commentClient      String?         @db.VarChar(512)
+  isCommentRead      Boolean         @default(false)
+  description        String?         @db.VarChar(512)
+  eventSourceType    EventSourceType @default(PLATFORM)
+  isEditableByClient Boolean         @default(true)
+  numberUpdates      Int?            @default(0)
+  eventStatusType    EventStatusType @default(PENDING)
+  timeZone           String          @default("Europe/Madrid") @db.VarChar(50)
+
+  eventParticipant EventParticipant[]
+
+  createdDate DateTime  @default(now())
+  updatedDate DateTime  @updatedAt
+  deletedDate DateTime?
+
+  events Event[] @relation("groupEvents")
+
+  @@index([idWorkspaceFk])
+  @@map("groupEvents")
+}
+
 model EventParticipant {
-  id                  String          @id @default(uuid())
-  idEventFk           String
+  id      String @id @default(uuid())
+  // idEventFk String
+  idGroup String
+
   idClientWorkspaceFk String?
   idClientFk          String?
   eventStatusType     EventStatusType @default(PENDING)
@@ -436,12 +466,13 @@ model EventParticipant {
   updatedDate DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
   deletedDate DateTime?
 
-  event Event @relation(fields: [idEventFk], references: [id], onDelete: Cascade)
+  groupEvents GroupEvents? @relation(fields: [idGroup], references: [id])
 
-  @@index([idEventFk])
+  // @@index([idEventFk])
   @@index([idClientWorkspaceFk])
   @@index([idClientFk])
-  @@index([idEventFk, eventStatusType])
+  // @@index([idEventFk, eventStatusType])
+  @@index([idGroup, eventStatusType])
   @@map("eventParticipants")
 }
 

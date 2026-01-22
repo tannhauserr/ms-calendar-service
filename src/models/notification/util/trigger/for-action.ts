@@ -18,9 +18,9 @@ import { WorkspaceBrief } from "../../../../services/@redis/cache/interfaces/mod
 * 
 * Es necesario que evento incluya:
 * 
-* - idWorkspaceFk
+* - idWorkspaceFk (o groupEvents.idWorkspaceFk)
 * - idUserPlatformFk
-* - eventParticipant (con idClientWorkspaceFk)
+* - eventParticipant (con idClientWorkspaceFk) o groupEvents.eventParticipant
 * - createdDate
 * - updatedDate
 * - startDate
@@ -33,129 +33,134 @@ import { WorkspaceBrief } from "../../../../services/@redis/cache/interfaces/mod
 * - Envía notis al negocio (sin datos de cliente)
 * - Envía notis al/los clientes asociados (si hay contacto)
 */
-export const createNotification = async (value: Partial<Event> & { eventParticipant: any[] }, plan: {
-    actionSectionType: ActionKey;
-}) => {
+// export const createNotification = async (value: Partial<Event> & { eventParticipant?: any[]; groupEvents?: any }, plan: {
+//     actionSectionType: ActionKey;
+// }) => {
 
-    // console.log("entro aqui, event:", value);
-    // console.log("entro aqui, plan:", plan);
-    const idWorkspace = value.idWorkspaceFk;
-    if (!idWorkspace) return;
-
-
-    console.log("mira que es el value partial", value?.eventParticipant);
-
-    // 1) IDs de clientes asociados. Tienen que ser IDs de ClientWorkspace
-    const clientParticipantIds = Array.isArray((value as any)?.eventParticipant)
-        ? (value as any).eventParticipant
-            .map((p: any) => p?.idClientWorkspaceFk)
-            .filter((v: any): v is string => typeof v === "string")
-        : [];
-
-    // 2) Cargar workspace + clientes en paralelo
-    const [workspaces, clientList, userList] = await Promise.all([
-        getWorkspacesByIds([idWorkspace]),
-        clientParticipantIds.length
-            ? getClientWorkspacesByIds(clientParticipantIds, idWorkspace)
-            : Promise.resolve([]),
-        getUsersByIds([value.idUserPlatformFk])
-    ]);
+//     // console.log("entro aqui, event:", value);
+//     // console.log("entro aqui, plan:", plan);
+//     const idWorkspace = (value as any).idWorkspaceFk ?? (value as any)?.groupEvents?.idWorkspaceFk;
+//     const idCompany = (value as any)?.idCompanyFk ?? (value as any)?.groupEvents?.idCompanyFk;
+//     if (!idWorkspace) return;
 
 
-    if (!workspaces?.length || !userList?.length) return;
-    console.log("workspaces:", workspaces);
-    console.log("userList:", userList);
-    console.log("clientList:", clientList);
+//     console.log("mira que es el value partial", value?.eventParticipant);
 
-    const user = userList[0];
-    const workspace = workspaces[0];
-    const notificationConfig = workspace?.generalNotificationConfigJson;
-    console.log("notificationConfig:", notificationConfig);
-    if (!notificationConfig) return;
+//     // 1) IDs de clientes asociados. Tienen que ser IDs de ClientWorkspace
+//     const participants =
+//         (value as any)?.eventParticipant ??
+//         (value as any)?.groupEvents?.eventParticipant ??
+//         [];
+//     const clientParticipantIds = Array.isArray(participants)
+//         ? participants
+//             .map((p: any) => p?.idClientWorkspaceFk)
+//             .filter((v: any): v is string => typeof v === "string")
+//         : [];
 
-
-    // 3) Booking base (negocio)
-    const bookingBase: BookingSnap = {
-        id: value.id,
-        createdAt: value.createdDate.toISOString(),
-        updatedAt: value.updatedDate.toISOString(),
-        startAtLocal: value.startDate.toISOString(),
-        endAtLocal: value.endDate.toISOString(),
-
-        idService: value.idServiceFk,
-        idGroup: value.idGroup,
-
-    };
-
-    // 4) Publicar para negocio
-    try {
-
-        const bookingForUser = {
-            ...bookingBase,
-            business: {
-                id: value.idUserPlatformFk,
-                // TODO: Cambiar esto por los datos del usuario, que es el organizador del evento
-                email: user?.email ?? undefined,
-                phoneE164: (user?.phoneNumber && user?.phoneCode)
-                    ? `${(user.phoneCode ?? "").toString()}${user.phoneNumber}`
-                    : undefined,
-            },
-        }
-
-        const timeZoneStaff = user?.timeZone ?? workspace?.timeZone ?? "UTC";
-
-        console.log("bookingForUser:", bookingForUser);
-        console.log("timeZoneStaff:", timeZoneStaff);
-
-        await _publishForAction({
-            action: plan?.actionSectionType,
-            workspaceId: workspace?.id,
-            timeZoneStaff,
-            // Se manda participante en este caso el Staff porque es él mismo quien recibe la notifación
-            timeZoneParticipant: timeZoneStaff,
-            companyId: workspace.idCompanyFk,
-            booking: bookingForUser,
-            notificationConfig,
-
-        });
-    } catch (err: any) {
-        console.error("[EventController.add] notify business error:", err?.message || err);
-    }
-
-    // 5) Publicar para cada cliente (si hay contacto)
-    for (const client of clientList) {
-        const email = (client as any)?.email;
-        const phoneE164 = (client?.phoneNumber && client?.phoneCode)
-            ? `${(client.phoneCode ?? "").toString()}${client.phoneNumber}`
-            : undefined;
+//     // 2) Cargar workspace + clientes en paralelo
+//     const [workspaces, clientList, userList] = await Promise.all([
+//         getWorkspacesByIds([idWorkspace]),
+//         clientParticipantIds.length
+//             ? getClientWorkspacesByIds(clientParticipantIds, idCompany)
+//             : Promise.resolve([]),
+//         getUsersByIds([value.idUserPlatformFk])
+//     ]);
 
 
-        if (!email && !phoneE164) continue;
+//     if (!workspaces?.length || !userList?.length) return;
+//     console.log("workspaces:", workspaces);
+//     console.log("userList:", userList);
+//     console.log("clientList:", clientList);
 
-        const bookingForClient = {
-            ...bookingBase,
-            client: { id: client.id, email, phoneE164 },
-            business: { id: value.idUserPlatformFk },
-        };
+//     const user = userList[0];
+//     const workspace = workspaces[0];
+//     const notificationConfig = workspace?.generalNotificationConfigJson;
+//     console.log("notificationConfig:", notificationConfig);
+//     if (!notificationConfig) return;
 
-        const timeZoneStaff = user?.timeZone ?? workspace?.timeZone ?? "UTC";
-        const timeZoneParticipant = client?.timeZone ?? workspace?.timeZone ?? "UTC";
 
-        try {
-            await _publishForAction({
-                action: plan?.actionSectionType,
-                workspaceId: workspace.id,
-                timeZoneStaff,
-                timeZoneParticipant,
-                companyId: workspace.idCompanyFk,
-                booking: bookingForClient,
-                notificationConfig,
-            });
-        } catch (err: any) {
-            console.error("[EventController.add] notify client error:", { id: (client as any)?.id }, err?.message || err);
-        }
-    }
-};
+//     // 3) Booking base (negocio)
+//     const bookingBase: BookingSnap = {
+//         id: value.id,
+//         createdAt: value.createdDate.toISOString(),
+//         updatedAt: value.updatedDate.toISOString(),
+//         startAtLocal: value.startDate.toISOString(),
+//         endAtLocal: value.endDate.toISOString(),
+
+//         idService: value.idServiceFk,
+//         idGroup: value.idGroup,
+
+//     };
+
+//     // 4) Publicar para negocio
+//     try {
+
+//         const bookingForUser = {
+//             ...bookingBase,
+//             business: {
+//                 id: value.idUserPlatformFk,
+//                 // TODO: Cambiar esto por los datos del usuario, que es el organizador del evento
+//                 email: user?.email ?? undefined,
+//                 phoneE164: (user?.phoneNumber && user?.phoneCode)
+//                     ? `${(user.phoneCode ?? "").toString()}${user.phoneNumber}`
+//                     : undefined,
+//             },
+//         }
+
+//         const timeZoneStaff = user?.timeZone ?? workspace?.timeZone ?? "UTC";
+
+//         console.log("bookingForUser:", bookingForUser);
+//         console.log("timeZoneStaff:", timeZoneStaff);
+
+//         await _publishForAction({
+//             action: plan?.actionSectionType,
+//             workspaceId: workspace?.id,
+//             timeZoneStaff,
+//             // Se manda participante en este caso el Staff porque es él mismo quien recibe la notifación
+//             timeZoneParticipant: timeZoneStaff,
+//             companyId: workspace.idCompanyFk,
+//             booking: bookingForUser,
+//             notificationConfig,
+
+//         });
+//     } catch (err: any) {
+//         console.error("[EventController.add] notify business error:", err?.message || err);
+//     }
+
+//     // 5) Publicar para cada cliente (si hay contacto)
+//     for (const client of clientList) {
+//         const email = (client as any)?.email;
+//         const phoneE164 = (client?.phoneNumber && client?.phoneCode)
+//             ? `${(client.phoneCode ?? "").toString()}${client.phoneNumber}`
+//             : undefined;
+
+
+//         if (!email && !phoneE164) continue;
+
+//         const bookingForClient = {
+//             ...bookingBase,
+//             client: { id: client.id, email, phoneE164 },
+//             business: { id: value.idUserPlatformFk },
+//         };
+
+//         const timeZoneStaff = user?.timeZone ?? workspace?.timeZone ?? "UTC";
+//         const timeZoneParticipant = client?.timeZone ?? workspace?.timeZone ?? "UTC";
+
+//         try {
+//             await _publishForAction({
+//                 action: plan?.actionSectionType,
+//                 workspaceId: workspace.id,
+//                 timeZoneStaff,
+//                 timeZoneParticipant,
+//                 companyId: workspace.idCompanyFk,
+//                 booking: bookingForClient,
+//                 notificationConfig,
+//             });
+//         } catch (err: any) {
+//             console.error("[EventController.add] notify client error:", { id: (client as any)?.id }, err?.message || err);
+//         }
+//     }
+// };
 
 /**
  * Función optimizada para crear notificaciones desde el cliente
@@ -172,19 +177,26 @@ export const createNotification = async (value: Partial<Event> & { eventParticip
  *     asociada al mismo idGroup.
  */
 export const createNotificationByClient = async (
-    value: Partial<Event>[],
+    value: Array<Partial<Event> & { groupEvents?: any }>,
     plan: { actionSectionType: ActionKey },
     idClient: string[]
 ) => {
-    const events = value as (Partial<Event> & { eventParticipant?: any[] })[];
+    const events = value as (Partial<Event> & { eventParticipant?: any[]; groupEvents?: any })[];
 
     if (!Array.isArray(events) || !events.length) return;
 
     const first = events[0];
-    const idWorkspace = first.idWorkspaceFk;
+    const idWorkspace = (first as any).idWorkspaceFk ?? (first as any)?.groupEvents?.idWorkspaceFk;
+    const idCompany = (first as any)?.idCompanyFk ?? (first as any)?.groupEvents?.idCompanyFk;
     const idGroup = first.idGroup;
 
-    if (!idWorkspace) return;
+    if (!idWorkspace) {
+        console.log(CONSOLE_COLOR.FgYellow, `[createNotificationByClient] missing idWorkspace`, CONSOLE_COLOR.Reset);
+    }
+
+    if (!idCompany) {
+        console.log(CONSOLE_COLOR.FgYellow, `[createNotificationByClient] missing idCompany`, CONSOLE_COLOR.Reset);
+    }
 
     // 1) IDs de clientes (vienen ya desde el parámetro idClient)
     const clientIds = Array.from(
@@ -204,7 +216,7 @@ export const createNotificationByClient = async (
     // 3) Cargar workspace + clientes + staff en paralelo
     const [workspaces, clientList, userList] = await Promise.all([
         getWorkspacesByIds([idWorkspace]),
-        getClientWorkspacesByIds(clientIds, idWorkspace),
+        getClientWorkspacesByIds(clientIds, idCompany),
         staffIds.length ? getUsersByIds(staffIds) : Promise.resolve([]),
     ]);
 

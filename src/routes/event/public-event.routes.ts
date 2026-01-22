@@ -1,14 +1,7 @@
-import express from 'express';
 import crypto from 'crypto';
-import { EventController } from '../../controllers/event/event.controller';
-import { JWTService } from '../../services/jwt/jwt.service';
-import { EventMiddleware } from '../../middlewares/event/event.middleware';
-import { OnlyAdminMiddleware } from '../../middlewares/only-admin.middleware';
-import { CheckCompanyMiddleware } from '../../middlewares/check-company/check-company.middleware';
+import express from 'express';
 import { PublicEventController } from '../../controllers/event/public-event.controller';
 import { BookingGuardsMiddleware } from '../../middlewares/booiking-guard/booking-guard.middleware';
-import prisma from '../../lib/prisma';
-import { buildIcs, IcsMeta } from '../../services/@database/event/util/build-ics';
 
 
 const router = express.Router();

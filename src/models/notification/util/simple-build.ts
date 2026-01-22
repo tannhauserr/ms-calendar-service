@@ -7,8 +7,8 @@ import { CONSOLE_COLOR } from "../../../constant/console-color";
 
 const mapChannel = (
     ch: string
-): "email" | "whatsapp" | "sms" | "webpush" | "websocket" =>
-    ch === "push" ? "webpush" : (ch as any);
+): "email" | "whatsapp" | "sms" | "push" | "websocket" =>
+    ch === "push" ? "push" : (ch as any);
 
 export type BookingSnap = {
     id: string;
@@ -328,7 +328,7 @@ function resolveTo(
 
     if (ch === "email" && who.email) return { email: who.email };
     if ((ch === "whatsapp" || ch === "sms") && who.phoneE164) return { phoneE164: who.phoneE164 };
-    if (ch === "webpush") return { subscriptionId: "1234_subscriptionId_inventado" }; // TODO: sustituir por real
+    if (ch === "push") return { subscriptionId: "1234_subscriptionId_inventado" }; // TODO: sustituir por real
     if (ch === "websocket") return {}; // si tu layer lo resuelve por audienceRef
 
     return undefined;

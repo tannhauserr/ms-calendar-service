@@ -573,7 +573,8 @@ export class AllStrategy implements RecurrenceStrategy {
 
             if (stateChanged) {
                 const action: ActionKey = "addFromRecurrence";
-                createNotification(ev, { actionSectionType: action });
+                const idGroup = (ev as any)?.idGroup;
+                if (idGroup) createNotification(idGroup, { actionSectionType: action });
             }
 
         }
@@ -606,7 +607,8 @@ export class AllStrategy implements RecurrenceStrategy {
             });
 
             const action: ActionKey = "addFromRecurrence";
-            createNotification(ev, { actionSectionType: action });
+            const idGroup = (ev as any)?.idGroup;
+            if (idGroup) createNotification(idGroup, { actionSectionType: action });
         }
     };
 
@@ -746,7 +748,8 @@ export class AllStrategy implements RecurrenceStrategy {
 
             if (stateChanged) {
                 const action: ActionKey = "addFromRecurrence";
-                createNotification(ev, { actionSectionType: action });
+                const idGroup = (ev as any)?.idGroup;
+                if (idGroup) createNotification(idGroup, { actionSectionType: action });
             }
         }
 
@@ -782,7 +785,8 @@ export class AllStrategy implements RecurrenceStrategy {
             });
 
             const action: ActionKey = "addFromRecurrence";
-            createNotification(ev, { actionSectionType: action });
+            const idGroup = (ev as any)?.idGroup;
+            if (idGroup) createNotification(idGroup, { actionSectionType: action });
         }
 
         console.log(`✅ [AllStrategy.handleWindow] Recreated ${candidateDates.length} instances (reused ${pairCount} IDs)`);

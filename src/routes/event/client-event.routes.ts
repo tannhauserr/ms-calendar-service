@@ -1,12 +1,9 @@
 import express from 'express';
 
-import { JWTService } from '../../services/jwt/jwt.service';
-import { EventMiddleware } from '../../middlewares/event/event.middleware';
-import { OnlyAdminMiddleware } from '../../middlewares/only-admin.middleware';
-import { CheckCompanyMiddleware } from '../../middlewares/check-company/check-company.middleware';
-import { BookingGuardsMiddleware } from '../../middlewares/booiking-guard/booking-guard.middleware';
 import { ClientEventController } from '../../controllers/event/client-event.controller';
 import { PublicEventController } from '../../controllers/event/public-event.controller';
+import { BookingGuardsMiddleware } from '../../middlewares/booiking-guard/booking-guard.middleware';
+import { JWTService } from '../../services/jwt/jwt.service';
 
 
 const router = express.Router();
@@ -98,6 +95,11 @@ router.post('/events/client-cancel', [
     BookingGuardsMiddleware.ResolveClientWorkspace(),        // resuelve idClientWorkspace -> ctx.customer
 ], controller.cancelEventFromWeb);
 
-
+router.post('/events/client-confirm', [
+    JWTService.authCookieOrBearer,
+    BookingGuardsMiddleware.BaseContextSimple(),    // valida + normaliza input -> ctx.input
+    BookingGuardsMiddleware.ResolveWorkspace(),              // resuelve workspace + config + tz -> ctx.workspace/config/timeZoneWorkspace
+    BookingGuardsMiddleware.ResolveClientWorkspace(),        // resuelve idClientWorkspace -> ctx.customer
+], controller.confirmEventFromWeb);
 
 module.exports = router;

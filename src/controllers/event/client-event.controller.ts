@@ -1,16 +1,14 @@
+import { CONSOLE_COLOR } from "../../constant/console-color";
+import { pickHttpStatus } from "../../constant/errors/codes";
 import { Response } from "../../models/messages/response";
+import { ActionKey } from "../../models/notification/util/action-to-senctions";
+import { createNotificationByClient } from "../../models/notification/util/trigger/for-action";
 import { BusinessHourService } from "../../services/@database/all-business-services/business-hours/business-hours.service";
 import { TemporaryBusinessHourService } from "../../services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service";
 import { WorkerBusinessHourService } from "../../services/@database/all-business-services/worker-business-hours/worker-business-hours.service";
-import { EventV2Service } from "../../services/@database/event/eventv2.service";
-import { CONSOLE_COLOR } from "../../constant/console-color";
-import { getServiceByIds } from "../../services/@service-token-client/api-ms/bookingPage.ms";
-import { JWTService } from "../../services/jwt/jwt.service";
 import { ClientEventService } from "../../services/@database/event/client-event.service";
-import { pickHttpStatus } from "../../constant/errors/codes";
-import { a } from "@react-spring/web";
-import { ACTION_TO_SECTIONS, ActionKey } from "../../models/notification/util/action-to-senctions";
-import { createNotification, createNotificationByClient } from "../../models/notification/util/trigger/for-action";
+import { EventV2Service } from "../../services/@database/event/eventv2.service";
+import { JWTService } from "../../services/jwt/jwt.service";
 
 export class ClientEventController {
     public eventClientService: ClientEventService;
@@ -564,5 +562,21 @@ export class ClientEventController {
             return res.status(500).json({ ok: false, message: err.message });
         }
     }
+
+    confirmEventFromWeb = async (req: any, res: any, next: any) => {
+        try {
+            const { idEvent, idWorkspace, customer } = req.body;
+            const ctx = req.booking?.ctx;
+            const idClientWorkspaceCtx = ctx?.customer?.idClientWorkspace;
+
+            const token = req.token;
+            await this.jwtService.verify(token);
+
+            const result = await this.eventClientService.confirmEventFromWeb(idEvent, idClientWorkspaceCtx, idWorkspace);
+            res.status(200).json(Response.build("Evento confirmado", 200, true, result));
+        } catch (err: any) {
+            return res.status(500).json({ ok: false, message: err.message });
+        }
+    };
 
 }

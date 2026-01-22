@@ -4,6 +4,7 @@ import CustomError from "../../../models/custom-error/CustomError";
 import moment from "moment";
 import { CONSOLE_COLOR } from "../../../constant/console-color";
 import { TIME_SECONDS } from "../../../constant/time";
+import { v4 as uuidv4 } from "uuid";
 
 import {
     assignSequentially_SPECIAL,
@@ -103,6 +104,22 @@ type ClientAppointment = {
 
 export class ClientEventService {
 
+    private _withGroupFields<T extends { groupEvents?: any }>(event: T | null) {
+        if (!event || !event.groupEvents) return event;
+        const group = event.groupEvents;
+        return {
+            ...event,
+            idWorkspaceFk: group.idWorkspaceFk,
+            idCompanyFk: group.idCompanyFk,
+            commentClient: group.commentClient,
+            isCommentRead: group.isCommentRead,
+            eventSourceType: group.eventSourceType,
+            eventStatusType: group.eventStatusType,
+            timeZone: group.timeZone,
+            eventParticipant: group.eventParticipant ?? (event as any).eventParticipant ?? [],
+        };
+    }
+
 
     cancelEventFromWeb = async (
         idEvent: string,
@@ -114,27 +131,34 @@ export class ClientEventService {
             const event = await prisma.event.findFirst({
                 where: {
                     id: idEvent,
-                    idWorkspaceFk: idWorkspace,
-                    eventParticipant: {
-                        some: {
-                            idClientWorkspaceFk: idClientWorkspace,
-                            deletedDate: null,
+                    groupEvents: {
+                        idWorkspaceFk: idWorkspace,
+                        eventParticipant: {
+                            some: {
+                                idClientWorkspaceFk: idClientWorkspace,
+                                deletedDate: null,
+                            },
                         },
                     },
                     deletedDate: null,
                 },
                 select: {
                     id: true,
-                    eventStatusType: true,
+                    idGroup: true,
                     serviceMaxParticipantsSnapshot: true,
-                    eventParticipant: {
-                        where: {
-                            deletedDate: null,
-                        },
+                    groupEvents: {
                         select: {
-                            id: true,
-                            idClientWorkspaceFk: true,
                             eventStatusType: true,
+                            eventParticipant: {
+                                where: {
+                                    deletedDate: null,
+                                },
+                                select: {
+                                    id: true,
+                                    idClientWorkspaceFk: true,
+                                    eventStatusType: true,
+                                },
+                            },
                         },
                     },
                 },
@@ -144,18 +168,23 @@ export class ClientEventService {
                 throw new Error('Evento no encontrado o no pertenece al cliente');
             }
 
-            if (event.eventStatusType === 'CANCELLED' || event.eventStatusType === 'CANCELLED_BY_CLIENT_REMOVED') {
+            // El evento ya se habría cancelado
+            const groupStatus = event.groupEvents?.eventStatusType;
+            if (groupStatus === 'CANCELLED'
+                || groupStatus === 'CANCELLED_BY_CLIENT_REMOVED'
+                || groupStatus === 'CANCELLED_BY_CLIENT') {
                 // El evento general ya está cancelado
                 return;
             }
 
             // Determinar si es servicio individual o grupal
             const maxParticipants = event.serviceMaxParticipantsSnapshot ?? 1;
-            const isGroupService = maxParticipants > 1;
-            const totalParticipants = event.eventParticipant.length;
+            const isSeveralParticipants = maxParticipants > 1;
+            const participants = event.groupEvents?.eventParticipant ?? [];
+            const totalParticipants = participants.length;
 
             // Encontrar el participante del cliente
-            const clientParticipant = event.eventParticipant.find(
+            const clientParticipant = participants.find(
                 (p) => p.idClientWorkspaceFk === idClientWorkspace
             );
 
@@ -164,11 +193,11 @@ export class ClientEventService {
             }
 
             if (clientParticipant.eventStatusType === 'CANCELLED_BY_CLIENT') {
-                // Este cliente ya se había dado de baja
+                // Este cliente en concreto ya se había dado de baja
                 return;
             }
 
-            if (isGroupService) {
+            if (isSeveralParticipants) {
                 // Servicio GRUPAL (clase): solo cancelar participación del cliente
                 await prisma.eventParticipant.update({
                     where: { id: clientParticipant.id },
@@ -179,16 +208,19 @@ export class ClientEventService {
                 });
 
                 // Si este era el último participante activo, cancelar el evento completo
-                const activeParticipants = event.eventParticipant.filter(
+                const activeParticipants = participants.filter(
                     (p) => p.id !== clientParticipant.id && p.eventStatusType !== 'CANCELLED_BY_CLIENT'
                 );
 
                 if (activeParticipants.length === 0) {
-                    await prisma.event.update({
-                        where: { id: idEvent },
-                        data: {
-                            eventStatusType: 'PENDING',
-                        },
+                    await prisma.event.deleteMany({
+                        where: { idGroup: event.idGroup },
+                    });
+                    await prisma.eventParticipant.deleteMany({
+                        where: { idGroup: event.idGroup },
+                    });
+                    await prisma.groupEvents.delete({
+                        where: { id: event.idGroup },
                     });
                 }
             } else {
@@ -200,8 +232,8 @@ export class ClientEventService {
                             eventStatusType: 'CANCELLED_BY_CLIENT',
                         },
                     }),
-                    prisma.event.update({
-                        where: { id: idEvent },
+                    prisma.groupEvents.update({
+                        where: { id: event.idGroup },
                         data: {
                             eventStatusType: 'CANCELLED_BY_CLIENT',
                         },
@@ -211,6 +243,110 @@ export class ClientEventService {
 
         } catch (error: any) {
             throw new CustomError('ClientEventService.cancelEventFromWeb', error);
+        }
+    };
+
+
+    confirmEventFromWeb = async (
+        idEvent: string,
+        idClientWorkspace: string,
+        idWorkspace: string,
+    ): Promise<void> => {
+        try {
+            // Verificar que el evento pertenece al cliente y obtener información completa
+            const event = await prisma.event.findFirst({
+                where: {
+                    id: idEvent,
+                    groupEvents: {
+                        idWorkspaceFk: idWorkspace,
+                        eventParticipant: {
+                            some: {
+                                idClientWorkspaceFk: idClientWorkspace,
+                                deletedDate: null,
+                            },
+                        },
+                    },
+                    deletedDate: null,
+                },
+                select: {
+                    id: true,
+                    idGroup: true,
+                    serviceMaxParticipantsSnapshot: true,
+                    groupEvents: {
+                        select: {
+                            eventStatusType: true,
+                            eventParticipant: {
+                                where: {
+                                    deletedDate: null,
+                                },
+                                select: {
+                                    id: true,
+                                    idClientWorkspaceFk: true,
+                                    eventStatusType: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+            if (!event) {
+                throw new Error('Evento no encontrado o no pertenece al cliente');
+            }
+
+            // Solo se puede confirmar si el estado es 'ACCEPTED'
+            const groupStatus = event.groupEvents?.eventStatusType;
+            if (groupStatus !== 'ACCEPTED') {
+                // El evento general no está en estado aceptado
+                return;
+            }
+
+            // Determinar si es servicio individual o grupal
+            const maxParticipants = event.serviceMaxParticipantsSnapshot ?? 1;
+            const isSeveralParticipants = maxParticipants > 1;
+
+            // Encontrar el participante del cliente
+            const participants = event.groupEvents?.eventParticipant ?? [];
+            const clientParticipant = participants.find(
+                (p) => p.idClientWorkspaceFk === idClientWorkspace
+            );
+
+            if (!clientParticipant) {
+                throw new Error('Participante no encontrado en el evento');
+            }
+
+            if (clientParticipant.eventStatusType !== 'ACCEPTED') {
+                // Solo se puede confirmar si el participante está en estado 'ACCEPTED'
+                return;
+            }
+
+            if (isSeveralParticipants) {
+                // Servicio GRUPAL: solo confirmar al participante
+                await prisma.eventParticipant.update({
+                    where: { id: clientParticipant.id },
+                    data: {
+                        eventStatusType: 'CONFIRMED',
+                    },
+                });
+            } else {
+                // Servicio INDIVIDUAL: confirmar el evento completo y el participante
+                await prisma.$transaction([
+                    prisma.eventParticipant.update({
+                        where: { id: clientParticipant.id },
+                        data: {
+                            eventStatusType: 'CONFIRMED',
+                        },
+                    }),
+                    prisma.groupEvents.update({
+                        where: { id: event.idGroup },
+                        data: {
+                            eventStatusType: 'CONFIRMED',
+                        },
+                    }),
+                ]);
+            }
+        } catch (error: any) {
+            throw new CustomError('ClientEventService.confirmEventFromWeb', error);
         }
     };
 
@@ -262,15 +398,17 @@ export class ClientEventService {
         const now = new Date();
 
         const baseWhere = {
-            idWorkspaceFk: idWorkspace,
-            eventParticipant: {
-                some: {
-                    idClientWorkspaceFk: idClientWorkspace,
-                    deletedDate: null,
+            groupEvents: {
+                idWorkspaceFk: idWorkspace,
+                eventParticipant: {
+                    some: {
+                        idClientWorkspaceFk: idClientWorkspace,
+                        deletedDate: null,
+                    },
                 },
-            },
-            eventStatusType: {
-                notIn: ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_CLIENT_REMOVED"] as any,
+                eventStatusType: {
+                    notIn: ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_CLIENT_REMOVED"] as any,
+                },
             },
             deletedDate: null,
         } as const;
@@ -291,24 +429,28 @@ export class ClientEventService {
                 endDate: true,
                 idUserPlatformFk: true,
                 idServiceFk: true,
-                eventStatusType: true,
                 eventPurposeType: true,
-                eventSourceType: true,
                 allDay: true,
-                timeZone: true,
                 serviceNameSnapshot: true,
                 servicePriceSnapshot: true,
                 serviceDiscountSnapshot: true,
                 serviceDurationSnapshot: true,
                 serviceMaxParticipantsSnapshot: true,
-                commentClient: true,
-                eventParticipant: {
-                    where: { deletedDate: null },
+                groupEvents: {
                     select: {
-                        id: true,
-                        idClientFk: true,
-                        idClientWorkspaceFk: true,
+                        commentClient: true,
                         eventStatusType: true,
+                        eventSourceType: true,
+                        timeZone: true,
+                        eventParticipant: {
+                            where: { deletedDate: null },
+                            select: {
+                                id: true,
+                                idClientFk: true,
+                                idClientWorkspaceFk: true,
+                                eventStatusType: true,
+                            },
+                        },
                     },
                 },
             },
@@ -317,7 +459,7 @@ export class ClientEventService {
             },
         });
 
-        return events;
+        return events.map((event) => this._withGroupFields(event as any));
     }
 
     /**
@@ -583,13 +725,15 @@ export class ClientEventService {
             // 1) Traer TODOS los eventos que pertenecen a ese booking lógico
             const events = await prisma.event.findMany({
                 where: {
-                    idWorkspaceFk: idWorkspace,
                     deletedDate: null,
-                    eventStatusType: { notIn: EXCLUDED_STATUSES as any },
-                    eventParticipant: {
-                        some: {
-                            idClientWorkspaceFk: idClientWorkspace,
-                            deletedDate: null,
+                    groupEvents: {
+                        idWorkspaceFk: idWorkspace,
+                        eventStatusType: { notIn: EXCLUDED_STATUSES as any },
+                        eventParticipant: {
+                            some: {
+                                idClientWorkspaceFk: idClientWorkspace,
+                                deletedDate: null,
+                            },
                         },
                     },
                     // Aunque el front envíe idGroup, mantengo OR con id por compatibilidad
@@ -612,24 +756,28 @@ export class ClientEventService {
                     endDate: true,
                     idUserPlatformFk: true,
                     idServiceFk: true,
-                    eventStatusType: true,
                     eventPurposeType: true,
-                    eventSourceType: true,
                     allDay: true,
-                    timeZone: true,
                     serviceNameSnapshot: true,
                     servicePriceSnapshot: true,
                     serviceDiscountSnapshot: true,
                     serviceDurationSnapshot: true,
                     serviceMaxParticipantsSnapshot: true,
-                    commentClient: true,
-                    eventParticipant: {
-                        where: { deletedDate: null },
+                    groupEvents: {
                         select: {
-                            id: true,
-                            idClientFk: true,
-                            idClientWorkspaceFk: true,
+                            commentClient: true,
                             eventStatusType: true,
+                            eventSourceType: true,
+                            timeZone: true,
+                            eventParticipant: {
+                                where: { deletedDate: null },
+                                select: {
+                                    id: true,
+                                    idClientFk: true,
+                                    idClientWorkspaceFk: true,
+                                    eventStatusType: true,
+                                },
+                            },
                         },
                     },
                 },
@@ -643,7 +791,7 @@ export class ClientEventService {
             // 2) Reutilizamos el agrupador actual
             const grouped = this._buildClientBookingsFromEvents(
                 "upcoming", // scope irrelevante, solo hay un booking
-                events,
+                events.map((event) => this._withGroupFields(event as any)),
                 1,
                 events.length || 10
             );
@@ -838,6 +986,13 @@ export class ClientEventService {
         const eventStatus = autoConfirmClientBookings ? 'ACCEPTED' : 'PENDING';
         const participantStatus = autoConfirmClientBookings ? 'ACCEPTED' : 'PENDING';
 
+
+        const CANCELLED_STATES = [
+            'CANCELLED_BY_CLIENT',
+            'CANCELLED_BY_CLIENT_REMOVED',
+            "CANCELLED"
+        ];
+
         // Lock por (pro+servicio+inicio)
         await tx.$executeRawUnsafe(
             `SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`,
@@ -848,13 +1003,13 @@ export class ClientEventService {
         // ¿Evento exacto ya existe?
         const existing = await tx.event.findFirst({
             where: {
-                idWorkspaceFk: idWorkspace,
                 idServiceFk: seg.serviceId,
                 idUserPlatformFk: seg.userId,
                 startDate,
                 endDate,
+                groupEvents: { idWorkspaceFk: idWorkspace },
             },
-            select: { id: true },
+            select: { id: true, idGroup: true },
         });
 
         if (existing) {
@@ -862,14 +1017,17 @@ export class ClientEventService {
             if (!isGroup) {
                 const same = await tx.eventParticipant.findFirst({
                     where: {
-                        idEventFk: existing.id,
+                        idGroup: existing.idGroup,
                         idClientWorkspaceFk: customer.idClientWorkspace,
                         deletedDate: null,
                     },
                     select: { id: true },
                 });
 
-                const ev = await tx.event.findUnique({ where: { id: existing.id } });
+                const ev = await tx.event.findUnique({
+                    where: { id: existing.id },
+                    include: { groupEvents: true },
+                });
                 if (same) return { event: ev!, action: "already-in" };
                 throw new Error("Ese horario ya está ocupado.");
             }
@@ -877,11 +1035,11 @@ export class ClientEventService {
             // Grupal
             const [count, already] = await Promise.all([
                 tx.eventParticipant.count({
-                    where: { idEventFk: existing.id, deletedDate: null },
+                    where: { idGroup: existing.idGroup, deletedDate: null },
                 }),
                 tx.eventParticipant.findFirst({
                     where: {
-                        idEventFk: existing.id,
+                        idGroup: existing.idGroup,
                         idClientWorkspaceFk: customer.idClientWorkspace,
                         deletedDate: null,
                     },
@@ -889,14 +1047,17 @@ export class ClientEventService {
                 }),
             ]);
 
-            const ev = await tx.event.findUnique({ where: { id: existing.id } });
+            const ev = await tx.event.findUnique({
+                where: { id: existing.id },
+                include: { groupEvents: true },
+            });
 
             if (already) return { event: ev!, action: "already-in" };
             if (count >= capacity) throw new Error("No quedan plazas disponibles en ese grupo.");
 
             await tx.eventParticipant.create({
                 data: {
-                    idEventFk: existing.id,
+                    idGroup: existing.idGroup,
                     idClientFk: customer.id,
                     idClientWorkspaceFk: customer.idClientWorkspace,
                     eventStatusType: participantStatus,
@@ -912,44 +1073,114 @@ export class ClientEventService {
                 idUserPlatformFk: seg.userId,
                 startDate: { lt: endDate },
                 endDate: { gt: startDate },
+                deletedDate: null,
+                groupEvents: {
+                    idWorkspaceFk: idWorkspace,
+                    eventStatusType: {
+                        notIn: CANCELLED_STATES as any,
+                    },
+                },
             },
             select: { id: true },
         });
         if (overlappingOther) throw new Error("Ese profesional ya tiene otro evento en ese horario.");
 
+        let group = params.idGroup
+            ? await tx.groupEvents.findUnique({ where: { id: params.idGroup } })
+            : null;
+
+        if (!group) {
+            group = await tx.groupEvents.create({
+                data: {
+                    ...(params.idGroup ? { id: params.idGroup } : {}),
+                    title: (svc.name ?? "Cita").slice(0, 100),
+                    // startDate/endDate se sincronizan al final con los eventos reales del grupo
+                    startDate,
+                    endDate,       
+                    description: null,
+                    idCompanyFk: idCompany,
+                    idWorkspaceFk: idWorkspace,
+                    commentClient: note ?? null,
+                    isCommentRead: isCommentRead ?? false,
+                    eventStatusType: eventStatus,
+                    timeZone: timeZoneWorkspace,
+                    eventParticipant: {
+                        create: {
+                            idClientFk: customer.id,
+                            idClientWorkspaceFk: customer.idClientWorkspace,
+                            eventStatusType: participantStatus,
+                        },
+                    },
+                },
+            });
+        } else {
+            const existingParticipant = await tx.eventParticipant.findFirst({
+                where: {
+                    idGroup: group.id,
+                    idClientWorkspaceFk: customer.idClientWorkspace,
+                    deletedDate: null,
+                },
+                select: { id: true },
+            });
+            if (!existingParticipant) {
+                await tx.eventParticipant.create({
+                    data: {
+                        idGroup: group.id,
+                        idClientFk: customer.id,
+                        idClientWorkspaceFk: customer.idClientWorkspace,
+                        eventStatusType: participantStatus,
+                    },
+                });
+            }
+        }
+
         // Crear evento nuevo
         const ev = await tx.event.create({
             data: {
-                idCompanyFk: idCompany,
-                idWorkspaceFk: idWorkspace,
+                idGroup: group.id,
                 idServiceFk: seg.serviceId,
                 idUserPlatformFk: seg.userId,
                 startDate,
                 endDate,
                 title: svc.name ?? "Cita",
-
-                timeZone: timeZoneWorkspace,
+                description: null,
                 eventPurposeType: "APPOINTMENT",
-                eventStatusType: eventStatus,
-                commentClient: note ?? null,
-                isCommentRead: isCommentRead ?? false,
 
                 serviceNameSnapshot: svc.name ?? null,
                 servicePriceSnapshot: typeof svc.price === "number" ? svc.price : null,
                 serviceDiscountSnapshot: typeof svc.discount === "number" ? svc.discount : null,
                 serviceDurationSnapshot: typeof svc.duration === "number" ? svc.duration : null,
                 serviceMaxParticipantsSnapshot: typeof svc.maxParticipants === "number" ? svc.maxParticipants : null,
-                eventParticipant: {
-                    create: {
-                        idClientFk: customer.id,
-                        idClientWorkspaceFk: customer.idClientWorkspace,
-                        eventStatusType: participantStatus,
-                    },
-                },
             },
+            include: { groupEvents: true },
         });
 
-        return { event: ev, action: "created" };
+        await this._syncGroupStartEndDates(tx, group.id);
+
+        return { event: ev as any, action: "created" };
+    }
+
+    private async _syncGroupStartEndDates(tx: Prisma.TransactionClient, idGroup: string): Promise<void> {
+        const agg = await tx.event.aggregate({
+            where: {
+                idGroup,
+                deletedDate: null,
+            },
+            _min: { startDate: true },
+            _max: { endDate: true },
+        });
+
+        const startDate = agg._min?.startDate ?? null;
+        const endDate = agg._max?.endDate ?? null;
+        if (!startDate || !endDate) return;
+
+        await tx.groupEvents.update({
+            where: { id: idGroup },
+            data: {
+                startDate,
+                endDate,
+            },
+        });
     }
 
     // ───────────────── helpers internos ─────────────────
@@ -1138,6 +1369,8 @@ export class ClientEventService {
             const isSingleGroup = this.isSingleGroupFromWeb(attendees, serviceById);
             const onlyIndividual = this.isOnlyIndividualServicesFromWeb(attendees, serviceById);
             const isSingleIndividual = onlyIndividual && attendees.length === 1;
+            const sharedGroupId =
+                onlyIndividual && attendees.length > 1 ? uuidv4() : undefined;
 
             // Cuando hay más de un servicio (todos individuales) queremos un idGroup
             // que será EL ID DEL PRIMER EVENTO creado.
@@ -1157,11 +1390,16 @@ export class ClientEventService {
                 if (elig.length) {
                     const overlappingEvents = await prisma.event.findMany({
                         where: {
-                            idWorkspaceFk: idWorkspace,
                             idServiceFk: svcReq.serviceId,
                             idUserPlatformFk: { in: elig },
                             startDate: { lt: endWS.toDate() },
                             endDate: { gt: startWS.toDate() },
+                            groupEvents: {
+                                idWorkspaceFk: idWorkspace,
+                                eventStatusType: {
+                                    notIn: ["CANCELLED", "CANCELLED_BY_CLIENT", "CANCELLED_BY_CLIENT_REMOVED"]
+                                }
+                            },
                             ...(excludeEventId ? { id: { not: excludeEventId } } : {}),
                             deletedDate: null,
                         },
@@ -1171,9 +1409,13 @@ export class ClientEventService {
                             idUserPlatformFk: true,
                             startDate: true,
                             endDate: true,
-                            eventParticipant: {
-                                where: { deletedDate: null },
-                                select: { idClientFk: true, idClientWorkspaceFk: true },
+                            groupEvents: {
+                                select: {
+                                    eventParticipant: {
+                                        where: { deletedDate: null },
+                                        select: { idClientFk: true, idClientWorkspaceFk: true },
+                                    },
+                                },
                             },
                         },
                     });
@@ -1192,10 +1434,10 @@ export class ClientEventService {
 
                     if (pick && pick.idUserPlatformFk) {
                         const capacity = Math.max(1, svcSnap?.maxParticipants ?? 1);
-                        const booked = pick.eventParticipant.length;
+                        const booked = pick.groupEvents?.eventParticipant?.length ?? 0;
                         const hasSeat = booked < capacity;
 
-                        const alreadyIn = pick.eventParticipant.some(p =>
+                        const alreadyIn = (pick.groupEvents?.eventParticipant ?? []).some(p =>
                             p.idClientFk === customer.id || p.idClientWorkspaceFk === customer.idClientWorkspace
                         );
 
@@ -1342,6 +1584,7 @@ export class ClientEventService {
                     const result = await this.createOrJoinGroupEvent(tx, {
                         idWorkspace,
                         idCompany,
+                        idGroup: sharedGroupId,
                         seg,
                         svc,
                         timeZoneWorkspace,
@@ -1517,6 +1760,13 @@ export class ClientEventService {
                 "YYYY-MM-DDTHH:mm:ss",
                 timeZoneClient
             );
+
+            const CANCELLED_STATES = [
+                'CANCELLED_BY_CLIENT',
+                'CANCELLED_BY_CLIENT_REMOVED',
+                "CANCELLED"
+            ];
+
             if (!startClient.isValid()) throw new Error("startLocalISO inválido");
 
             const startWS = startClient.clone().tz(timeZoneWorkspace);
@@ -1560,15 +1810,20 @@ export class ClientEventService {
             }
 
             // ───────────── Evento original + grupo ─────────────
-            const original = await prisma.event.findUnique({
+            const originalRaw = await prisma.event.findUnique({
                 where: { id: idEvent },
                 include: {
-                    eventParticipant: {
-                        where: { deletedDate: null },
-                        select: { idClientFk: true, idClientWorkspaceFk: true },
+                    groupEvents: {
+                        include: {
+                            eventParticipant: {
+                                where: { deletedDate: null },
+                                select: { idClientFk: true, idClientWorkspaceFk: true },
+                            },
+                        },
                     },
                 },
             });
+            const original = this._withGroupFields(originalRaw as any);
             if (!original || original.deletedDate)
                 throw new Error("Evento original no encontrado");
             if (original.idWorkspaceFk !== idWorkspace)
@@ -1589,9 +1844,9 @@ export class ClientEventService {
             const groupId = original.idGroup ?? original.id;
             const groupEvents = await prisma.event.findMany({
                 where: {
-                    idWorkspaceFk: idWorkspace,
                     idGroup: groupId,
                     deletedDate: null,
+                    groupEvents: { idWorkspaceFk: idWorkspace },
                 },
                 orderBy: { startDate: "asc" },
             });
@@ -1890,11 +2145,14 @@ export class ClientEventService {
                     // Solape definitivo (excluye el propio id)
                     const overlapping = await tx.event.findFirst({
                         where: {
-                            idWorkspaceFk: idWorkspace,
                             idUserPlatformFk: seg.userId,
                             startDate: { lt: seg.end.toDate() },
                             endDate: { gt: seg.start.toDate() },
                             deletedDate: null,
+                            groupEvents: {
+                                idWorkspaceFk: idWorkspace,
+                                eventStatusType: { notIn: CANCELLED_STATES as any },
+                            },
                             NOT: { id: original.id },
                         },
                         select: { id: true },
@@ -1905,6 +2163,15 @@ export class ClientEventService {
                         );
                     }
 
+                    await tx.groupEvents.update({
+                        where: { id: groupId },
+                        data: {
+                            commentClient: note ?? null,
+                            isCommentRead: isCommentRead ?? false,
+                            timeZone: timeZoneWorkspace,
+                        },
+                    });
+
                     const ev = await tx.event.update({
                         where: { id: original.id },
                         data: {
@@ -1913,9 +2180,6 @@ export class ClientEventService {
                             startDate: seg.start.toDate(),
                             endDate: seg.end.toDate(),
 
-                            commentClient: note ?? null,
-                            isCommentRead: isCommentRead ?? false,
-                            timeZone: timeZoneWorkspace,
                             eventPurposeType: "APPOINTMENT",
                             // snapshots
                             serviceNameSnapshot:
@@ -2202,15 +2466,42 @@ export class ClientEventService {
 
             // ───── TX: aplicar UPDATE / CREATE / DELETE ─────
             const result = await prisma.$transaction(async (tx) => {
+                await tx.groupEvents.update({
+                    where: { id: groupId },
+                    data: {
+                        commentClient: note ?? null,
+                        isCommentRead: isCommentRead ?? false,
+                        timeZone: timeZoneWorkspace,
+                    },
+                });
+
+                const existingParticipant = await tx.eventParticipant.findFirst({
+                    where: {
+                        idGroup: groupId,
+                        idClientWorkspaceFk: customer.idClientWorkspace!,
+                        deletedDate: null,
+                    },
+                    select: { id: true },
+                });
+                if (!existingParticipant) {
+                    await tx.eventParticipant.create({
+                        data: {
+                            idGroup: groupId,
+                            idClientFk: customer.id,
+                            idClientWorkspaceFk: customer.idClientWorkspace!,
+                        },
+                    });
+                }
+
                 // 1) anti-solape definitivo por cada seg planificado (excluye todo el grupo original)
                 for (const seg of chosenSegments) {
                     const overlapping = await tx.event.findFirst({
                         where: {
-                            idWorkspaceFk: idWorkspace,
                             idUserPlatformFk: seg.userId,
                             startDate: { lt: seg.end.toDate() },
                             endDate: { gt: seg.start.toDate() },
                             deletedDate: null,
+                            groupEvents: { idWorkspaceFk: idWorkspace },
                             NOT: { id: { in: Array.from(originalIds) } },
                         },
                         select: { id: true },
@@ -2236,10 +2527,7 @@ export class ClientEventService {
                             idUserPlatformFk: seg.userId,
                             startDate: seg.start.toDate(),
                             endDate: seg.end.toDate(),
-                            timeZone: timeZoneWorkspace,
 
-                            commentClient: note ?? null,
-                            isCommentRead: isCommentRead ?? false,
                             eventPurposeType: "APPOINTMENT",
                             idGroup: groupId,
                             // snapshots
@@ -2271,17 +2559,12 @@ export class ClientEventService {
                     const ev = await tx.event.create({
                         data: {
                             title: snap?.name,
-                            idCompanyFk: idCompany,
-                            idWorkspaceFk: idWorkspace,
                             idServiceFk: seg.serviceId,
                             idUserPlatformFk: seg.userId,
                             startDate: seg.start.toDate(),
                             endDate: seg.end.toDate(),
-                            timeZone: timeZoneWorkspace,
                             eventPurposeType: "APPOINTMENT",
                             idGroup: groupId,
-                            commentClient: note ?? null,
-                            isCommentRead: false,
                             // snapshots
                             serviceNameSnapshot: snap?.name ?? null,
                             servicePriceSnapshot:
@@ -2299,15 +2582,6 @@ export class ClientEventService {
                                     ? snap!.maxParticipants!
                                     : null,
                             // description: note ?? null,
-                        },
-                    });
-
-                    // Asegurar participación del cliente en el nuevo evento
-                    await tx.eventParticipant.create({
-                        data: {
-                            idEventFk: ev.id,
-                            idClientFk: customer.id,
-                            idClientWorkspaceFk: customer.idClientWorkspace!,
                         },
                     });
 
@@ -2488,9 +2762,10 @@ export class ClientEventService {
         // ───────────────── TX: mover participación de la clase ─────────────────
         const { targetEvent, action, deletedEventIds } = await prisma.$transaction(
             async (tx) => {
+                const originalGroupId = original.idGroup ?? original.id;
                 // Participantes activos actuales en esa clase
                 const activeParticipants = await tx.eventParticipant.findMany({
-                    where: { idEventFk: original.id, deletedDate: null },
+                    where: { idGroup: originalGroupId, deletedDate: null },
                     select: {
                         id: true,
                         idClientFk: true,
@@ -2515,12 +2790,12 @@ export class ClientEventService {
 
                 if (activeParticipants.length === 1) {
                     // Solo este cliente estaba en la clase → podemos “mover” la sesión entera
-                    await tx.event.update({
-                        where: { id: original.id },
+                    await tx.event.updateMany({
+                        where: { idGroup: originalGroupId },
                         data: { deletedDate: now },
                     });
                     await tx.eventParticipant.updateMany({
-                        where: { idEventFk: original.id, deletedDate: null },
+                        where: { idGroup: originalGroupId, deletedDate: null },
                         data: { deletedDate: now },
                     });
                     deletedEventIds.push(original.id);
@@ -2528,7 +2803,7 @@ export class ClientEventService {
                     // Hay más gente en la clase → solo sacamos a este cliente
                     await tx.eventParticipant.updateMany({
                         where: {
-                            idEventFk: original.id,
+                            idGroup: originalGroupId,
                             deletedDate: null,
                             OR: [
                                 { idClientFk: customer.id },
@@ -2547,6 +2822,7 @@ export class ClientEventService {
                     await this.createOrJoinGroupEvent(tx, {
                         idCompany,
                         idWorkspace,
+                        idGroup: originalGroupId,
                         seg,
                         svc: {
                             id: svcSnap.id,
