@@ -429,3 +429,197 @@ Unknown argument `idEventFk`. Available options are marked with ?.
     at WorkerAbsenceController.update (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/worker-absence/worker-absence.controller.ts:101:28)
     =====================================================
     
+    =====================================================
+    Date: 2026-01-23T19:12:19.172Z
+    Service: TemporaryBusinessHour.updateTemporaryBusinessHour
+    Error Message: No se encontró el registro a actualizar
+    Stack Trace: Error: No se encontró el registro a actualizar
+    at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:376:27
+    at Proxy._transactionWithCallback (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:8000)
+    at TemporaryBusinessHourService.updateTemporaryBusinessHour (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service.ts:358:20)
+    at TemporaryBusinessHourController.update (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/controllers/all-business-controller/temporary-business-hour/temporary-business-hour.controller.ts:118:28)
+    =====================================================
+    
+    =====================================================
+    Date: 2026-01-26T14:02:52.610Z
+    Service: [41m [getClientWorkspacesByIds] error [0m
+    Error Message: Request failed with status code 504
+    Stack Trace: undefined
+    =====================================================
+    
+    =====================================================
+    Date: 2026-01-26T16:24:12.051Z
+    Service: WaitListService.getPendingWaitList
+    Error Message: 
+Invalid `prisma.waitList.findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+
+  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+  126     try {
+  127         const now = new Date();
+→ 128         return await prisma.waitList.findMany(
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 25)
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.waitList.findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+
+  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+  126     try {
+  127         const now = new Date();
+→ 128         return await prisma.waitList.findMany(
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 25)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+    at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+    at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+    =====================================================
+    
+    =====================================================
+    Date: 2026-01-27T15:45:35.036Z
+    Service: WaitListService.getPendingWaitList
+    Error Message: 
+Invalid `prisma.waitList.findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+
+  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+  126     try {
+  127         const now = new Date();
+→ 128         return await prisma.waitList.findMany(
+Can't reach database server at `localhost:5432`
+
+Please make sure your database server is running at `localhost:5432`.
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.waitList.findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+
+  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+  126     try {
+  127         const now = new Date();
+→ 128         return await prisma.waitList.findMany(
+Can't reach database server at `localhost:5432`
+
+Please make sure your database server is running at `localhost:5432`.
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+    at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+    at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+    =====================================================
+    
+    =====================================================
+    Date: 2026-01-27T18:44:05.036Z
+    Service: WaitListService.getPendingWaitList
+    Error Message: 
+Invalid `prisma.waitList.findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+
+  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+  126     try {
+  127         const now = new Date();
+→ 128         return await prisma.waitList.findMany(
+Can't reach database server at `localhost:5432`
+
+Please make sure your database server is running at `localhost:5432`.
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.waitList.findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+
+  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+  126     try {
+  127         const now = new Date();
+→ 128         return await prisma.waitList.findMany(
+Can't reach database server at `localhost:5432`
+
+Please make sure your database server is running at `localhost:5432`.
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+    at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+    at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+    =====================================================
+    
+    =====================================================
+    Date: 2026-01-28T20:03:37.067Z
+    Service: WaitListService.getPendingWaitList
+    Error Message: 
+Invalid `prisma.waitList.findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+
+  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+  126     try {
+  127         const now = new Date();
+→ 128         return await prisma.waitList.findMany(
+Can't reach database server at `localhost:5432`
+
+Please make sure your database server is running at `localhost:5432`.
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.waitList.findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+
+  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+  126     try {
+  127         const now = new Date();
+→ 128         return await prisma.waitList.findMany(
+Can't reach database server at `localhost:5432`
+
+Please make sure your database server is running at `localhost:5432`.
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+    at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+    at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+    =====================================================
+    
+    =====================================================
+    Date: 2026-01-28T20:06:12.019Z
+    Service: WaitListService.getPendingWaitList
+    Error Message: 
+Invalid `prisma.waitList.findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+
+  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+  126     try {
+  127         const now = new Date();
+→ 128         return await prisma.waitList.findMany(
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 25)
+    Stack Trace: PrismaClientKnownRequestError: 
+Invalid `prisma.waitList.findMany()` invocation in
+/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+
+  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+  126     try {
+  127         const now = new Date();
+→ 128         return await prisma.waitList.findMany(
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 25)
+    at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+    at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+    at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+    =====================================================
+    
+    =====================================================
+    Date: 2026-01-30T13:55:05.460Z
+    Service: [41m [getClientWorkspacesByIds] error [0m
+    Error Message: Request failed with status code 504
+    Stack Trace: undefined
+    =====================================================
+    
+    =====================================================
+    Date: 2026-01-30T13:55:07.830Z
+    Service: [41m [getClientWorkspacesByIds] error [0m
+    Error Message: Request failed with status code 504
+    Stack Trace: undefined
+    =====================================================
+    

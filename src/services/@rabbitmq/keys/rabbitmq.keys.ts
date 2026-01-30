@@ -56,6 +56,7 @@ export const RabbitMQKeys = {
 
     pubSubStoreNotificationCreatedRk: () => "store.notification.created" as const,
     pubSubStoreNotificationDeletedRk: () => "store.notification.deleted" as const,
+    pubSubStoreNotificationPurgeByBookingRk: () => "store.notification.purgeByBooking" as const,
 
     // Colas para cada microservicio
     pubSubStoreNotificationCreatedQueue: () => "pubsub_store_notification_created_queue",

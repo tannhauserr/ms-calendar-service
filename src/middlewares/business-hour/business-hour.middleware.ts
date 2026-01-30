@@ -320,10 +320,13 @@ export class BusinessHourMiddleware {
     static preventOverlapping_ThirdPart = async (req: any, res: any, next: any) => {
         try {
             const { startTime, endTime, idUserFk, date, weekDayType, idWorkspaceFk, id } = req.body;
+            const recordId = id ?? req.params?.id;
 
+            console.log("preventOverlapping_ThirdPart ID", req.body);
             if (startTime && endTime) {
                 let isOverlapping = false;
                 if (idUserFk && date) {
+                    console.log("1")
                     // Temporal
                     isOverlapping =
                         await BusinessHourMiddleware.temporaryBusinessHourService.checkOverlappingTemporaryBusinessHour(
@@ -332,9 +335,10 @@ export class BusinessHourMiddleware {
                             idUserFk,
                             idWorkspaceFk,
                             date,
-                            id
+                            recordId
                         );
                 } else if (idUserFk) {
+                    console.log("2")
                     // Worker recurrente
                     isOverlapping =
                         await BusinessHourMiddleware.workerBusinessHourService.checkOverlappingWorkerBusinessHour(
@@ -342,9 +346,10 @@ export class BusinessHourMiddleware {
                             endTime as string,   // "HH:mm"
                             weekDayType,
                             idUserFk,
-                            id
+                            recordId
                         );
                 } else {
+                    console.log("3")
                     // Business recurrente
                     isOverlapping =
                         await BusinessHourMiddleware.businessHourService.checkOverlappingBusinessHour(
@@ -352,7 +357,7 @@ export class BusinessHourMiddleware {
                             endTime as string,   // "HH:mm"
                             weekDayType,
                             idWorkspaceFk,
-                            id
+                            recordId
                         );
                 }
 

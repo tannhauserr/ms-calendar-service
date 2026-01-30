@@ -13,11 +13,9 @@ router.post('/temporary-business-hours/add',
     [
         JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.accessOnlyAdminOrManager,
-
-        // TODO: No se agrega ya que las fechas vienen de otra manera
-        // BusinessHourMiddleware.convertToISOTime_FirstPart,
-        BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
-        BusinessHourMiddleware.preventOverlapping_ThirdPart,
+        // Legacy   
+        // BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
+        // BusinessHourMiddleware.preventOverlapping_ThirdPart,
     ], controller.add);
 
 // Obtener todos los horarios de trabajo con paginación
@@ -41,20 +39,18 @@ router.post('/temporary-business-hours/update-:id', [
     JWTService.authCookieOrBearer,
     OnlyAdminMiddleware.accessOnlyAdminOrManager,
 
-    // TODO: No se agrega ya que las fechas vienen de otra manera
-    // BusinessHourMiddleware.convertToISOTime_FirstPart,
-    BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
-    BusinessHourMiddleware.preventOverlapping_ThirdPart,
+    //   Legacy
+    // BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
+    // BusinessHourMiddleware.preventOverlapping_ThirdPart,
 ], controller.update);
 
 // Eliminar un horario de trabajo por ID
 router.post('/temporary-business-hours/delete', [
     JWTService.authCookieOrBearer,
     OnlyAdminMiddleware.accessOnlyAdminOrManager,
-    // TODO: No se agrega ya que las fechas vienen de otra manera
-    // BusinessHourMiddleware.convertToISOTime_FirstPart,
-    // BusinessHourMiddleware.handleDeleteClosedRecords_SecondPart,
-    BusinessHourMiddleware.preventOverlapping_ThirdPart,
+
+    // Legacy
+    // BusinessHourMiddleware.preventOverlapping_ThirdPart,
 ], controller.delete);
 
 // Autocompletar horarios de trabajo

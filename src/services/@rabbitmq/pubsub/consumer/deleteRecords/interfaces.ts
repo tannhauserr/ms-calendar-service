@@ -29,6 +29,9 @@ export type DeleteRecordsTable =
     // HARD DELETE — Borrado de relaciones usuario ←→ workspace,
     // filtrando por workspace (se expulsan usuarios de un workspace)
     | "userWorkspaces-byWorkspace"
+    // HARD DELETE — Igual que userWorkspaces-byWorkspace pero con borrado
+    // de eventos futuros del usuario en esos workspaces
+    | "userWorkspaces-byWorkspace-hard"
     // HARD DELETE — Borrado de relaciones usuario ←→ workspace,
     // filtrando por usuario (se saca a un usuario de todos los workspaces)
     | "userWorkspaces-byUser";

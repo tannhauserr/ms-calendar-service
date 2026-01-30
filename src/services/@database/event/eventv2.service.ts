@@ -522,10 +522,10 @@ export class EventV2Service {
     async getEvents(pagination: Pagination, isValidCancelledStatus: boolean = true): Promise<any> {
         try {
 
-            // ######################################################################
+            // #################################################################################
             // # isValidCancelledStatus = false -> Es el get usado para calendarios            #
-            // # isValidCancelledStatus = true -> Es el get usado para el listado de eventos #
-            // ######################################################################
+            // # isValidCancelledStatus = true -> Es el get usado para el listado de eventos   #
+            // #################################################################################
 
             if (isValidCancelledStatus === false) {
 

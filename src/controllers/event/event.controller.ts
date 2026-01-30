@@ -3,7 +3,7 @@ import { EventV2Service } from "../../services/@database/event/eventv2.service";
 
 import { CONSOLE_COLOR } from "../../constant/console-color";
 import { EventForBackend } from "../../services/@database/event/dto/EventForBackend";
-import { deleteRecordsRoutingKeys, publishDeleteRecordsMessage } from "../../services/@rabbitmq/pubsub/functions";
+import { deleteRecordsRoutingKeys, publishDeleteRecordsMessage, publishStoreNotificationDeleted, publishStoreNotificationPurgeByBooking } from "../../services/@rabbitmq/pubsub/functions";
 import { getServiceByIds } from "../../services/@service-token-client/api-ms/bookingPage.ms";
 import { getClientWorkspacesByIds } from "../../services/@service-token-client/api-ms/client.ms";
 import { JWTService } from "../../services/jwt/jwt.service";
@@ -14,6 +14,8 @@ import { ActionKey } from "../../models/notification/util/action-to-senctions";
 import { upsertEvent } from "../../services/@database/event/platform/upsertEvent.service";
 import { SidebarBackendBookingPayload } from "../../services/@database/event/dto/SidebarBackendBookingPayload";
 import { createNotification as createNotificationPlatform } from "../../models/notification/util/trigger/util/for-action-platform";
+import { is } from "zod/locales";
+import { randomUUID } from "crypto";
 
 export class EventController {
     public eventService: EventV2Service;
@@ -93,6 +95,8 @@ export class EventController {
                 });
             }
 
+            
+
             // 3. Ejecutar upsert
             const events = await upsertEvent(payload);
 
@@ -101,14 +105,24 @@ export class EventController {
                 ? "Eventos creados exitosamente"
                 : "Eventos actualizados exitosamente";
 
-
-            if (events?.length > 0 && events[0]?.idGroup) {
+            const isSendNotification = payload?.sendNotification;
+            if (isSendNotification && events?.length > 0 && events[0]?.idGroup) {
                 await createNotificationPlatform(events[0].idGroup, {
                     actionSectionType: payload.mode === 'create' ? 'add' : 'update',
                 });
+            } else if (!isSendNotification && payload.mode === 'edit' && events?.[0]?.idGroup) {
+                // Si no se envía notificación y es edición, eliminamos notificaciones 
+                // que no se hayan enviado aún
+                await publishStoreNotificationPurgeByBooking({
+                    v: 1,
+                    bookingId: events[0].idGroup,
+                    trace: {
+                        correlationId: randomUUID() || "",
+                        producedAt: new Date().toISOString()
+                    },
+                })
             }
 
-            
             return res.status(200).json(
                 Response.build(message, 200, true, {
                     events,

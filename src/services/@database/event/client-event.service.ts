@@ -1137,6 +1137,7 @@ export class ClientEventService {
         // Crear evento nuevo
         const ev = await tx.event.create({
             data: {
+                idCompanyFk: idCompany,
                 idGroup: group.id,
                 idServiceFk: seg.serviceId,
                 idUserPlatformFk: seg.userId,
@@ -2558,6 +2559,7 @@ export class ClientEventService {
                     const snap = serviceById[seg.serviceId];
                     const ev = await tx.event.create({
                         data: {
+                            idCompanyFk: idCompany,
                             title: snap?.name,
                             idServiceFk: seg.serviceId,
                             idUserPlatformFk: seg.userId,

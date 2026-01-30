@@ -20,6 +20,7 @@ type ModelType =
   | 'temporaryBusinessHour'
   | 'workerAbsence'
   | 'recurrenceRule'
+  | 'waitList'
 
   ;
 

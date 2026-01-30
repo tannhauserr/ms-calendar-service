@@ -53,6 +53,9 @@ router.use("/api", require('./temporary-business-hour.routes'));
 // WorkerAbsence routes
 router.use("/api", require('./worker-absence.routes'));
 
+// WaitList routes
+router.use("/api", require('./wait-list.routes'));
+
 
 // Health check
 router.get("/health", (_req, res) => res.status(200).json({ ok: true }));
