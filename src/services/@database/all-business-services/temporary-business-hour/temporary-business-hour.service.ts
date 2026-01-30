@@ -1,4 +1,4 @@
-import { Prisma, TemporaryBusinessHour, WeekDayType, $Enums } from "@prisma/client";
+import { Event, EventPurposeType, Prisma, TemporaryBusinessHour } from "@prisma/client";
 import prisma from "../../../../lib/prisma";
 import CustomError from "../../../../models/custom-error/CustomError";
 import { Pagination } from "../../../../models/pagination";
@@ -12,31 +12,213 @@ import { HoursRangeInput, normalizeRange, isWithin, listDaysInclusive } from "..
 export class TemporaryBusinessHourService {
     constructor() { }
 
-    async addTemporaryBusinessHour(item: Prisma.TemporaryBusinessHourCreateInput): Promise<TemporaryBusinessHour> {
-        try {
-            // Elimina la propiedad 'id' si viene en el objeto
-            const { id, ...dataWithoutId } = item as any;
+    private resolveEventDateTime(baseDate: Date | string, value: unknown): Date | null {
+        if (!value) {
+            return null;
+        }
+        if (value instanceof Date) {
+            return value;
+        }
 
-            console.log("que voy a agregar?", dataWithoutId);
+        const raw = String(value).trim();
+        if (!raw) {
+            return null;
+        }
 
-            return await prisma.temporaryBusinessHour.create({
-                data: {
-                    ...dataWithoutId,
-                    createdDate: new Date(),
-                    updatedDate: new Date(),
+        if (/^\d{4}-\d{2}-\d{2}T/.test(raw)) {
+            const parsed = new Date(raw);
+            return isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        const match = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+        if (!match) {
+            return null;
+        }
+
+        const hours = match[1].padStart(2, "0");
+        const minutes = match[2];
+        const dateStr = moment(baseDate).format("YYYY-MM-DD");
+        const dateTime = moment(`${dateStr}T${hours}:${minutes}`, "YYYY-MM-DDTHH:mm", true);
+        return dateTime.isValid() ? dateTime.toDate() : null;
+    }
+
+    private buildTemporaryBlockEventRange(record: {
+        date: Date | string;
+        startTime?: unknown;
+        endTime?: unknown;
+        closed?: boolean;
+    }): { startDate: Date; endDate: Date; allDay: boolean } {
+        const startDate = this.resolveEventDateTime(record.date, record.startTime);
+        const endDate = this.resolveEventDateTime(record.date, record.endTime);
+        const isAllDay = !!record.closed || !startDate || !endDate || endDate <= startDate;
+
+        if (isAllDay) {
+            return {
+                startDate: moment(record.date).startOf("day").toDate(),
+                endDate: moment(record.date).endOf("day").toDate(),
+                allDay: true,
+            };
+        }
+
+        return {
+            startDate,
+            endDate,
+            allDay: false,
+        };
+    }
+
+    private async createTemporaryBlockEvent(
+        record: {
+            title?: string | null;
+            description?: string | null;
+            idCompanyFk: string;
+            idWorkspaceFk: string;
+            idUserFk?: string | null;
+            date: Date | string;
+            startTime?: unknown;
+            endTime?: unknown;
+            closed?: boolean;
+        },
+        tx: Prisma.TransactionClient
+    ): Promise<Event> {
+        if (!record.idCompanyFk || !record.idWorkspaceFk) {
+            throw new Error("idCompanyFk e idWorkspaceFk son obligatorios para crear el evento");
+        }
+        const { startDate, endDate, allDay } = this.buildTemporaryBlockEventRange(record);
+        const title = record?.title ?? "Bloqueo temporal";
+        const description = record.description ?? "";
+
+        const group = await tx.groupEvents.create({
+            data: {
+                title,
+                description,
+                idCompanyFk: record.idCompanyFk,
+                idWorkspaceFk: record.idWorkspaceFk,
+                startDate,
+                endDate,
+
+                eventStatusType: "ACCEPTED"
+            },
+        });
+
+        const event = await tx.event.create({
+            data: {
+                idGroup: group.id,
+                title,
+                description,
+                startDate,
+                endDate,
+                idUserPlatformFk: record.idUserFk ?? null,
+                eventPurposeType: EventPurposeType.TEMPORARY_BLOCK,
+                allDay,
+                idCompanyFk: record.idCompanyFk,
+
+                
+            },
+        });
+
+        return event;
+    }
+
+    private async updateTemporaryBlockEvent(
+        eventId: string,
+        record: {
+            title?: string | null;
+            description?: string | null;
+            idUserFk?: string | null;
+            date: Date | string;
+            startTime?: unknown;
+            endTime?: unknown;
+            closed?: boolean;
+        },
+        tx: Prisma.TransactionClient
+    ): Promise<Event> {
+        const { startDate, endDate, allDay } = this.buildTemporaryBlockEventRange(record);
+        // const title = "Bloqueo temporal";
+
+        const event = await tx.event.update({
+            where: { id: eventId },
+            data: {
+                title: record?.title ?? "Bloqueo temporal",
+                description: record.description ?? "",
+                startDate,
+                endDate,
+                idUserPlatformFk: record.idUserFk ?? null,
+                eventPurposeType: EventPurposeType.TEMPORARY_BLOCK,
+                allDay,
+            },
+        });
+
+        await tx.groupEvents.update({
+            where: { id: event.idGroup },
+            data: {
+                title: record?.title ?? "Bloqueo temporal",
+                startDate,
+                endDate,
+            },
+        });
+
+        return event;
+    }
+
+    private async deleteTemporaryBlockEvents(records: TemporaryBusinessHour[], tx: Prisma.TransactionClient): Promise<void> {
+        const eventIds = Array.from(new Set(records.map((record) => record.idEventFk).filter(Boolean)));
+        if (eventIds.length === 0) {
+            return;
+        }
+
+        const events = await tx.event.findMany({
+            where: { id: { in: eventIds } },
+            select: { id: true, idGroup: true },
+        });
+
+        const groupIds = Array.from(new Set(events.map((event) => event.idGroup)));
+
+        await tx.event.deleteMany({
+            where: { id: { in: eventIds } },
+        });
+
+        if (groupIds.length > 0) {
+            await tx.groupEvents.deleteMany({
+                where: {
+                    id: { in: groupIds },
+                    events: { none: {} },
                 },
+            });
+        }
+    }
+
+    async addTemporaryBusinessHour(item: TemporaryBusinessHour): Promise<{ temporary: TemporaryBusinessHour; event: Event }> {
+        try {
+            const { id, idEventFk, event, createdDate, updatedDate, deletedDate, ...dataWithoutId } = item as any;
+
+            return await prisma.$transaction(async (tx) => {
+                const event = await this.createTemporaryBlockEvent(dataWithoutId, tx);
+
+                const temporary = await tx.temporaryBusinessHour.create({
+                    data: {
+                        ...dataWithoutId,
+                        event: { connect: { id: event.id } },
+                        createdDate: new Date(),
+                        updatedDate: new Date(),
+                    },
+                });
+
+                return { temporary, event };
             });
         } catch (error: any) {
             throw new CustomError('TemporaryBusinessHour.addTemporaryBusinessHour', error);
         }
     }
 
-    async getTemporaryBusinessHourById(id: string): Promise<TemporaryBusinessHour | null> {
+    async getTemporaryBusinessHourById(id: string): Promise<Partial<TemporaryBusinessHour> | null> {
         try {
             return await prisma.temporaryBusinessHour.findUnique({
                 where: { id: id },
                 select: {
                     id: true,
+                    title: true,
+                    description: true,
                     date: true,
                     startTime: true,
                     endTime: true,
@@ -44,9 +226,8 @@ export class TemporaryBusinessHourService {
                     idUserFk: true,
                     idWorkspaceFk: true,
                     idCompanyFk: true,
-                    deletedDate: true,
-                    createdDate: true,
-                    updatedDate: true,
+                    idEventFk: true,
+
                 }
             });
         } catch (error: any) {
@@ -54,7 +235,7 @@ export class TemporaryBusinessHourService {
         }
     }
 
-    async getTemporaryBusinessHourByDate(date: Date): Promise<TemporaryBusinessHour[]> {
+    async getTemporaryBusinessHourByDate(date: Date): Promise<Partial<TemporaryBusinessHour>[]> {
         try {
             // Obtener el inicio y fin del día
             const startDate = moment(date).startOf('day').toDate();
@@ -69,6 +250,8 @@ export class TemporaryBusinessHourService {
                 },
                 select: {
                     id: true,
+                    title: true,
+                    description: true,
                     date: true,
                     idWorkspaceFk: true,
                     idCompanyFk: true,
@@ -79,6 +262,7 @@ export class TemporaryBusinessHourService {
                     createdDate: true,
                     updatedDate: true,
                     deletedDate: true,
+                    idEventFk: true,
                 },
                 orderBy: { startTime: 'asc' },
             });
@@ -177,20 +361,52 @@ export class TemporaryBusinessHourService {
     }
 
 
-    async updateTemporaryBusinessHour(item: TemporaryBusinessHour): Promise<TemporaryBusinessHour> {
+    async updateTemporaryBusinessHour(item: TemporaryBusinessHour): Promise<{ temporary: TemporaryBusinessHour; event: Event }> {
         try {
+            return await prisma.$transaction(async (tx) => {
+                const incomingEventId = item.idEventFk ? String(item.idEventFk) : undefined;
 
-            console.log("el item entrante en updateTemporaryBusinessHour", item);
-            // Convertimos el ID a string para usarlo en el where
-            const id = String(item.id);
-            delete item.id;
+                if (!incomingEventId) {
+                    throw new Error("Debe proporcionar idEventFk para actualizar el registro");
+                }
 
-            return await prisma.temporaryBusinessHour.update({
-                where: { id },
-                data: {
+                const currentRecord = await tx.temporaryBusinessHour.findFirst({
+                    where: { idEventFk: incomingEventId },
+                });
+
+                if (!currentRecord) {
+                    throw new Error("No se encontró el registro a actualizar");
+                }
+
+                const effectiveRecord = {
+                    ...currentRecord,
                     ...item,
-                    updatedDate: new Date(),
-                },
+                    idCompanyFk: item.idCompanyFk === undefined ? currentRecord.idCompanyFk : item.idCompanyFk,
+                    idWorkspaceFk: item.idWorkspaceFk === undefined ? currentRecord.idWorkspaceFk : item.idWorkspaceFk,
+                    idUserFk: item.idUserFk === undefined ? currentRecord.idUserFk : item.idUserFk,
+                    date: item.date === undefined ? currentRecord.date : item.date,
+                    startTime: item.startTime === undefined ? currentRecord.startTime : item.startTime,
+                    endTime: item.endTime === undefined ? currentRecord.endTime : item.endTime,
+                    closed: item.closed === undefined ? currentRecord.closed : item.closed,
+                    title: item.title === undefined ? currentRecord.title : item.title,
+                    description: item.description === undefined ? currentRecord.description : item.description,
+                };
+
+                const eventId = currentRecord.idEventFk;
+                const updatedEvent = await this.updateTemporaryBlockEvent(eventId, effectiveRecord, tx);
+
+                const { id, idEventFk, event: eventPayload, createdDate, updatedDate, deletedDate, ...dataWithoutId } = item as any;
+
+                const temporary = await tx.temporaryBusinessHour.update({
+                    where: { id: currentRecord.id },
+                    data: {
+                        ...dataWithoutId,
+                        idEventFk: eventId,
+                        updatedDate: new Date(),
+                    },
+                });
+
+                return { temporary, event: updatedEvent };
             });
         } catch (error: any) {
             throw new CustomError('TemporaryBusinessHour.updateTemporaryBusinessHour', error);
@@ -200,12 +416,25 @@ export class TemporaryBusinessHourService {
     async deleteTemporaryBusinessHour(idList: string[]): Promise<any> {
         try {
             const listAux = Array.isArray(idList) ? idList : [idList];
-            return await prisma.temporaryBusinessHour.deleteMany({
-                where: {
-                    id: {
-                        in: listAux,
+
+            return await prisma.$transaction(async (tx) => {
+                const recordsToDelete = await tx.temporaryBusinessHour.findMany({
+                    where: {
+                        id: { in: listAux },
                     },
-                },
+                });
+
+                const result = await tx.temporaryBusinessHour.deleteMany({
+                    where: {
+                        id: {
+                            in: listAux,
+                        },
+                    },
+                });
+
+                await this.deleteTemporaryBlockEvents(recordsToDelete, tx);
+
+                return result;
             });
         } catch (error: any) {
             throw new CustomError('TemporaryBusinessHour.deleteTemporaryBusinessHour', error);
@@ -628,7 +857,7 @@ export class TemporaryBusinessHourService {
 
             const { start, end } = normalizeRange(range, true);
 
-            
+
             const wantedDays = listDaysInclusive(start, end);
             const startDate = moment(start, "YYYY-MM-DD").toDate();
             const endDate = moment(end, "YYYY-MM-DD").toDate();
@@ -773,9 +1002,8 @@ export class TemporaryBusinessHourService {
      * Elimina de Redis y de la BD todos los registros que tengan el mismo día y usuario
      * que alguno de los IDs indicados en `idList`.
      */
-    public async deleteTemporaryBusinessHourFromRedis(idList: string[], idWorkspace: string): Promise<any> {
+    public async getTemporaryBusinessHoursForDeletion(idList: string[], idWorkspace: string): Promise<TemporaryBusinessHour[]> {
         try {
-            const temporaryHoursStrategy = new TemporaryHoursStrategy();
             const listAux = Array.isArray(idList) ? idList : [idList];
 
             // 1) Buscar en la BD los (idUserFk, idWorkspaceFk, date) de cada ID
@@ -802,34 +1030,42 @@ export class TemporaryBusinessHourService {
 
                 orConditions.push({
                     idUserFk: r.idUserFk,
-                    idWorkspace: r.idWorkspaceFk,
+                    idWorkspaceFk: r.idWorkspaceFk,
                     dateRangeStart: dayStart,
                     dateRangeEnd: dayEnd,
                 });
             }
 
-            // 3) Buscar TODOS los registros que coincidan en ese día (rango)
-            let allRecordsToDelete = [];
-            if (orConditions.length > 0) {
-                // Construimos un OR de rangos
-                allRecordsToDelete = await prisma.temporaryBusinessHour.findMany({
-                    where: {
-                        OR: orConditions.map((c) => ({
-                            idUserFk: c.idUserFk,
-                            idWorkspaceFk: c.idWorkspaceFk,
-                            date: {
-                                gte: c.dateRangeStart,
-                                lt: c.dateRangeEnd,
-                            },
-                        })),
-                    },
-                    select: {
-                        id: true,
-                        idUserFk: true,
-                        idWorkspaceFk: true,
-                    },
-                });
+            if (orConditions.length === 0) {
+                return [];
             }
+
+            // 3) Buscar TODOS los registros que coincidan en ese día (rango)
+            return await prisma.temporaryBusinessHour.findMany({
+                where: {
+                    OR: orConditions.map((c) => ({
+                        idUserFk: c.idUserFk,
+                        idWorkspaceFk: c.idWorkspaceFk,
+                        date: {
+                            gte: c.dateRangeStart,
+                            lt: c.dateRangeEnd,
+                        },
+                    })),
+                },
+            });
+        } catch (error: any) {
+            throw new CustomError('TemporaryBusinessHour.getTemporaryBusinessHoursForDeletion', error);
+        }
+    }
+
+    /**
+     * Elimina de Redis y de la BD todos los registros que tengan el mismo día y usuario
+     * que alguno de los IDs indicados en `idList`.
+     */
+    public async deleteTemporaryBusinessHourFromRedis(idList: string[], idWorkspace: string): Promise<any> {
+        try {
+            const temporaryHoursStrategy = new TemporaryHoursStrategy();
+            const allRecordsToDelete = await this.getTemporaryBusinessHoursForDeletion(idList, idWorkspace);
 
             // IDs definitivos a eliminar
             const allIds = allRecordsToDelete.map((r) => r.id);
@@ -847,15 +1083,20 @@ export class TemporaryBusinessHourService {
             }
 
             // 6) Borrar en la BD
-            if (allIds.length > 0) {
-                return await prisma.temporaryBusinessHour.deleteMany({
-                    where: {
-                        id: { in: allIds },
-                    },
-                });
-            } else {
-                return { count: 0 };
-            }
+            return await prisma.$transaction(async (tx) => {
+                let result = { count: 0 };
+                if (allIds.length > 0) {
+                    result = await tx.temporaryBusinessHour.deleteMany({
+                        where: {
+                            id: { in: allIds },
+                        },
+                    });
+                }
+
+                await this.deleteTemporaryBlockEvents(allRecordsToDelete, tx);
+
+                return result;
+            });
         } catch (error: any) {
             throw new CustomError('TemporaryBusinessHour.deleteTemporaryBusinessHourFromRedis', error);
         }

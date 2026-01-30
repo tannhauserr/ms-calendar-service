@@ -8,7 +8,9 @@ import {
     mapStatusToBus,
     StoreNotificationDeletedV1,
     StoreNotificationCreatedV1Schema,
-    StoreNotificationDeletedV1Schema
+    StoreNotificationDeletedV1Schema,
+    StoreNotificationPurgeByBookingV1,
+    StoreNotificationPurgeByBookingV1Schema
 } from "../../../interfaces/notification/store-notification";
 import { CONSOLE_COLOR } from "../../../../../constant/console-color";
 
@@ -46,6 +48,19 @@ function withDefaultsForDeleted(payload: StoreNotificationDeletedV1): StoreNotif
         v: 1,
         ...payload,
         trace: payload.trace ?? { correlationId: randomUUID(), producedAt: new Date().toISOString() },
+    };
+}
+
+function withDefaultsForPurgeByBooking(
+    payload: StoreNotificationPurgeByBookingV1
+): StoreNotificationPurgeByBookingV1 {
+    return {
+        v: 1,
+        ...payload,
+        trace: payload.trace ?? {
+            correlationId: randomUUID(),
+            producedAt: new Date().toISOString(),
+        },
     };
 }
 
@@ -117,6 +132,31 @@ export async function publishStoreNotificationDeleted(payload: StoreNotification
     if (!parsed.success) {
         console.error("[publishStoreNotificationDeleted] invalid payload", parsed.error.flatten());
         throw new Error("Invalid StoreNotificationDeletedV1 payload");
+    }
+
+    await publishSafe(exchange, rk, finalized);
+}
+
+
+/**
+ * Publica un evento para PURGAR (hard delete) todas las notificaciones de una reserva (bookingId/idGroup).
+ * @param payload
+ */
+export async function publishStoreNotificationPurgeByBooking(
+    payload: StoreNotificationPurgeByBookingV1
+): Promise<void> {
+    const exchange = RabbitMQKeys.pubSubNotificationStoreExchange();
+    const rk = RabbitMQKeys.pubSubStoreNotificationPurgeByBookingRk(); // "store.notification.purgeByBooking"
+
+    const finalized = withDefaultsForPurgeByBooking(payload);
+
+    const parsed = StoreNotificationPurgeByBookingV1Schema.safeParse(finalized);
+    if (!parsed.success) {
+        console.error(
+            "[publishStoreNotificationPurgeByBooking] invalid payload",
+            parsed.error.flatten()
+        );
+        throw new Error("Invalid StoreNotificationPurgeByBookingV1 payload");
     }
 
     await publishSafe(exchange, rk, finalized);

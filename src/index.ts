@@ -130,6 +130,7 @@ import { initializeConsumerPubSub_RabbitMQ } from "./services/@rabbitmq/pubsub/i
 import {
   CalendarChannelRefreshCronService,
   CheckCacheCronService,
+  WaitListCronService,
 } from "./services/@cron";
 
 import prisma from "./lib/prisma";
@@ -183,6 +184,7 @@ async function initializeServices() {
 
     // Crons
     CheckCacheCronService.instance.start();
+    WaitListCronService.instance.start();
     // CalendarChannelRefreshCronService.instance.start();
 
     console.log(`${CONSOLE_COLOR.FgGreen}✅ Servicios inicializados${CONSOLE_COLOR.Reset}`);
@@ -234,6 +236,7 @@ async function gracefulShutdown(signal: string) {
     // 2) Parar crons
     CheckCacheCronService.instance.stop?.();
     CalendarChannelRefreshCronService.instance.stop?.();
+    WaitListCronService.instance.stop?.();
 
     // 3) Cerrar DB (Prisma)
     await prisma.$disconnect();
@@ -256,5 +259,4 @@ process.on("unhandledRejection", (reason) => {
   console.error("❌ Promesa rechazada no capturada:", reason);
   gracefulShutdown("unhandledRejection");
 });
-
 

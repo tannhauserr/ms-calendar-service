@@ -9,6 +9,22 @@ import { getGeneric } from "../../../../utils/get-genetic/getGenetic";
 export class WorkerAbsenceService {
     constructor() { }
 
+    private _withGroupFields<T extends { groupEvents?: any }>(event: T | null) {
+        if (!event || !event.groupEvents) return event;
+        const group = event.groupEvents;
+        return {
+            ...event,
+            idWorkspaceFk: group.idWorkspaceFk,
+            idCompanyFk: group.idCompanyFk,
+            commentClient: group.commentClient,
+            isCommentRead: group.isCommentRead,
+            eventSourceType: group.eventSourceType,
+            eventStatusType: group.eventStatusType,
+            timeZone: group.timeZone,
+            eventParticipant: group.eventParticipant ?? (event as any).eventParticipant ?? [],
+        };
+    }
+
     /**
      * Crear una nueva ausencia
      */
@@ -75,6 +91,8 @@ export class WorkerAbsenceService {
 
                 // Crear el evento asociado, usando el id del calendario obtenido
                 const eventData: Prisma.EventCreateInput = {
+                    // Tengo que pasar el idCompanyFk para que lo coja bien en el hook de creación de eventos
+                    idCompanyFk: item.idCompanyFk!,
                     title: item.title,
                     description: item.description,
                     startDate: startDate,
@@ -102,7 +120,7 @@ export class WorkerAbsenceService {
                         updatedDate: new Date(),
                     },
                 });
-
+                
                 return {
                     absence: createdAbsence,
                     event: createdEvent

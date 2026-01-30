@@ -80,6 +80,12 @@ export type StoreNotificationDeletedV1 = {
     trace: { correlationId: string; producedAt: string };
 };
 
+export type StoreNotificationPurgeByBookingV1 = {
+    v: 1;
+    bookingId: string; // corresponde a Notification.idBooking (tu “idGroup”)
+    trace: { correlationId: string; producedAt: string };
+};
+
 // ─────────── Zod (ATÓMICO) ───────────
 export const StoreNotificationCreatedV1Schema = z.object({
     v: z.literal(1),
@@ -131,6 +137,15 @@ export const StoreNotificationCreatedV1Schema = z.object({
 export const StoreNotificationDeletedV1Schema = z.object({
     v: z.literal(1),
     id: z.string().uuid(),
+    trace: z.object({
+        correlationId: z.string().uuid(),
+        producedAt: z.string().datetime(),
+    }),
+});
+
+export const StoreNotificationPurgeByBookingV1Schema = z.object({
+    v: z.literal(1),
+    bookingId: z.string().uuid(),
     trace: z.object({
         correlationId: z.string().uuid(),
         producedAt: z.string().datetime(),

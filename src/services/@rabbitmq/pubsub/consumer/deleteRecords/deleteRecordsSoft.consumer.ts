@@ -116,6 +116,7 @@ async function deleteSOFTRecordsConsumer(): Promise<void> {
                 "companies",
                 "workspaces",
                 "userWorkspaces-byWorkspace",
+                "userWorkspaces-byWorkspace-hard",
                 "userWorkspaces-byUser",
                 "clientWorkspaces",
                 "clients",
@@ -463,27 +464,69 @@ async function deleteSOFTRecordsConsumer(): Promise<void> {
                     // } else {
 
                 } else if (table === "userWorkspaces-byWorkspace") {
-                    // TODO: Haty que pensar que hacer con los eventos de este usuario
-
-                    // HARD DELETE:
+                    // SOFT: desvincular usuario de eventos futuros (no eliminarlos)
                     // idRelation = userId
                     // ids = workspaces
                     const batches = chunkArray(ids, CHUNK);
                     for (const batch of batches) {
-
-
                         await prisma.$transaction(async (tx) => {
-                            // Por ahora solo eventos que no sean APPOINTMENT serán borrados
+                            await tx.event.updateMany({
+                                where: {
+                                    idUserPlatformFk: idRelation,
+                                    deletedDate: null,
+                                    groupEvents: {
+                                        is: {
+                                            idWorkspaceFk: { in: batch },
+                                            deletedDate: null,
+                                            // Solo eventos que aún no han terminado
+                                            endDate: { gt: now },
+                                        },
+                                    },
+                                },
+                                data: { idUserPlatformFk: null },
+                            });
+
+                            await tx.workerBusinessHour.deleteMany({
+                                where: {
+                                    idUserFk: idRelation,
+                                    idWorkspaceFk: { in: batch },
+                                },
+                            });
+                            await tx.temporaryBusinessHour.deleteMany({
+                                where: {
+                                    idUserFk: idRelation,
+                                    idWorkspaceFk: { in: batch },
+                                },
+                            });
+                            await tx.workerAbsence.deleteMany({
+                                where: {
+                                    idUserFk: idRelation,
+                                    idWorkspaceFk: { in: batch },
+                                },
+                            });
+                        });
+                    }
+
+                } else if (table === "userWorkspaces-byWorkspace-hard") {
+                    // HARD: eliminar eventos futuros del usuario (los pasados se conservan)
+                    // idRelation = userId
+                    // ids = workspaces
+                    const batches = chunkArray(ids, CHUNK);
+                    for (const batch of batches) {
+                        await prisma.$transaction(async (tx) => {
                             await tx.event.deleteMany({
                                 where: {
                                     idUserPlatformFk: idRelation,
-                                    groupEvents: { is: { idWorkspaceFk: { in: batch }, deletedDate: null } },
-                                    eventPurposeType: { not: "APPOINTMENT" },
                                     deletedDate: null,
-                                }
+                                    groupEvents: {
+                                        is: {
+                                            idWorkspaceFk: { in: batch },
+                                            deletedDate: null,
+                                            endDate: { gt: now },
+                                        },
+                                    },
+                                },
                             });
-
-
 
                             await tx.workerBusinessHour.deleteMany({
                                 where: {

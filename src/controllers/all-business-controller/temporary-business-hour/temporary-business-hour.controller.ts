@@ -2,9 +2,6 @@ import { Response } from "../../../models/messages/response";
 import { Pagination } from "../../../models/pagination";
 import { TemporaryBusinessHourService } from "../../../services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service";
 import { TemporaryHoursStrategy } from "../../../services/@redis/cache/strategies/temporaryHours/temporaryHours.strategy";
-
-
-
 import { JWTService } from "../../../services/jwt/jwt.service";
 
 
@@ -25,11 +22,12 @@ export class TemporaryBusinessHourController {
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workBusinessHourService.addTemporaryBusinessHour(body);
+            const { idEventFk, ...payload } = body;
+            const result = await this.workBusinessHourService.addTemporaryBusinessHour(payload);
 
             const temporaryHoursStrategy = new TemporaryHoursStrategy();
-            if (body?.idWorkspaceFk && body?.idUserFk) {
-                await temporaryHoursStrategy.deleteTemporaryHours(result.idWorkspaceFk, result.idUserFk);
+            if (result?.temporary?.idWorkspaceFk && result?.temporary?.idUserFk) {
+                await temporaryHoursStrategy.deleteTemporaryHours(result.temporary.idWorkspaceFk, result.temporary.idUserFk);
             }
 
 
@@ -113,10 +111,14 @@ export class TemporaryBusinessHourController {
             const token = req.token;
             await this.jwtService.verify(token);
 
+            if (!body?.id && req.params?.id) {
+                body.id = req.params.id;
+            }
+
             const result = await this.workBusinessHourService.updateTemporaryBusinessHour(body);
             const temporaryHoursStrategy = new TemporaryHoursStrategy();
-            if (body?.idWorkspaceFk && body?.idUserFk) {
-                await temporaryHoursStrategy.deleteTemporaryHours(result.idWorkspaceFk, result.idUserFk);
+            if (result?.temporary?.idWorkspaceFk && result?.temporary?.idUserFk) {
+                await temporaryHoursStrategy.deleteTemporaryHours(result.temporary.idWorkspaceFk, result.temporary.idUserFk);
             }
 
 

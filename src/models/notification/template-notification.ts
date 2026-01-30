@@ -1,5 +1,13 @@
 /** Tipos alineados con el backend */
-export type NotificationChannel = "email" | "whatsapp" | "sms" | "push" | "websocket" | "webhook";
+export type NotificationChannel = 
+"email" 
+| "whatsapp" 
+| "sms" 
+| "push" 
+| "websocket" 
+| "webhook"
+| "platform_internal"; 
+
 export type OwnerScope = "PLATFORM" | "COMPANY" | "WORKSPACE" | "BOOKING_PAGE" | "USER";
 
 export type LanguageType =

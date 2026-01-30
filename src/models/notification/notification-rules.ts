@@ -40,12 +40,12 @@ export const EVENT_RULES: Record<NotificationEvent, EventRule> = {
     "booking.request.created": {
         actors: ["clientSide"],
         allowedChannelsByTargetLine: {
-            organizerSide: ["email", "push"],
+            organizerSide: ["email", "push", "platform_internal"],
         },
         caps: {
             perActorTargetChannelMax: {
                 clientSide: {
-                    organizerLimits: { email: [0], push: [0] },
+                    organizerLimits: { email: [0], push: [0], platform_internal: [0] },
                 },
             },
         },
@@ -101,13 +101,13 @@ export const EVENT_RULES: Record<NotificationEvent, EventRule> = {
         actors: ["clientSide", "organizerSide"],
         allowedChannelsByTargetLine: {
             clientSide: ["email", "push"],
-            organizerSide: ["email", "push"],
+            organizerSide: ["email", "push", "platform_internal"],
         },
         caps: {
             perActorTargetChannelMax: {
                 clientSide: {
                     clientLimits: { email: [0], push: [0] },
-                    organizerLimits: { email: [0], push: [0] },
+                    organizerLimits: { email: [0], push: [0], platform_internal: [0] },
                 },
                 organizerSide: {
                     clientLimits: { email: [0], push: [0] },
@@ -128,13 +128,13 @@ export const EVENT_RULES: Record<NotificationEvent, EventRule> = {
         actors: ["clientSide", "organizerSide"],
         allowedChannelsByTargetLine: {
             clientSide: ["email", "push"],
-            organizerSide: ["email", "push"],
+            organizerSide: ["email", "push", "platform_internal"],
         },
         caps: {
             perActorTargetChannelMax: {
                 clientSide: {
                     clientLimits: { email: [0], push: [0] },
-                    organizerLimits: { email: [0], push: [0] },
+                    organizerLimits: { email: [0], push: [0], platform_internal: [0] },
                 },
                 organizerSide: {
                     clientLimits: { email: [0], push: [0] },
@@ -154,13 +154,13 @@ export const EVENT_RULES: Record<NotificationEvent, EventRule> = {
         actors: ["clientSide", "organizerSide"],
         allowedChannelsByTargetLine: {
             clientSide: ["email", "push"],
-            organizerSide: ["email", "push"],
+            organizerSide: ["email", "push", "platform_internal"],
         },
         caps: {
             perActorTargetChannelMax: {
                 clientSide: {
                     clientLimits: { email: [0], push: [0] },
-                    organizerLimits: { email: [0], push: [0] },
+                    organizerLimits: { email: [0], push: [0], platform_internal: [0] },
                 },
                 organizerSide: {
                     clientLimits: { email: [0], push: [0] },
@@ -180,13 +180,13 @@ export const EVENT_RULES: Record<NotificationEvent, EventRule> = {
         actors: ["clientSide", "organizerSide"],
         allowedChannelsByTargetLine: {
             clientSide: ["email", "push"],
-            organizerSide: ["email", "push"],
+            organizerSide: ["email", "push", "platform_internal"],
         },
         caps: {
             perActorTargetChannelMax: {
                 clientSide: {
                     clientLimits: { email: [0], push: [0] },
-                    organizerLimits: { email: [0], push: [0] },
+                    organizerLimits: { email: [0], push: [0], platform_internal: [0]},
                 },
                 organizerSide: {
                     clientLimits: { email: [0], push: [0] },
@@ -205,13 +205,13 @@ export const EVENT_RULES: Record<NotificationEvent, EventRule> = {
     "booking.reminder.beforeStart": {
         allowedChannelsByTargetLine: {
             clientSide: ["email", "push", "whatsapp"],
-            organizerSide: ["email", "push"],
+            organizerSide: ["email", "push", "platform_internal"],
         },
         caps: {
             perActorTargetChannelMax: {
                 system: {
                     clientLimits: { email: [360, 1440], push: [60, 120, 1440], whatsapp: [1440] },
-                    organizerLimits: { email: [360, 1440], push: [60, 120, 1440] },
+                    organizerLimits: { email: [360, 1440], push: [60, 120, 1440], platform_internal: [1440] },
                 },
             },
         },

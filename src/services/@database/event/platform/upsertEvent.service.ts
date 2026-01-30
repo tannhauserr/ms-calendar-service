@@ -14,7 +14,7 @@ import { Event, EventSourceType, EventStatusType, GroupEvents } from "@prisma/cl
  * 
  * @param payload - Datos del booking desde el sidebar
  */
-export const upsertEvent = async (payload: SidebarBackendBookingPayload): Promise<Event[]> => {
+export const upsertEvent = async (payload: SidebarBackendBookingPayload): Promise<any[]> => {
     // Solo procesamos eventos de tipo "event" por ahora
     if (payload.type !== "event") {
         throw new Error(`Tipo ${payload.type} no soportado en esta versión`);
@@ -85,7 +85,9 @@ export const upsertEvent = async (payload: SidebarBackendBookingPayload): Promis
         // 6. Asegurar que el rango del booking sea el real (primer/último evento)
         await _syncGroupStartEndDates(group.id, tx);
 
-        return upsertedEvents;
+        const withGroupFieldsEvents = upsertedEvents.map(e => _withGroupFields(e));
+
+        return withGroupFieldsEvents;
     }, {
         maxWait: 10_000,
         timeout: 30_000,
@@ -185,6 +187,7 @@ async function _ensureGroupEvents(
         description: payload.description ?? null,
         eventSourceType: EventSourceType.PLATFORM,
         isEditableByClient: true,
+        hasNotifications: payload.sendNotification
     };
 
     if (normalizedStatus) {
@@ -316,8 +319,8 @@ async function _upsertServices(
     tx: any,
     effectiveGroupId: string,
     groupStartDate: Date
-): Promise<Event[]> {
-    const results: Event[] = [];
+): Promise<any[]> {
+    const results: any[] = [];
 
     // Fecha de inicio del primer servicio:
     // - preferimos payload.startDate si viene
@@ -333,7 +336,7 @@ async function _upsertServices(
         const eventData = _buildEventData(payload, service, currentStartDate, currentEndDate);
 
         // Si tiene idEvent, es una actualización; si no, es creación
-        let event: Event;
+        let event: any;
         if (service?.idEvent && !service?.idEvent.startsWith('new-')) {
             event = await tx.event.update({
                 where: { id: service.idEvent },
@@ -341,6 +344,7 @@ async function _upsertServices(
                     ...eventData,
                     idGroup: effectiveGroupId,
                 },
+                include: { groupEvents: true },
             });
         } else {
             event = await tx.event.create({
@@ -348,6 +352,7 @@ async function _upsertServices(
                     ...eventData,
                     idGroup: effectiveGroupId,
                 },
+                include: { groupEvents: true },
             });
         }
 
@@ -380,6 +385,7 @@ function _buildEventData(
         servicePriceSnapshot: service.price,
         serviceDiscountSnapshot: service.discount,
         serviceDurationSnapshot: service.duration,
+        idCompanyFk: payload.idCompany,
     };
 }
 
@@ -413,4 +419,25 @@ async function _upsertParticipants(
             })),
         });
     }
+}
+
+/**
+ * Agrega el registro event los campos del grupo para facilitar consultas
+ * @param event 
+ * @returns 
+ */
+function _withGroupFields<T extends { groupEvents?: any }>(event: T | null) {
+    if (!event || !event.groupEvents) return event;
+    const group = event.groupEvents;
+    return {
+        ...event,
+        idWorkspaceFk: group.idWorkspaceFk,
+        idCompanyFk: group.idCompanyFk,
+        commentClient: group.commentClient,
+        isCommentRead: group.isCommentRead,
+        eventSourceType: group.eventSourceType,
+        eventStatusType: group.eventStatusType,
+        timeZone: group.timeZone,
+        eventParticipant: group.eventParticipant ?? (event as any).eventParticipant ?? [],
+    };
 }
