@@ -49,6 +49,7 @@ type AddFromWebInput = {
         email?: string;
         phone?: string;
     };
+    eventSourceType: 'PLATFORM' | 'WEB' | 'WIDGET' | 'GOOGLE' | 'BOT';
 
 };
 
@@ -974,9 +975,10 @@ export class ClientEventService {
             isCommentRead?: boolean;
             customer: { id: string; idClientWorkspace: string };
             autoConfirmClientBookings: boolean;
+            eventSourceType: 'PLATFORM' | 'WEB' | 'WIDGET' | 'GOOGLE' | 'BOT';
         }
     ): Promise<{ event: Event; action: "created" | "joined" | "already-in" }> {
-        const { idWorkspace, idCompany, seg, svc, timeZoneWorkspace, note, isCommentRead, customer, autoConfirmClientBookings } = params;
+        const { idWorkspace, idCompany, seg, svc, timeZoneWorkspace, note, isCommentRead, customer, autoConfirmClientBookings, eventSourceType: EventSourceTypeFromParams } = params;
         const startDate = seg.start.toDate();
         const endDate = seg.end.toDate();
         const capacity = Math.max(1, svc.maxParticipants ?? 1);
@@ -985,6 +987,7 @@ export class ClientEventService {
         // Determinar el estado según configuración
         const eventStatus = autoConfirmClientBookings ? 'ACCEPTED' : 'PENDING';
         const participantStatus = autoConfirmClientBookings ? 'ACCEPTED' : 'PENDING';
+        const eventSourceType = EventSourceTypeFromParams ?? 'WEB';
 
 
         const CANCELLED_STATES = [
@@ -1096,7 +1099,7 @@ export class ClientEventService {
                     title: (svc.name ?? "Cita").slice(0, 100),
                     // startDate/endDate se sincronizan al final con los eventos reales del grupo
                     startDate,
-                    endDate,       
+                    endDate,
                     description: null,
                     idCompanyFk: idCompany,
                     idWorkspaceFk: idWorkspace,
@@ -1111,6 +1114,7 @@ export class ClientEventService {
                             eventStatusType: participantStatus,
                         },
                     },
+                    eventSourceType,
                 },
             });
         } else {
@@ -1225,6 +1229,7 @@ export class ClientEventService {
             const {
                 idCompany, idWorkspace, timeZoneClient, startLocalISO,
                 attendees, excludeEventId, note, isCommentRead, customer,
+                eventSourceType = 'WEB',
             } = input;
             const {
                 timeZoneWorkspace, businessHoursService, workerHoursService,
@@ -1596,6 +1601,7 @@ export class ClientEventService {
                             idClientWorkspace: customer.idClientWorkspace!,
                         },
                         autoConfirmClientBookings,
+                        eventSourceType,
                         // ya no usamos shouldCreateGroupId aquí
                     });
 
@@ -1722,6 +1728,7 @@ export class ClientEventService {
                 isCommentRead,
                 customer,
                 deletedEventIds = [], // NUEVO
+                eventSourceType = 'WEB'
             } = input;
 
             const {
@@ -1955,6 +1962,7 @@ export class ClientEventService {
                         idClientWorkspace: customer.idClientWorkspace!,
                     },
                     note,
+                    eventSourceType
                 });
             }
 
@@ -2682,6 +2690,7 @@ export class ClientEventService {
         cache: any;
         customer: { id: string; idClientWorkspace: string };
         note?: string | null;
+        eventSourceType: 'PLATFORM' | 'WEB' | 'WIDGET' | 'GOOGLE' | 'BOT';
     }) {
         const {
             idCompany,
@@ -2700,6 +2709,7 @@ export class ClientEventService {
             cache,
             customer,
             note,
+            eventSourceType
         } = params;
 
         // Sólo 1 servicio (ya garantizado en isPureClassEdit)
@@ -2838,6 +2848,7 @@ export class ClientEventService {
                         note: note ?? null,
                         customer,
                         autoConfirmClientBookings: true, // Mantener estado ACCEPTED al mover participación
+                        eventSourceType
                     });
 
                 // 🟢 Asegurar idGroup "booking code" también en la nueva sesión

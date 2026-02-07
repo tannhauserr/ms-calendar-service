@@ -379,6 +379,7 @@ model Event {
   idCompanyFk          String
   title                String   @db.VarChar(120)
   description          String?  @db.VarChar(512)
+  descriptionHash      String?
   encryptionKeyVersion Int      @default(1)
   startDate            DateTime @db.Timestamptz(6)
   endDate              DateTime @db.Timestamptz(6)
@@ -422,6 +423,8 @@ model Event {
   @@index([idUserPlatformFk, startDate, endDate], map: "idx_events_user_start_end")
   @@index([idUserPlatformFk, endDate], map: "idx_events_user_end")
   @@index([startDate], type: Brin, map: "idx_events_start_brin")
+  @@index([idCompanyFk])
+  @@index([idCompanyFk, descriptionHash])
   @@index([idServiceFk])
   @@index([idUserPlatformFk])
   @@map("events")
@@ -435,8 +438,11 @@ model GroupEvents {
   idCompanyFk        String
   idWorkspaceFk      String
   commentClient      String?         @db.VarChar(512)
+  commentClientHash  String?
   isCommentRead      Boolean         @default(false)
   description        String?         @db.VarChar(512)
+  descriptionHash    String?
+  encryptionKeyVersion Int           @default(1)
   eventSourceType    EventSourceType @default(PLATFORM)
   isEditableByClient Boolean         @default(true)
   numberUpdates      Int?            @default(0)
@@ -453,6 +459,9 @@ model GroupEvents {
   events Event[] @relation("groupEvents")
 
   @@index([idWorkspaceFk])
+  @@index([idCompanyFk])
+  @@index([idCompanyFk, commentClientHash])
+  @@index([idCompanyFk, descriptionHash])
   @@map("groupEvents")
 }
 
@@ -742,6 +751,8 @@ enum EventSourceType {
   PLATFORM
   BOT
   GOOGLE
+  WEB
+  WIDGET
 }
 
 enum ServiceType {

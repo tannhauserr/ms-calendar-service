@@ -1477,10 +1477,27 @@ export class BookingGuardsMiddleware {
        5) LÍMITES POR USUARIO (día / concurrentes)
        Código de error base: 150 (BookingGuards.EnforceUserLimits)
     ────────────────────────────────────── */
-    static EnforceUserLimits() {
+    static EnforceUserLimits(enableDebug = false) {
         return async (req: Request, res: Response, next: NextFunction) => {
             try {
                 const ctx = req.booking!.ctx;
+
+                const debugLog = (...args: unknown[]) => {
+                    if (!enableDebug) {
+                        return;
+                    }
+                    console.log(...args);
+                };
+
+                const debugJson = (label: string, value: unknown) => {
+                    if (!enableDebug) {
+                        return;
+                    }
+                    console.log(label, JSON.stringify(value, null, 2));
+                };
+
+                debugLog(`${CONSOLE_COLOR.BgCyan}[EnforceUserLimits] ===== INICIO DEBUG =====${CONSOLE_COLOR.Reset}`);
+                debugJson(`${CONSOLE_COLOR.FgCyan}[EnforceUserLimits] Config completa:${CONSOLE_COLOR.Reset}`, ctx.config);
 
                 // ---- Limits con defaults seguros
                 const lim = (ctx.config?.limits ?? {}) as {
@@ -1488,6 +1505,8 @@ export class BookingGuardsMiddleware {
                     perUserConcurrent?: number;
                     maxServicesPerBooking?: number;
                 };
+
+                debugLog(`${CONSOLE_COLOR.FgYellow}[EnforceUserLimits] Limits raw:${CONSOLE_COLOR.Reset}`, lim);
 
                 // Si no lo configuras, aplicamos estas políticas por defecto:
                 const maxServicesPerBooking = Number.isFinite(
@@ -1506,12 +1525,19 @@ export class BookingGuardsMiddleware {
                     ? Number(lim.perUserConcurrent)
                     : 0; // 0 = sin límite concurrente por defecto
 
+                debugLog(`${CONSOLE_COLOR.FgGreen}[EnforceUserLimits] Límites calculados:${CONSOLE_COLOR.Reset}`);
+                debugLog(`  - maxServicesPerBooking: ${maxServicesPerBooking}`);
+                debugLog(`  - perUserPerDay: ${perUserPerDay}`);
+                debugLog(`  - perUserConcurrent: ${perUserConcurrent}`);
+
                 // ---- (A) Chequeo: servicios por reserva
                 const servicesCount = ctx.input.attendees.length;
+                debugLog(`${CONSOLE_COLOR.FgMagenta}[EnforceUserLimits] Servicios en esta reserva: ${servicesCount}${CONSOLE_COLOR.Reset}`);
                 if (
                     maxServicesPerBooking > 0 &&
                     servicesCount > maxServicesPerBooking
                 ) {
+                    debugLog(`${CONSOLE_COLOR.BgRed}[EnforceUserLimits] ❌ Excede límite de servicios por reserva${CONSOLE_COLOR.Reset}`);
                     return this.endBadRequest(
                         res,
                         400,
@@ -1520,14 +1546,24 @@ export class BookingGuardsMiddleware {
                     );
                 }
 
+                debugLog(`${CONSOLE_COLOR.FgGreen}[EnforceUserLimits] ✅ Validación de servicios por reserva pasada${CONSOLE_COLOR.Reset}`);
+
                 // Si no tenemos cliente o ventana temporal calculada, continúa
                 if (!ctx.customer || !ctx.when) {
+                    debugLog(`${CONSOLE_COLOR.FgYellow}[EnforceUserLimits] ⚠️ No hay customer o when, saltando límites temporales${CONSOLE_COLOR.Reset}`);
+                    debugLog(`  - ctx.customer: ${!!ctx.customer}`);
+                    debugLog(`  - ctx.when: ${!!ctx.when}`);
                     return next();
                 }
 
                 const { idClientWorkspace } = ctx.customer;
                 const slotStartWS = ctx.when.startWS.clone();
                 const slotEndWS = ctx.when.endWS!.clone();
+
+                debugLog(`${CONSOLE_COLOR.FgBlue}[EnforceUserLimits] Cliente y tiempo:${CONSOLE_COLOR.Reset}`);
+                debugLog(`  - idClientWorkspace: ${idClientWorkspace}`);
+                debugLog(`  - slotStartWS: ${slotStartWS.format()}`);
+                debugLog(`  - slotEndWS: ${slotEndWS.format()}`);
 
                 // Rangos día en WS → a UTC para query
                 const dayStartUTC = slotStartWS
@@ -1544,6 +1580,12 @@ export class BookingGuardsMiddleware {
                 const slotStartUTC = slotStartWS.clone().utc().toDate();
                 const slotEndUTC = slotEndWS.clone().utc().toDate();
 
+                debugLog(`${CONSOLE_COLOR.FgBlue}[EnforceUserLimits] Rangos UTC para queries:${CONSOLE_COLOR.Reset}`);
+                debugLog(`  - dayStartUTC: ${dayStartUTC.toISOString()}`);
+                debugLog(`  - dayEndUTC: ${dayEndUTC.toISOString()}`);
+                debugLog(`  - slotStartUTC: ${slotStartUTC.toISOString()}`);
+                debugLog(`  - slotEndUTC: ${slotEndUTC.toISOString()}`);
+
                 const reasons: string[] = [];
 
                 // En el nuevo modelo, EventParticipant cuelga del grupo (idGroup -> GroupEvents)
@@ -1554,8 +1596,12 @@ export class BookingGuardsMiddleware {
                     "CANCELLED_BY_CLIENT_REMOVED",
                 ] as const;
 
+                debugLog(`${CONSOLE_COLOR.FgMagenta}[EnforceUserLimits] Estados cancelados considerados:${CONSOLE_COLOR.Reset}`, CANCELLED_GROUP_STATUSES);
+
                 // ---- (B) Chequeo: límite de reservas por día (NO por servicios)
                 if (perUserPerDay > 0) {
+                    debugLog(`${CONSOLE_COLOR.BgBlue}[EnforceUserLimits] === Verificando límite de reservas por día ===${CONSOLE_COLOR.Reset}`);
+                    debugLog(`  - Límite configurado: ${perUserPerDay} reservas/día`);
                     const dayParticipations =
                         await prisma.eventParticipant.findMany({
                             where: {
@@ -1572,27 +1618,56 @@ export class BookingGuardsMiddleware {
                             },
                             select: {
                                 idGroup: true,
+                                groupEvents: {
+                                    select: {
+                                        id: true,
+                                        eventStatusType: true,
+                                        startDate: true,
+                                        endDate: true,
+                                    },
+                                },
                             },
                         });
 
+                    debugLog(`${CONSOLE_COLOR.FgYellow}[EnforceUserLimits] Participaciones encontradas en el día: ${dayParticipations.length}${CONSOLE_COLOR.Reset}`);
+                    
                     const bookingIdsDay = new Set<string>();
 
                     for (const p of dayParticipations) {
-                        if (!p?.idGroup) continue;
+                        debugLog(`  - Procesando participación, idGroup: ${p.idGroup}`);
+                        if (!p?.idGroup) {
+                            debugLog(`    ⚠️ Sin idGroup, saltando`);
+                            continue;
+                        }
+                        if (p.groupEvents) {
+                            debugLog(`    - Estado: ${p.groupEvents.eventStatusType}`);
+                            debugLog(`    - Start: ${p.groupEvents.startDate}`);
+                            debugLog(`    - End: ${p.groupEvents.endDate}`);
+                        }
                         bookingIdsDay.add(`g:${p.idGroup}`);
+                        debugLog(`    ✓ Grupo activo, añadido: g:${p.idGroup}`);
                     }
 
                     const countDayBookings = bookingIdsDay.size;
+                    debugLog(`${CONSOLE_COLOR.FgGreen}[EnforceUserLimits] Total de reservas activas en el día: ${countDayBookings}${CONSOLE_COLOR.Reset}`);
+                    debugLog(`${CONSOLE_COLOR.FgGreen}[EnforceUserLimits] IDs de grupos: ${Array.from(bookingIdsDay).join(", ")}${CONSOLE_COLOR.Reset}`);
 
                     if (countDayBookings >= perUserPerDay) {
-                        reasons.push(
-                            `Has alcanzado el máximo de reservas por día (${countDayBookings}/${perUserPerDay}).`
-                        );
+                        const msg = `Has alcanzado el máximo de reservas por día (${countDayBookings}/${perUserPerDay}).`;
+                        debugLog(`${CONSOLE_COLOR.BgRed}[EnforceUserLimits] ❌ ${msg}${CONSOLE_COLOR.Reset}`);
+                        reasons.push(msg);
+                    } else {
+                        debugLog(`${CONSOLE_COLOR.FgGreen}[EnforceUserLimits] ✅ Límite por día OK (${countDayBookings}/${perUserPerDay})${CONSOLE_COLOR.Reset}`);
                     }
+                } else {
+                    debugLog(`${CONSOLE_COLOR.FgYellow}[EnforceUserLimits] ⚠️ perUserPerDay = 0, sin límite de reservas por día${CONSOLE_COLOR.Reset}`);
                 }
 
                 // ---- (C) Chequeo: límite de reservas simultáneas (NO por servicios)
                 if (perUserConcurrent > 0) {
+                    debugLog(`${CONSOLE_COLOR.BgBlue}[EnforceUserLimits] === Verificando límite de reservas simultáneas ===${CONSOLE_COLOR.Reset}`);
+                    debugLog(`  - Límite configurado: ${perUserConcurrent} reservas simultáneas`);
+                    
                     const overlappingParticipations =
                         await prisma.eventParticipant.findMany({
                             where: {
@@ -1609,26 +1684,53 @@ export class BookingGuardsMiddleware {
                             },
                             select: {
                                 idGroup: true,
+                                groupEvents: {
+                                    select: {
+                                        id: true,
+                                        eventStatusType: true,
+                                        startDate: true,
+                                        endDate: true,
+                                    },
+                                },
                             },
                         });
 
+                    debugLog(`${CONSOLE_COLOR.FgYellow}[EnforceUserLimits] Participaciones solapadas encontradas: ${overlappingParticipations.length}${CONSOLE_COLOR.Reset}`);
+                    
                     const bookingIdsOverlap = new Set<string>();
 
                     for (const p of overlappingParticipations) {
-                        if (!p?.idGroup) continue;
+                        debugLog(`  - Procesando participación solapada, idGroup: ${p.idGroup}`);
+                        if (!p?.idGroup) {
+                            debugLog(`    ⚠️ Sin idGroup, saltando`);
+                            continue;
+                        }
+                        if (p.groupEvents) {
+                            debugLog(`    - Estado: ${p.groupEvents.eventStatusType}`);
+                            debugLog(`    - Start: ${p.groupEvents.startDate}`);
+                            debugLog(`    - End: ${p.groupEvents.endDate}`);
+                        }
                         bookingIdsOverlap.add(`g:${p.idGroup}`);
+                        debugLog(`    ✓ Grupo activo solapado, añadido: g:${p.idGroup}`);
                     }
 
                     const overlappingBookings = bookingIdsOverlap.size;
+                    debugLog(`${CONSOLE_COLOR.FgGreen}[EnforceUserLimits] Total de reservas activas solapadas: ${overlappingBookings}${CONSOLE_COLOR.Reset}`);
+                    debugLog(`${CONSOLE_COLOR.FgGreen}[EnforceUserLimits] IDs de grupos solapados: ${Array.from(bookingIdsOverlap).join(", ")}${CONSOLE_COLOR.Reset}`);
 
                     if (overlappingBookings >= perUserConcurrent) {
-                        reasons.push(
-                            `Límite de reservas simultáneas alcanzado (${overlappingBookings}/${perUserConcurrent}).`
-                        );
+                        const msg = `Límite de reservas simultáneas alcanzado (${overlappingBookings}/${perUserConcurrent}).`;
+                        debugLog(`${CONSOLE_COLOR.BgRed}[EnforceUserLimits] ❌ ${msg}${CONSOLE_COLOR.Reset}`);
+                        reasons.push(msg);
+                    } else {
+                        debugLog(`${CONSOLE_COLOR.FgGreen}[EnforceUserLimits] ✅ Límite simultáneo OK (${overlappingBookings}/${perUserConcurrent})${CONSOLE_COLOR.Reset}`);
                     }
+                } else {
+                    debugLog(`${CONSOLE_COLOR.FgYellow}[EnforceUserLimits] ⚠️ perUserConcurrent = 0, sin límite de reservas simultáneas${CONSOLE_COLOR.Reset}`);
                 }
 
                 if (reasons.length > 0) {
+                    debugLog(`${CONSOLE_COLOR.BgRed}[EnforceUserLimits] ❌ RECHAZANDO RESERVA - Razones:${CONSOLE_COLOR.Reset}`, reasons);
                     // 409: reglas del negocio infringidas
                     return this.endBadRequest(
                         res,
@@ -1637,6 +1739,9 @@ export class BookingGuardsMiddleware {
                         "BookingGuards.EnforceUserLimits" // code: 150
                     );
                 }
+
+                debugLog(`${CONSOLE_COLOR.BgGreen}[EnforceUserLimits] ✅ TODOS LOS LÍMITES PASADOS - Permitiendo reserva${CONSOLE_COLOR.Reset}`);
+                debugLog(`${CONSOLE_COLOR.BgCyan}[EnforceUserLimits] ===== FIN DEBUG =====${CONSOLE_COLOR.Reset}`);
 
                 return next();
             } catch (error: any) {

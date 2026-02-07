@@ -27,6 +27,76 @@ export class EventController {
         this.eventService = new EventV2Service();
     }
 
+    private async buildEventsExtraData(
+        idList: string[],
+        idCompany: string,
+        idWorkspace: string
+    ) {
+        const events = await this.eventService.getEventExtraData(idList);
+
+        const allClientIds = events
+            .flatMap(ev => ev.eventParticipant.map(p => p.idClientWorkspaceFk))
+            .filter((id): id is string => !!id);
+
+        const uniqueClientIds = [...new Set(allClientIds)];
+
+        const allServiceIds = events
+            .map(ev => ev.idServiceFk)
+            .filter((id): id is string => !!id);
+
+        const uniqueServiceIds = [...new Set(allServiceIds)];
+
+        const clientWorkspaceList = uniqueClientIds.length > 0
+            ? await getClientWorkspacesByIds(uniqueClientIds, idCompany)
+            : [];
+
+        const services = uniqueServiceIds.length > 0
+            ? await getServiceByIds(uniqueServiceIds, idWorkspace)
+            : [];
+
+        const clientMap = new Map(
+            clientWorkspaceList.map(c => [c.id, c]),
+        );
+
+        const serviceMap = new Map(
+            services.map(s => [s.id, s]),
+        );
+
+        return events.map(ev => ({
+            ...ev,
+            eventParticipant: ev.eventParticipant.map(p => {
+                const fullClient = clientMap.get(p.idClientWorkspaceFk) ?? null;
+
+                const client = fullClient
+                    ? {
+                        name: fullClient.name,
+                        surname1: fullClient.surname1,
+                        surname2: fullClient.surname2,
+                        image: fullClient.image,
+                    }
+                    : null;
+
+                return {
+                    ...p,
+                    client,
+                };
+            }),
+            service: ev.idServiceFk ? (() => {
+                const fullService = serviceMap.get(ev.idServiceFk);
+                return fullService ? {
+                    id: fullService.id,
+                    name: fullService.name,
+                    duration: fullService.duration,
+                    price: fullService.price,
+                    discount: fullService.discount,
+                    serviceType: fullService.serviceType,
+                    color: fullService.color,
+                    image: fullService.image,
+                } : null;
+            })() : null,
+        }));
+    }
+
     /**
   * Upsert de eventos desde la plataforma (sidebar del calendario).
   * 
@@ -238,100 +308,11 @@ export class EventController {
             const token = req.token;
             await this.jwtService.verify(token);
 
-            // 2) Datos “crudos” (participantes, recurrenceRule, servicio)
-            const events = await this.eventService.getEventExtraData(idList);
-
-            // 2.1) Enriquecer con datos adicionales (si es necesario)
-
-            // console.log("Eventos encontrados:", events);
-
-            // 3) Colecciona todos los ids de cliente
-            const allClientIds = events
-                .flatMap(ev => ev.eventParticipant.map(p => p.idClientWorkspaceFk))
-                .filter((id): id is string => !!id);                  // quita null/undefined
-
-            const uniqueClientIds = [...new Set(allClientIds)];
-
-            // 3.1) Colecciona todos los ids de servicios
-            const allServiceIds = events
-                .map(ev => ev.idServiceFk)
-                .filter((id): id is string => !!id);                  // quita null/undefined
-
-            const uniqueServiceIds = [...new Set(allServiceIds)];
-
-            // 4) Pide a MS-clientes vía RPC -> devuelve nombre, avatar, etc.
-            const clientWorkspaceList = await getClientWorkspacesByIds(uniqueClientIds, idCompany);
-
-            // console.log("mira que es clientWorkspace", clientWorkspaceList)
-
-
-            // const clientWorkspaceRPCList =
-            //     await RPC.getClientstByIdClientAndIdWorkspace(
-            //         idWorkspace,
-            //         uniqueClientIds,
-            //     );
-
-            // 4.1) Obtiene servicios usando getServiceByIds
-            const services = uniqueServiceIds.length > 0
-                ? await getServiceByIds(uniqueServiceIds, idWorkspace)
-                : [];
-
-            // 5) Mapea a Map para lookup O(1)
-            const clientMap = new Map(
-                clientWorkspaceList.map(c => [c.id, c]),
+            const eventsWithClientsAndServices = await this.buildEventsExtraData(
+                idList,
+                idCompany,
+                idWorkspace
             );
-
-            // 5.1) Mapea servicios para lookup O(1)
-            const serviceMap = new Map(
-                services.map(s => [s.id, s]),
-            );
-
-            // 6) Enriquecemos cada evento
-            // const eventsWithClients = events.map(ev => ({
-            //     ...ev,
-            //     eventParticipant: ev.eventParticipant.map(p => ({
-            //         ...p,
-            //         client: clientMap.get(p.idClientFk) ?? null,        // ⬅️ aquí queda el objeto cliente
-            //     })),
-            // }));
-
-            // 6) Enriquecemos cada evento, pero recortando el objeto client
-            const eventsWithClientsAndServices = events.map(ev => ({
-                ...ev,
-                eventParticipant: ev.eventParticipant.map(p => {
-                    // busca el objeto completo
-                    const fullClient = clientMap.get(p.idClientWorkspaceFk) ?? null;
-
-                    // recórtalo al shape que quieres
-                    const client = fullClient
-                        ? {
-                            name: fullClient.name,
-                            surname1: fullClient.surname1,
-                            surname2: fullClient.surname2,
-                            image: fullClient.image,
-                        }
-                        : null;
-
-                    return {
-                        ...p,
-                        client,
-                    };
-                }),
-                // Agregar el servicio si existe, pero solo con los campos necesarios
-                service: ev.idServiceFk ? (() => {
-                    const fullService = serviceMap.get(ev.idServiceFk);
-                    return fullService ? {
-                        id: fullService.id,
-                        name: fullService.name,
-                        duration: fullService.duration,
-                        price: fullService.price,
-                        discount: fullService.discount,
-                        serviceType: fullService.serviceType,
-                        color: fullService.color,
-                        image: fullService.image,
-                    } : null;
-                })() : null,
-            }));
 
 
             // 7) Respuesta
@@ -364,6 +345,34 @@ export class EventController {
 
             const isValidCancelledStatus = true;
             const result = await this.eventService.getEvents(pagination, isValidCancelledStatus);
+
+            if (result?.rows?.length) {
+                const idList = result.rows.map((row: any) => row.id).filter(Boolean);
+
+                const fallbackCompany = result.rows[0]?.groupEvents?.idCompanyFk ?? result.rows[0]?.idCompanyFk;
+                const fallbackWorkspace = result.rows[0]?.groupEvents?.idWorkspaceFk ?? result.rows[0]?.idWorkspaceFk;
+
+                const idCompany = req.body?.idCompany ?? fallbackCompany;
+                const idWorkspace = req.body?.idWorkspace ?? fallbackWorkspace;
+
+                if (idCompany && idWorkspace) {
+                    const extras = await this.buildEventsExtraData(idList, idCompany, idWorkspace);
+                    const extrasMap = new Map(extras.map(ev => [ev.id, ev]));
+
+                    result.rows = result.rows.map((row: any) => {
+                        const extra = extrasMap.get(row.id);
+                        return extra
+                            ? {
+                                ...row,
+                                ...extra,
+                                eventParticipant: extra.eventParticipant,
+                                service: extra.service,
+                            }
+                            : row;
+                    });
+                }
+            }
+
             res.status(200).json({ message: "Eventos encontrados", ok: true, item: result });
         } catch (err: any) {
             res.status(500).json({ message: err.message });
