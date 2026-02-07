@@ -34,7 +34,7 @@ export type DayStatus =
 export type DayFlag = {
     date: string;
     hasSlots: boolean;
-    capacity: number; // 0..1 (ratio de capacidad libre)
+    capacity: number; // cantidad de huecos disponibles
     status: DayAvailabilityStatus;
 };
 

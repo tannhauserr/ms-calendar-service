@@ -58,16 +58,20 @@ export const eventExtension = Prisma.defineExtension((prisma) => {
 
           // Lógica para la edición facturable
           if (requiereCobro) {
+            const eventAny = event as any;
+            const argsDataAny = ((args.data ?? {}) as Record<string, any>);
+
             // Verificar que no se exceda el número máximo de ediciones facturables
-            if ((event.numberUpdates || 0) >= MAX_ALLOWED_CHARGED_EDITS) {
+            if ((eventAny.numberUpdates || 0) >= MAX_ALLOWED_CHARGED_EDITS) {
               throw new Error("Número máximo de actualizaciones facturables alcanzado.");
             }
             console.log(`Edición facturable detectada para el evento ${eventId}.`);
 
             // Incrementar el contador de actualizaciones facturables
-            args.data.numberUpdates = {
+            argsDataAny.numberUpdates = {
               increment: 1,
             };
+            args.data = argsDataAny as any;
           } else if (dentroDeVentanaDeEdicion) {
             console.log(`Edición permitida sin cargo para el evento ${eventId}.`);
           } else {

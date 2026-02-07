@@ -897,685 +897,6 @@ export class EventV2Service {
     }
 
 
-
-    // public async publicGetAvailableDays(
-    //     input: GetTimeSlotsInputSpecial,
-    //     deps: AvailabilityDepsSpecial
-    // ): Promise<{ days: DayFlag[] }> {
-    //     try {
-    //         const {
-    //             idCompany,
-    //             idWorkspace,
-    //             timeZoneWorkspace,
-    //             range,
-    //             attendees,
-    //             excludeEventId,
-    //             idClient,
-    //         } = input;
-
-    //         if (!range) throw new Error("Faltan fechas de rango (start/end)");
-    //         const { start, end } = range;
-
-    //         const {
-    //             bookingConfig,
-    //             businessHoursService,
-    //             workerHoursService,
-    //             temporaryHoursService,
-    //             cache,
-    //         } = deps;
-
-    //         const BOOKING_PAGE_CONFIG: OnlineBookingConfig = bookingConfig;
-
-    //         // bookingWindow
-    //         const { maxAdvanceDays = 60, minLeadTimeMin = 60 } =
-    //             BOOKING_PAGE_CONFIG.bookingWindow ?? {};
-
-    //         const alignMode: "clock" | "service" =
-    //             BOOKING_PAGE_CONFIG.slot?.alignMode === "service" ? "service" : "clock";
-
-    //         const intervalMinutes =
-    //             alignMode === "service"
-    //                 ? attendees?.reduce((acc, a) => acc + (a.durationMin ?? 0), 0)
-    //                 : BOOKING_PAGE_CONFIG?.slot?.stepMinutes;
-
-    //         const professionalAllowed =
-    //             BOOKING_PAGE_CONFIG?.resources?.ids
-    //                 ?.map((r) => (Array.isArray(r) ? r?.[0] : r)) ?? [];
-
-    //         // Validaciones rápidas
-    //         if (!idCompany || !idWorkspace) throw new Error("Faltan idCompany / idWorkspace");
-    //         if (!timeZoneWorkspace) throw new Error("Falta timeZoneWorkspace");
-    //         if (!start || !end) throw new Error("Faltan fechas de rango (start/end)");
-
-    //         const dayList = enumerateDays(start, end);
-
-    //         if (!Array.isArray(attendees) || attendees.length === 0) {
-    //             return {
-    //                 days: dayList.map((d) => ({
-    //                     date: d,
-    //                     hasSlots: false,
-    //                     capacity: 0,
-    //                     status: "dayoff",
-    //                 })),
-    //             };
-    //         }
-    //         if (professionalAllowed.length === 0) {
-    //             return {
-    //                 days: dayList.map((d) => ({
-    //                     date: d,
-    //                     hasSlots: false,
-    //                     capacity: 0,
-    //                     status: "dayoff",
-    //                 })),
-    //             };
-    //         }
-    //         if (
-    //             typeof intervalMinutes !== "number" ||
-    //             !Number.isFinite(intervalMinutes) ||
-    //             intervalMinutes <= 0
-    //         ) {
-    //             throw new Error("El intervalo de minutos debe ser un número positivo");
-    //         }
-
-    //         const STEP_MINUTES = intervalMinutes;
-    //         const TZ_WS = timeZoneWorkspace;
-
-    //         // Helpers comunes ------------------------------------
-
-    //         type Range = { start: moment.Moment; end: moment.Moment };
-
-    //         const mergeRanges = (rs: Range[]): Range[] => {
-    //             if (!rs.length) return [];
-    //             const arr = rs
-    //                 .map((r) => ({
-    //                     start: r.start.clone().seconds(0).milliseconds(0),
-    //                     end: r.end.clone().seconds(0).milliseconds(0),
-    //                 }))
-    //                 .filter((r) => r.start.isBefore(r.end))
-    //                 .sort((a, b) => a.start.valueOf() - b.start.valueOf());
-    //             const out: Range[] = [];
-    //             let cur = arr[0];
-    //             for (let i = 1; i < arr.length; i++) {
-    //                 const r = arr[i];
-    //                 if (!r.start.isAfter(cur.end)) {
-    //                     if (r.end.isAfter(cur.end)) cur.end = r.end;
-    //                 } else {
-    //                     out.push(cur);
-    //                     cur = r;
-    //                 }
-    //             }
-    //             out.push(cur);
-    //             return out;
-    //         };
-
-    //         const subtractBusy = (shift: Range, busy: Range[]): Range[] => {
-    //             if (!busy.length) return [shift];
-    //             const mergedBusy = mergeRanges(busy);
-    //             const free: Range[] = [];
-    //             let cursor = shift.start.clone();
-
-    //             for (const b of mergedBusy) {
-    //                 if (b.end.isSameOrBefore(cursor) || b.start.isSameOrAfter(shift.end)) continue;
-    //                 if (b.start.isAfter(cursor)) {
-    //                     free.push({ start: cursor.clone(), end: moment.min(b.start, shift.end) });
-    //                 }
-    //                 cursor = moment.max(cursor, b.end);
-    //                 if (!cursor.isBefore(shift.end)) break;
-    //             }
-    //             if (cursor.isBefore(shift.end)) free.push({ start: cursor, end: shift.end.clone() });
-    //             return free;
-    //         };
-
-    //         const countStartsInWindows = (
-    //             wins: Range[],
-    //             durMin: number,
-    //             stepMin: number,
-    //             clampFrom?: moment.Moment
-    //         ): number => {
-    //             if (!wins.length) return 0;
-    //             let total = 0;
-
-    //             for (const w of wins) {
-    //                 const start = clampFrom ? moment.max(w.start, clampFrom) : w.start;
-    //                 const latestStart = w.end.clone().subtract(durMin, "minutes");
-    //                 if (start.isAfter(latestStart)) continue;
-
-    //                 const origin = w.start;
-    //                 const diffMin = Math.max(
-    //                     0,
-    //                     Math.floor((start.valueOf() - origin.valueOf()) / 60000)
-    //                 );
-    //                 const rem = diffMin % stepMin;
-    //                 const first = start
-    //                     .clone()
-    //                     .add(rem === 0 ? 0 : stepMin - rem, "minutes")
-    //                     .seconds(0)
-    //                     .milliseconds(0);
-
-    //                 if (first.isAfter(latestStart)) continue;
-
-    //                 const spanMin = Math.floor(
-    //                     (latestStart.valueOf() - first.valueOf()) / 60000
-    //                 );
-    //                 const cnt = 1 + Math.floor(spanMin / stepMin);
-    //                 if (cnt > 0) total += cnt;
-    //             }
-
-    //             return total;
-    //         };
-
-    //         // 1) Snapshot de servicios (1 llamada al ms)
-    //         const wantedServiceIds = Array.from(
-    //             new Set(attendees.map((a) => a.serviceId).filter(Boolean))
-    //         ) as string[];
-
-    //         const services =
-    //             wantedServiceIds.length > 0
-    //                 ? await getServiceByIds(wantedServiceIds, idWorkspace)
-    //                 : [];
-
-    //         const svcById: Record<string, { durationMin: number; maxParticipants: number }> = {};
-    //         for (const s of services) {
-    //             const duration = typeof s.duration === "number" ? s.duration : 60;
-    //             const maxP = Math.max(1, typeof s.maxParticipants === "number" ? s.maxParticipants : 1);
-    //             svcById[s.id] = {
-    //                 durationMin: duration,
-    //                 maxParticipants: maxP,
-    //             };
-    //         }
-
-    //         const getSvcDur = (svcId: string, fallback: number) =>
-    //             svcById[svcId]?.durationMin ?? fallback;
-
-    //         const getSvcCap = (svcId: string) =>
-    //             Math.max(1, svcById[svcId]?.maxParticipants ?? 1);
-
-    //         // 2) Usuarios elegibles por servicio (paralelo)
-    //         const userIdsByServiceEntries = await Promise.all(
-    //             attendees.map(async (a) => {
-    //                 const svcId = a.serviceId;
-    //                 if (!svcId) return [null, []] as const;
-
-    //                 if (a.staffId) {
-    //                     const elig = professionalAllowed.includes(a.staffId)
-    //                         ? [a.staffId]
-    //                         : [];
-    //                     return [svcId, elig] as const;
-    //                 }
-
-    //                 const users = await getUsersWhoCanPerformService_SPECIAL(
-    //                     idWorkspace,
-    //                     svcId,
-    //                     a.categoryId ?? null,
-    //                     cache
-    //                 );
-    //                 const elig = users.filter((id) => professionalAllowed.includes(id));
-    //                 return [svcId, elig] as const;
-    //             })
-    //         );
-
-    //         const userIdsByService = new Map<string, string[]>();
-    //         for (const [svcId, ids] of userIdsByServiceEntries) {
-    //             if (svcId) userIdsByService.set(svcId, ids as any);
-    //         }
-
-    //         const allUserIds = Array.from(
-    //             new Set(Array.from(userIdsByService.values()).flat())
-    //         );
-
-    //         if (!allUserIds.length) {
-    //             return {
-    //                 days: dayList.map((d) => ({
-    //                     date: d,
-    //                     hasSlots: false,
-    //                     capacity: 0,
-    //                     status: "dayoff",
-    //                 })),
-    //             };
-    //         }
-
-    //         // 3) Datos comunes del rango
-    //         const [businessHours, workerHoursMap, temporaryHoursMap, events] =
-    //             await Promise.all([
-    //                 businessHoursService.getBusinessHoursFromRedis(idCompany, idWorkspace),
-    //                 workerHoursService.getWorkerHoursFromRedis(allUserIds, idWorkspace),
-    //                 temporaryHoursService.getTemporaryHoursFromRedis(allUserIds, idWorkspace, {
-    //                     start,
-    //                     end,
-    //                 }),
-    //                 getEventsOverlappingRange_SPECIAL(idWorkspace, allUserIds, start, end, excludeEventId),
-    //             ]);
-
-    //         // Eventos por usuario
-    //         const eventsByUser = new Map<
-    //             string,
-    //             Array<{ startDate: Date; endDate: Date }>
-    //         >();
-    //         for (const ev of events) {
-    //             const uid = ev.idUserPlatformFk;
-    //             if (!uid) continue;
-    //             let arr = eventsByUser.get(uid);
-    //             if (!arr) {
-    //                 arr = [];
-    //                 eventsByUser.set(uid, arr);
-    //             }
-    //             arr.push({ startDate: ev.startDate, endDate: ev.endDate });
-    //         }
-
-    //         // 4) bookingWindow absoluto (TZ negocio)
-    //         const nowWS = moment.tz(TZ_WS);
-    //         const earliestAllowed = nowWS
-    //             .clone()
-    //             .add(minLeadTimeMin, "minutes")
-    //             .seconds(0)
-    //             .milliseconds(0);
-    //         const latestAllowedEnd = nowWS
-    //             .clone()
-    //             .add(maxAdvanceDays, "days")
-    //             .endOf("day");
-
-    //         const withinBookingWindowDay = (dayStart: moment.Moment, dayEnd: moment.Moment) => {
-    //             if (dayEnd.isBefore(earliestAllowed)) return false;
-    //             if (dayStart.isAfter(latestAllowedEnd)) return false;
-    //             return true;
-    //         };
-
-    //         // 5) Info single-service / group
-    //         const isSingleService = attendees.length === 1;
-    //         const singleAttendee = isSingleService ? attendees[0] : null;
-    //         const singleSvcId = singleAttendee?.serviceId || null;
-    //         const singleSvcCap = singleSvcId ? getSvcCap(singleSvcId) : 1;
-    //         const singleIsGroup = isSingleService && singleSvcCap > 1;
-    //         const singleElig =
-    //             singleSvcId && userIdsByService.has(singleSvcId)
-    //                 ? userIdsByService.get(singleSvcId) || []
-    //                 : [];
-
-    //         // 6) Eventos grupales (solo si 1 servicio grupal) para TODO el rango
-    //         let groupEvents: Array<{
-    //             idUserPlatformFk: string | null;
-    //             startDate: Date;
-    //             endDate: Date;
-    //             participantsCount: number;
-    //             participantClientIds: string[];
-    //             participantClientWorkspaceIds: string[];
-    //         }> = [];
-
-    //         if (singleIsGroup && singleSvcId && singleElig.length) {
-    //             const startRange = moment
-    //                 .tz(`${start}T00:00:00`, "YYYY-MM-DDTHH:mm:ss", TZ_WS)
-    //                 .toDate();
-    //             const endRange = moment
-    //                 .tz(`${end}T23:59:59`, "YYYY-MM-DDTHH:mm:ss", TZ_WS)
-    //                 .toDate();
-
-    //             const rows = await prisma.event.findMany({
-    //                 where: {
-    //                     idWorkspaceFk: idWorkspace,
-    //                     idServiceFk: singleSvcId,
-    //                     idUserPlatformFk: { in: singleElig },
-    //                     deletedDate: null,
-    //                     startDate: { lt: endRange },
-    //                     endDate: { gt: startRange },
-    //                     ...(excludeEventId ? { id: { not: excludeEventId } } : {}),
-    //                 },
-    //                 select: {
-    //                     idUserPlatformFk: true,
-    //                     startDate: true,
-    //                     endDate: true,
-    //                     eventParticipant: {
-    //                         where: { deletedDate: null },
-    //                         select: {
-    //                             idClientFk: true,
-    //                             idClientWorkspaceFk: true,
-    //                         },
-    //                     },
-    //                 },
-    //             });
-
-    //             groupEvents = rows.map((r) => ({
-    //                 idUserPlatformFk: r.idUserPlatformFk,
-    //                 startDate: r.startDate,
-    //                 endDate: r.endDate,
-    //                 participantsCount: r.eventParticipant.length,
-    //                 participantClientIds: r.eventParticipant
-    //                     .map((p) => p.idClientFk)
-    //                     .filter(Boolean) as string[],
-    //                 participantClientWorkspaceIds: r.eventParticipant
-    //                     .map((p) => p.idClientWorkspaceFk)
-    //                     .filter(Boolean) as string[],
-    //             }));
-    //         }
-
-    //         const groupEventsByDay = new Map<string, typeof groupEvents>();
-    //         if (groupEvents.length) {
-    //             for (const ev of groupEvents) {
-    //                 const dayISO = moment(ev.startDate).tz(TZ_WS).format("YYYY-MM-DD");
-    //                 const arr = groupEventsByDay.get(dayISO) || [];
-    //                 arr.push(ev);
-    //                 groupEventsByDay.set(dayISO, arr);
-    //             }
-    //         }
-
-    //         // Helper: turnos por user/día (business/worker/tmp)
-    //         const getShiftsFor = (uid: string, dateISO: string): Range[] => {
-    //             const dayStart = moment.tz(
-    //                 `${dateISO}T00:00:00`,
-    //                 "YYYY-MM-DDTHH:mm:ss",
-    //                 TZ_WS
-    //             );
-    //             const weekDay = dayStart.format("dddd").toUpperCase() as Weekday;
-
-    //             const workerDay = (workerHoursMap as any)?.[uid]?.[weekDay];
-    //             const tempDay = (temporaryHoursMap as any)?.[uid]?.[dateISO];
-
-    //             let slots: string[][] = [];
-    //             if (tempDay === null) slots = [];
-    //             else if (Array.isArray(tempDay) && tempDay.length) slots = tempDay;
-    //             else if (workerDay === null) slots = [];
-    //             else if (Array.isArray(workerDay) && workerDay.length) slots = workerDay;
-    //             else {
-    //                 const biz = (businessHours as any)?.[weekDay];
-    //                 slots = biz === null ? [] : Array.isArray(biz) ? biz : [];
-    //             }
-
-    //             return (slots || []).map(([s, e]) => ({
-    //                 start: moment.tz(
-    //                     `${dateISO}T${s}`,
-    //                     "YYYY-MM-DDTHH:mm:ss",
-    //                     TZ_WS
-    //                 ),
-    //                 end: moment.tz(
-    //                     `${dateISO}T${e}`,
-    //                     "YYYY-MM-DDTHH:mm:ss",
-    //                     TZ_WS
-    //                 ),
-    //             }));
-    //         };
-
-    //         // LOOP DÍAS ------------------------------------------
-
-    //         const days: DayFlag[] = [];
-
-    //         for (const dateISO of dayList) {
-    //             const dayStart = moment.tz(
-    //                 `${dateISO}T00:00:00`,
-    //                 "YYYY-MM-DDTHH:mm:ss",
-    //                 TZ_WS
-    //             );
-    //             const dayEnd = dayStart.clone().endOf("day");
-
-    //             // Fuera de ventana → dayoff
-    //             if (!withinBookingWindowDay(dayStart, dayEnd)) {
-    //                 days.push({
-    //                     date: dateISO,
-    //                     hasSlots: false,
-    //                     capacity: 0,
-    //                     status: "dayoff",
-    //                 });
-    //                 continue;
-    //             }
-
-    //             const isLeadDay = dayStart.isSame(earliestAllowed, "day");
-    //             const clampFrom = isLeadDay ? earliestAllowed : undefined;
-
-    //             const dayStartUTC = dayStart.clone().utc().toDate();
-    //             const dayEndUTC = dayEnd.clone().utc().toDate();
-
-    //             // ---- SINGLE SERVICE
-    //             if (isSingleService && singleSvcId && singleAttendee) {
-    //                 const a = singleAttendee;
-    //                 const elig = singleElig;
-    //                 const durMin = getSvcDur(singleSvcId, a.durationMin);
-    //                 const svcCap = singleSvcCap;
-    //                 const isGroup = singleIsGroup;
-
-    //                 if (!elig.length || durMin <= 0) {
-    //                     days.push({
-    //                         date: dateISO,
-    //                         hasSlots: false,
-    //                         capacity: 0,
-    //                         status: "dayoff",
-    //                     });
-    //                     continue;
-    //                 }
-
-    //                 // Denominador teórico
-    //                 let denomStarts = 0;
-    //                 for (const uid of elig) {
-    //                     const shifts = mergeRanges(getShiftsFor(uid, dateISO));
-    //                     denomStarts += countStartsInWindows(
-    //                         shifts,
-    //                         durMin,
-    //                         STEP_MINUTES,
-    //                         clampFrom
-    //                     );
-    //                 }
-    //                 const denomSeats = denomStarts * (isGroup ? svcCap : 1);
-
-    //                 if (denomSeats <= 0) {
-    //                     days.push({
-    //                         date: dateISO,
-    //                         hasSlots: false,
-    //                         capacity: 0,
-    //                         status: "dayoff",
-    //                     });
-    //                     continue;
-    //                 }
-
-    //                 // Numerador:
-    //                 // (A) plazas libres en clases existentes (solo grupal)
-    //                 let seatsFromExisting = 0;
-    //                 if (isGroup && groupEventsByDay.has(dateISO)) {
-    //                     for (const ev of groupEventsByDay.get(dateISO)!) {
-    //                         const startLocal = moment(ev.startDate)
-    //                             .tz(TZ_WS)
-    //                             .seconds(0)
-    //                             .milliseconds(0);
-    //                         if (clampFrom && startLocal.isBefore(clampFrom)) continue;
-
-    //                         const booked = ev.participantsCount;
-    //                         const left = Math.max(0, svcCap - booked);
-    //                         if (left <= 0) continue;
-
-    //                         const alreadyIn =
-    //                             !!idClient &&
-    //                             (ev.participantClientIds.includes(idClient) ||
-    //                                 ev.participantClientWorkspaceIds.includes(idClient));
-
-    //                         if (!alreadyIn) seatsFromExisting += left;
-    //                     }
-    //                 }
-
-    //                 // (B) plazas potenciales en slots nuevos
-    //                 let startsCreatable = 0;
-    //                 for (const uid of elig) {
-    //                     const shifts = getShiftsFor(uid, dateISO);
-    //                     if (!shifts.length) continue;
-
-    //                     const busy: Range[] = (eventsByUser.get(uid) || [])
-    //                         .filter(
-    //                             (ev) =>
-    //                                 ev.startDate < dayEndUTC &&
-    //                                 ev.endDate > dayStartUTC
-    //                         )
-    //                         .map((ev) => ({
-    //                             start: moment(ev.startDate).tz(TZ_WS),
-    //                             end: moment(ev.endDate).tz(TZ_WS),
-    //                         }));
-
-    //                     const freeWins: Range[] = [];
-    //                     for (const sh of shifts) {
-    //                         const shStart = clampFrom
-    //                             ? moment.max(sh.start, clampFrom)
-    //                             : sh.start;
-    //                         if (!shStart.isBefore(sh.end)) continue;
-    //                         freeWins.push(...subtractBusy({ start: shStart, end: sh.end }, busy));
-    //                     }
-
-    //                     const mergedFree = mergeRanges(freeWins);
-    //                     startsCreatable += countStartsInWindows(
-    //                         mergedFree,
-    //                         durMin,
-    //                         STEP_MINUTES,
-    //                         clampFrom
-    //                     );
-    //                 }
-
-    //                 const seatsFromNew = startsCreatable * (isGroup ? svcCap : 1);
-    //                 const numeratorSeats = seatsFromExisting + seatsFromNew;
-
-    //                 const ratioRaw = numeratorSeats / denomSeats;
-    //                 const capacity = Math.max(
-    //                     0,
-    //                     Math.min(1, Number(ratioRaw.toFixed(2)))
-    //                 );
-    //                 const hasSlots = capacity > 0;
-    //                 const status: DayAvailabilityStatus =
-    //                     !hasSlots ? "completed" : "available";
-
-    //                 days.push({
-    //                     date: dateISO,
-    //                     hasSlots,
-    //                     capacity,
-    //                     status,
-    //                 });
-    //                 continue;
-    //             }
-
-    //             // ---- MULTI-SERVICIO (sin grupales)
-    //             let anyGroup = false;
-    //             for (const a of attendees) {
-    //                 if (getSvcCap(a.serviceId) > 1) {
-    //                     anyGroup = true;
-    //                     break;
-    //                 }
-    //             }
-    //             if (anyGroup) {
-    //                 // sin soporte combos grupales aquí
-    //                 days.push({
-    //                     date: dateISO,
-    //                     hasSlots: false,
-    //                     capacity: 0,
-    //                     status: "dayoff",
-    //                 });
-    //                 continue;
-    //             }
-
-    //             const ratios: number[] = [];
-    //             const denoms: number[] = [];
-
-    //             for (const a of attendees) {
-    //                 const svcId = a.serviceId;
-    //                 const elig = userIdsByService.get(svcId) ?? [];
-    //                 const durMin = getSvcDur(svcId, a.durationMin);
-
-    //                 if (!elig.length || durMin <= 0) {
-    //                     ratios.push(0);
-    //                     denoms.push(0);
-    //                     continue;
-    //                 }
-
-    //                 // Denominador servicio
-    //                 let denomStarts = 0;
-    //                 for (const uid of elig) {
-    //                     const shifts = mergeRanges(getShiftsFor(uid, dateISO));
-    //                     denomStarts += countStartsInWindows(
-    //                         shifts,
-    //                         durMin,
-    //                         STEP_MINUTES,
-    //                         clampFrom
-    //                     );
-    //                 }
-
-    //                 if (denomStarts <= 0) {
-    //                     ratios.push(0);
-    //                     denoms.push(0);
-    //                     continue;
-    //                 }
-
-    //                 // Numerador (libre tras busy)
-    //                 let freeStarts = 0;
-    //                 for (const uid of elig) {
-    //                     const shifts = getShiftsFor(uid, dateISO);
-    //                     if (!shifts.length) continue;
-
-    //                     const busy: Range[] = (eventsByUser.get(uid) || [])
-    //                         .filter(
-    //                             (ev) =>
-    //                                 ev.startDate < dayEndUTC &&
-    //                                 ev.endDate > dayStartUTC
-    //                         )
-    //                         .map((ev) => ({
-    //                             start: moment(ev.startDate).tz(TZ_WS),
-    //                             end: moment(ev.endDate).tz(TZ_WS),
-    //                         }));
-
-    //                     const freeWins: Range[] = [];
-    //                     for (const sh of shifts) {
-    //                         const shStart = clampFrom
-    //                             ? moment.max(sh.start, clampFrom)
-    //                             : sh.start;
-    //                         if (!shStart.isBefore(sh.end)) continue;
-    //                         freeWins.push(...subtractBusy({ start: shStart, end: sh.end }, busy));
-    //                     }
-
-    //                     const mergedFree = mergeRanges(freeWins);
-    //                     freeStarts += countStartsInWindows(
-    //                         mergedFree,
-    //                         durMin,
-    //                         STEP_MINUTES,
-    //                         clampFrom
-    //                     );
-    //                 }
-
-    //                 const ratio = Math.max(0, Math.min(1, freeStarts / denomStarts));
-    //                 ratios.push(ratio);
-    //                 denoms.push(denomStarts);
-    //             }
-
-    //             const allDenomZero = denoms.every((d) => d <= 0);
-    //             if (allDenomZero) {
-    //                 days.push({
-    //                     date: dateISO,
-    //                     hasSlots: false,
-    //                     capacity: 0,
-    //                     status: "dayoff",
-    //                 });
-    //                 continue;
-    //             }
-
-    //             const minRatio =
-    //                 ratios.length > 0
-    //                     ? Math.max(
-    //                         0,
-    //                         Math.min(
-    //                             1,
-    //                             Number(Math.min(...ratios).toFixed(2))
-    //                         )
-    //                     )
-    //                     : 0;
-
-    //             const hasSlots = minRatio > 0;
-    //             const status: DayAvailabilityStatus =
-    //                 !hasSlots ? "completed" : "available";
-
-    //             days.push({
-    //                 date: dateISO,
-    //                 hasSlots,
-    //                 capacity: minRatio,
-    //                 status,
-    //             });
-    //         }
-
-    //         console.log("Available days:", days);
-
-    //         return { days };
-    //     } catch (error: any) {
-    //         throw new CustomError("EventService.publicGetAvailableDays", error);
-    //     }
-    // }
-
     // ────────────────────────────────────────────────────────────
     // publicGetAvailableDays (MISMA lógica + logs exhaustivos tipo trace)
     // ────────────────────────────────────────────────────────────
@@ -2240,42 +1561,6 @@ export class EventV2Service {
                         continue;
                     }
 
-                    // Denominador teórico
-                    let denomStarts = 0;
-                    const denomDetail: any[] = [];
-
-                    for (const uid of elig) {
-                        const shiftsMerged = mergeRanges(getShiftsFor(uid, dateISO));
-                        const cnt = countStartsInWindows(shiftsMerged, durMin, STEP_MINUTES, clampFrom);
-                        denomStarts += cnt;
-
-                        if (DEEP) {
-                            denomDetail.push({
-                                userId: uid,
-                                shiftsCount: shiftsMerged.length,
-                                shifts: shiftsMerged.map((s) => `${fmt(s.start, TZ_WS)}-${fmt(s.end, TZ_WS)}`).join(" | "),
-                                denomStarts: cnt,
-                            });
-                        }
-                    }
-
-                    const denomSeats = denomStarts * (isGroup ? svcCap : 1);
-
-                    if (DEEP) {
-                        group(`DAY ${dateISO} SINGLE: DENOM`, () => {
-                            dbg("durMin:", durMin, "STEP_MINUTES:", STEP_MINUTES);
-                            table("denom por user", denomDetail);
-                            dbg("denomStarts(total):", denomStarts);
-                            dbg("denomSeats:", denomSeats);
-                        });
-                    }
-
-                    if (denomSeats <= 0) {
-                        if (DEBUG) dbg(`DAY ${dateISO} SINGLE: denomSeats<=0 → dayoff`, { denomStarts, denomSeats });
-                        days.push({ date: dateISO, hasSlots: false, capacity: 0, status: "dayoff" });
-                        continue;
-                    }
-
                     // Numerador:
                     // (A) plazas libres en clases existentes (solo grupal)
                     let seatsFromExisting = 0;
@@ -2297,16 +1582,30 @@ export class EventV2Service {
                         }
                     }
 
-                    // (B) plazas potenciales en slots nuevos
+                    // (B) plazas potenciales en slots nuevos + potencial teórico (sin busy)
+                    let potentialStarts = 0;
                     let startsCreatable = 0;
                     const numerDetail: any[] = [];
 
                     for (const uid of elig) {
                         const shifts = getShiftsFor(uid, dateISO);
                         if (!shifts.length) {
-                            if (DEEP) numerDetail.push({ userId: uid, shiftsCount: 0, freeCount: 0, startsCreatable: 0 });
+                            if (DEEP) {
+                                numerDetail.push({
+                                    userId: uid,
+                                    shiftsCount: 0,
+                                    potentialStarts: 0,
+                                    busyCount: 0,
+                                    freeWindows: "",
+                                    startsCreatable: 0,
+                                });
+                            }
                             continue;
                         }
+
+                        const shiftsMerged = mergeRanges(shifts);
+                        const potentialCnt = countStartsInWindows(shiftsMerged, durMin, STEP_MINUTES, clampFrom);
+                        potentialStarts += potentialCnt;
 
                         const busy: Range[] = (eventsByUser.get(uid) || [])
                             .filter((ev) => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
@@ -2323,36 +1622,37 @@ export class EventV2Service {
                         }
 
                         const mergedFree = mergeRanges(freeWins);
-                        const cnt = countStartsInWindows(mergedFree, durMin, STEP_MINUTES, clampFrom);
-                        startsCreatable += cnt;
+                        const freeCnt = countStartsInWindows(mergedFree, durMin, STEP_MINUTES, clampFrom);
+                        startsCreatable += freeCnt;
 
                         if (DEEP) {
                             numerDetail.push({
                                 userId: uid,
-                                shiftsCount: shifts.length,
+                                shiftsCount: shiftsMerged.length,
+                                shifts: shiftsMerged.map((s) => `${fmt(s.start, TZ_WS)}-${fmt(s.end, TZ_WS)}`).join(" | "),
+                                potentialStarts: potentialCnt,
                                 busyCount: busy.length,
                                 freeWindows: mergedFree.map((w) => `${fmt(w.start, TZ_WS)}-${fmt(w.end, TZ_WS)}`).join(" | "),
-                                startsCreatable: cnt,
+                                startsCreatable: freeCnt,
                             });
                         }
                     }
 
                     const seatsFromNew = startsCreatable * (isGroup ? svcCap : 1);
-                    const numeratorSeats = seatsFromExisting + seatsFromNew;
-
-                    const ratioRaw = numeratorSeats / denomSeats;
-                    const capacity = Math.max(0, Math.min(1, Number(ratioRaw.toFixed(2))));
+                    const capacity = seatsFromExisting + seatsFromNew;
                     const hasSlots = capacity > 0;
-                    const status: DayAvailabilityStatus = !hasSlots ? "completed" : "available";
+                    const status: DayAvailabilityStatus = hasSlots
+                        ? "available"
+                        : potentialStarts > 0
+                            ? "completed"
+                            : "dayoff";
 
                     if (DEEP || (DEBUG && !hasSlots)) {
                         group(`DAY ${dateISO} SINGLE: RESULT`, () => {
                             dbg("seatsFromExisting:", seatsFromExisting);
+                            dbg("potentialStarts:", potentialStarts);
                             dbg("startsCreatable:", startsCreatable);
                             dbg("seatsFromNew:", seatsFromNew);
-                            dbg("numeratorSeats:", numeratorSeats);
-                            dbg("denomSeats:", denomSeats);
-                            dbg("ratioRaw:", ratioRaw);
                             dbg("capacity:", capacity);
                             dbg("status:", status);
                             if (DEEP) table("numerador por user", numerDetail);
@@ -2377,8 +1677,8 @@ export class EventV2Service {
                     continue;
                 }
 
-                const ratios: number[] = [];
-                const denoms: number[] = [];
+                const freeStartsByService: number[] = [];
+                const potentialStartsByService: number[] = [];
 
                 const multiDetail: any[] = [];
 
@@ -2388,31 +1688,21 @@ export class EventV2Service {
                     const durMin = getSvcDur(svcId, a.durationMin);
 
                     if (!elig.length || durMin <= 0) {
-                        ratios.push(0);
-                        denoms.push(0);
-                        if (DEEP) multiDetail.push({ serviceId: svcId, eligLen: elig.length, durMin, denomStarts: 0, freeStarts: 0, ratio: 0 });
+                        freeStartsByService.push(0);
+                        potentialStartsByService.push(0);
+                        if (DEEP) multiDetail.push({ serviceId: svcId, eligLen: elig.length, durMin, potentialStarts: 0, freeStarts: 0 });
                         continue;
                     }
 
-                    // Denominador servicio
-                    let denomStarts = 0;
-                    for (const uid of elig) {
-                        const shiftsMerged = mergeRanges(getShiftsFor(uid, dateISO));
-                        denomStarts += countStartsInWindows(shiftsMerged, durMin, STEP_MINUTES, clampFrom);
-                    }
-
-                    if (denomStarts <= 0) {
-                        ratios.push(0);
-                        denoms.push(0);
-                        if (DEEP) multiDetail.push({ serviceId: svcId, eligLen: elig.length, durMin, denomStarts: 0, freeStarts: 0, ratio: 0 });
-                        continue;
-                    }
-
-                    // Numerador (libre tras busy)
+                    // Potencial (sin busy) + Numerador (libre tras busy)
+                    let potentialStarts = 0;
                     let freeStarts = 0;
                     for (const uid of elig) {
                         const shifts = getShiftsFor(uid, dateISO);
                         if (!shifts.length) continue;
+
+                        const shiftsMerged = mergeRanges(shifts);
+                        potentialStarts += countStartsInWindows(shiftsMerged, durMin, STEP_MINUTES, clampFrom);
 
                         const busy: Range[] = (eventsByUser.get(uid) || [])
                             .filter((ev) => ev.startDate < dayEndUTC && ev.endDate > dayStartUTC)
@@ -2432,39 +1722,34 @@ export class EventV2Service {
                         freeStarts += countStartsInWindows(mergedFree, durMin, STEP_MINUTES, clampFrom);
                     }
 
-                    const ratio = Math.max(0, Math.min(1, freeStarts / denomStarts));
-                    ratios.push(ratio);
-                    denoms.push(denomStarts);
+                    freeStartsByService.push(freeStarts);
+                    potentialStartsByService.push(potentialStarts);
 
-                    if (DEEP) multiDetail.push({ serviceId: svcId, eligLen: elig.length, durMin, denomStarts, freeStarts, ratio });
+                    if (DEEP) multiDetail.push({ serviceId: svcId, eligLen: elig.length, durMin, potentialStarts, freeStarts });
                 }
 
-                const allDenomZero = denoms.every((d) => d <= 0);
-                if (allDenomZero) {
-                    if (DEBUG) dbg(`DAY ${dateISO} MULTI: allDenomZero → dayoff`);
+                const allPotentialZero = potentialStartsByService.every((d) => d <= 0);
+                if (allPotentialZero) {
+                    if (DEBUG) dbg(`DAY ${dateISO} MULTI: allPotentialZero → dayoff`);
                     days.push({ date: dateISO, hasSlots: false, capacity: 0, status: "dayoff" });
                     continue;
                 }
 
-                const minRatio =
-                    ratios.length > 0
-                        ? Math.max(0, Math.min(1, Number(Math.min(...ratios).toFixed(2))))
-                        : 0;
-
-                const hasSlots = minRatio > 0;
+                const capacity = freeStartsByService.length > 0 ? Math.min(...freeStartsByService) : 0;
+                const hasSlots = capacity > 0;
                 const status: DayAvailabilityStatus = !hasSlots ? "completed" : "available";
 
                 if (DEEP || (DEBUG && !hasSlots)) {
                     group(`DAY ${dateISO} MULTI: RESULT`, () => {
-                        dbg("ratios:", ratios.map((r) => Number(r.toFixed(4))));
-                        dbg("denoms:", denoms);
-                        dbg("minRatio:", minRatio);
+                        dbg("potentialStarts:", potentialStartsByService);
+                        dbg("freeStarts:", freeStartsByService);
+                        dbg("capacity:", capacity);
                         dbg("status:", status);
                         if (DEEP) table("multi detail", multiDetail);
                     });
                 }
 
-                days.push({ date: dateISO, hasSlots, capacity: minRatio, status });
+                days.push({ date: dateISO, hasSlots, capacity, status });
             }
 
             group("Available days (summary)", () => {

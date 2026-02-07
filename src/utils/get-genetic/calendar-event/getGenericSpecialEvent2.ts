@@ -1,6 +1,7 @@
 import { EventStatusType, Prisma } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import { FilterJson, Pagination } from "../../../models/pagination";
+import { hashClientValue } from "../../client-data-crypto/clientDataCrypto";
 
 
 type IncludeRelations = {
@@ -45,7 +46,7 @@ async function getGenericSpecialEvent2(
 
     let where: any = {};
     if (filters && Object.keys(filters).length > 0) {
-        where = mergeDeep(where, processFilters(filters as any));
+        where = mergeDeep(where, processFilters(filters as any, modelName));
     }
 
     if (filtersJson && Object.keys(filtersJson).length > 0) {
@@ -184,6 +185,78 @@ async function getGenericSpecialEvent2(
     }
 }
 
+const resolveEncryptedHashField = (
+    modelName: ModelType,
+    field: string,
+    relation?: string,
+    relation2?: string
+): string | undefined => {
+    if (modelName !== "event") return undefined;
+
+    if (!relation && field === "description") return "descriptionHash";
+    if (relation === "groupEvents" && field === "commentClient") return "commentClientHash";
+    if (relation === "groupEvents" && field === "description") return "descriptionHash";
+    if (relation2 === "groupEvents" && field === "commentClient") return "commentClientHash";
+    if (relation2 === "groupEvents" && field === "description") return "descriptionHash";
+
+    return undefined;
+};
+
+const hashStringOrNull = (value: unknown): string | null => {
+    if (typeof value !== "string") return null;
+    return hashClientValue(value) ?? null;
+};
+
+const buildCondition = (
+    modelName: ModelType,
+    actualField: string,
+    relation: string | undefined,
+    relation2: string | undefined,
+    isEnumField: boolean,
+    value: any
+): { targetField: string; condition: any } => {
+    const encryptedHashField = resolveEncryptedHashField(
+        modelName,
+        actualField,
+        relation,
+        relation2
+    );
+
+    if (encryptedHashField) {
+        if (Array.isArray(value)) {
+            const hashValues = value
+                .map((item) => hashStringOrNull(item))
+                .filter((item): item is string => typeof item === "string");
+
+            return {
+                targetField: encryptedHashField,
+                condition: { in: hashValues },
+            };
+        }
+
+        return {
+            targetField: encryptedHashField,
+            condition: { equals: hashStringOrNull(value) },
+        };
+    }
+
+    if (Array.isArray(value)) {
+        return {
+            targetField: actualField,
+            condition: { in: value },
+        };
+    }
+
+    return {
+        targetField: actualField,
+        condition: isEnumField
+            ? { equals: value }
+            : typeof value === "string"
+                ? { contains: value }
+                : { equals: value },
+    };
+};
+
 function processFilters(filters: Record<string, {
     value: any;
     relation?: string;
@@ -191,7 +264,7 @@ function processFilters(filters: Record<string, {
     relationType?: string;
     relationType2?: string;
     isEnum?: boolean;
-}>) {
+}>, modelName: ModelType) {
     let where: any = {};
 
     Object.entries(filters).forEach(([field, filter]) => {
@@ -210,18 +283,14 @@ function processFilters(filters: Record<string, {
         const isMax = field.startsWith('max_');
         const actualField = field.replace(/^(min_|max_)/, '');
 
-        let condition: any;
-        if (Array.isArray(value)) {
-            condition = {
-                in: value,
-            };
-        } else {
-            condition = isEnumField
-                ? { equals: value }
-                : typeof value === 'string'
-                    ? { contains: value }
-                    : { equals: value };
-        }
+        const { targetField, condition } = buildCondition(
+            modelName,
+            actualField,
+            relation,
+            relation2,
+            isEnumField,
+            value
+        );
 
         let newFilter: any;
 
@@ -230,15 +299,15 @@ function processFilters(filters: Record<string, {
             if (isMin || isMax) {
                 const conditionType = isMin ? 'gte' : 'lte';
                 const numericValue = Number(value);
-                if (!where[actualField]) where[actualField] = {};
-                where[actualField][conditionType] = numericValue;
+                if (!where[targetField]) where[targetField] = {};
+                where[targetField][conditionType] = numericValue;
             } else {
-                newFilter = { [actualField]: condition };
+                newFilter = { [targetField]: condition };
                 mergeDeep(where, newFilter);
             }
         } else {
             // Relacionado
-            let nestedFilter: any = { [actualField]: condition };
+            let nestedFilter: any = { [targetField]: condition };
 
             if (relation2) {
                 nestedFilter = {

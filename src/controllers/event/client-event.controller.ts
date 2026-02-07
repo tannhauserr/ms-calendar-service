@@ -498,10 +498,9 @@ export class ClientEventController {
     ) => {
         try {
             // Ahora el front envía el idGroup en body.id
-            const { id: bookingIdFromFront } = req.body;
+            const { id: bookingIdFromFront, idWorkspace } = req.body;
             const ctx = (req as any).booking?.ctx; // según tu middleware actual
 
-            const idWorkspace: string | undefined = ctx?.input?.idWorkspace;
             const idClientWorkspace: string | undefined = ctx?.customer?.idClientWorkspace;
 
             if (!bookingIdFromFront || !idWorkspace || !idClientWorkspace) {
@@ -523,6 +522,7 @@ export class ClientEventController {
                 }
             );
 
+           
             // Ahora pasamos el bookingId (idGroup) directamente
             const booking = await this.eventClientService.getEventByGroupIdAndClientWorkspaceAndWorkspace(
                 bookingIdFromFront,
