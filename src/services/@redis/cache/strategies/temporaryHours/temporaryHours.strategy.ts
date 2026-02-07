@@ -53,7 +53,7 @@ export class TemporaryHoursStrategy implements IRedisTemporaryHoursStrategy {
 
         const parsed: HoursMap = JSON.parse(data);
 
-        const norm = normalizeRange(range);
+        const norm = normalizeRange(range, true);
         if (!norm) {
             // sin rango o rango inválido → devuelve TODO (back-compat)
             return parsed;

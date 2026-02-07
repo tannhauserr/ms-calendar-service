@@ -263,24 +263,24 @@ export function shouldSendNotification(
     dedupeKey?: string,
     eventCreatedAt?: Date | string
 ): boolean {
-    console.log("mira que entra de scheduleDate", scheduleDate);
+    // console.log("mira que entra de scheduleDate", scheduleDate);
 
     const nowUtc = moment.utc();
     let scheduleUtc = toUtc(scheduleDate)!; // puede ser re-asignada localmente para cálculos previos
     const cutoffUtc = nowUtc.clone().subtract(CLOCK_SKEW_SECONDS, "seconds");
 
-    console.log("mira que sale de scheduleUtc", scheduleUtc);
+    // console.log("mira que sale de scheduleUtc", scheduleUtc);
 
     // Log inicial de diagnóstico
-    console.log(`[shouldSendNotification] 🔍 Evaluando (UTC):`, {
-        eventType,
-        scheduleDate,
-        dedupeKey,
-        eventCreatedAt,
-        nowISO: nowUtc?.toISOString(),
-        scheduleMomentISO: scheduleUtc?.toISOString(),
-        skewSeconds: CLOCK_SKEW_SECONDS,
-    });
+    // console.log(`[shouldSendNotification] 🔍 Evaluando (UTC):`, {
+    //     eventType,
+    //     scheduleDate,
+    //     dedupeKey,
+    //     eventCreatedAt,
+    //     nowISO: nowUtc?.toISOString(),
+    //     scheduleMomentISO: scheduleUtc?.toISOString(),
+    //     skewSeconds: CLOCK_SKEW_SECONDS,
+    // });
 
     // ───────────────────────────────────────────────────────────────────────────
     // TRATAMIENTO ESPECIAL: booking.reminder.beforeStart
@@ -289,25 +289,25 @@ export function shouldSendNotification(
     // Si estamos dentro de la ventana mínima previa al inicio, NO enviar.
     // ───────────────────────────────────────────────────────────────────────────
     if (eventType === "booking.reminder.beforeStart") {
-        console.log(`[shouldSendNotification] 🔔 reminder.beforeStart - analizando offset`);
+        // console.log(`[shouldSendNotification] 🔔 reminder.beforeStart - analizando offset`);
 
         // 1) Si el schedule ya quedó atrás del cutoff → NO enviar
         if (scheduleUtc.isBefore(cutoffUtc)) {
-            console.log(`[shouldSendNotification] ❌ schedule en pasado → no enviar`, {
-                scheduleUtc: scheduleUtc.toISOString(),
-                cutoffUtc: cutoffUtc.toISOString(),
-                diffMinutes: nowUtc.diff(scheduleUtc, "minutes"),
-            });
+            // console.log(`[shouldSendNotification] ❌ schedule en pasado → no enviar`, {
+            //     scheduleUtc: scheduleUtc.toISOString(),
+            //     cutoffUtc: cutoffUtc.toISOString(),
+            //     diffMinutes: nowUtc.diff(scheduleUtc, "minutes"),
+            // });
             return false;
         }
 
         // 2) Extraemos offset (si llega en la dedupeKey) solo para calcular ventana mínima
         const offsetMatch = dedupeKey?.match(/offset:(\d+)m$/);
         if (!offsetMatch) {
-            console.log(
-                `[shouldSendNotification] ${dedupeKey ? "⚠️ No se pudo extraer offset de dedupeKey" : "✅ Sin dedupeKey"
-                } → permitir (sin downgrade)`
-            );
+            // console.log(
+            //     `[shouldSendNotification] ${dedupeKey ? "⚠️ No se pudo extraer offset de dedupeKey" : "✅ Sin dedupeKey"
+            //     } → permitir (sin downgrade)`
+            // );
             return true;
         }
 
@@ -319,19 +319,19 @@ export function shouldSendNotification(
         // 3) Ventana mínima previa al inicio (p.ej., no avisar si quedan < MIN_WINDOW_MINUTES)
         const minWindowStart = startAtUtc.clone().subtract(MIN_WINDOW_MINUTES, "minutes");
         if (nowUtc.isSameOrAfter(minWindowStart)) {
-            console.log(`[shouldSendNotification] ❌ FILTRADO por ventana mínima`, {
-                requestedOffsetMin,
-                MIN_WINDOW_MINUTES,
-                nowUtc: nowUtc.toISOString(),
-                startAtUtc: startAtUtc.toISOString(),
-                minWindowStart: minWindowStart.toISOString(),
-                minutesToStart: startAtUtc.diff(nowUtc, "minutes"),
-            });
+            // console.log(`[shouldSendNotification] ❌ FILTRADO por ventana mínima`, {
+            //     requestedOffsetMin,
+            //     MIN_WINDOW_MINUTES,
+            //     nowUtc: nowUtc.toISOString(),
+            //     startAtUtc: startAtUtc.toISOString(),
+            //     minWindowStart: minWindowStart.toISOString(),
+            //     minutesToStart: startAtUtc.diff(nowUtc, "minutes"),
+            // });
             return false;
         }
 
         // 4) Si pasa todas las comprobaciones, se permite enviar
-        console.log(`[shouldSendNotification] ✅ reminder.beforeStart permitido`);
+        // console.log(`[shouldSendNotification] ✅ reminder.beforeStart permitido`);
         return true;
     }
 
@@ -339,12 +339,12 @@ export function shouldSendNotification(
     // Resto de eventos (NO reminders): aplicar Regla 1 al principio y cortar si está en pasado
     // ───────────────────────────────────────────────────────────────────────────
     if (scheduleUtc.isBefore(cutoffUtc)) {
-        console.log(`[shouldSendNotification] ❌ FILTRADO: scheduleDate < now - skew`, {
-            scheduleUtc: scheduleUtc.toISOString(),
-            nowUtc: nowUtc.toISOString(),
-            cutoffUtc: cutoffUtc.toISOString(),
-            diffMinutes: nowUtc.diff(scheduleUtc, "minutes"),
-        });
+        // console.log(`[shouldSendNotification] ❌ FILTRADO: scheduleDate < now - skew`, {
+        //     scheduleUtc: scheduleUtc.toISOString(),
+        //     nowUtc: nowUtc.toISOString(),
+        //     cutoffUtc: cutoffUtc.toISOString(),
+        //     diffMinutes: nowUtc.diff(scheduleUtc, "minutes"),
+        // });
         return false;
     }
 
@@ -357,24 +357,24 @@ export function shouldSendNotification(
         const hoursFromCreation = nowUtc.diff(createdUtc, "hours", true); // fraccional
         hasPassedTwelveHours = hoursFromCreation > 12;
 
-        console.log(`[shouldSendNotification] ⏰ Booking event (UTC)`, {
-            eventCreatedAt,
-            createdUtc: createdUtc.toISOString(),
-            hoursFromCreation: Number(hoursFromCreation.toFixed(2)),
-            hasPassedTwelveHours,
-        });
+        // console.log(`[shouldSendNotification] ⏰ Booking event (UTC)`, {
+        //     eventCreatedAt,
+        //     createdUtc: createdUtc.toISOString(),
+        //     hoursFromCreation: Number(hoursFromCreation.toFixed(2)),
+        //     hasPassedTwelveHours,
+        // });
     }
 
-    console.log(`[shouldSendNotification] 🎯 Reglas para: ${eventType}`);
+    // console.log(`[shouldSendNotification] 🎯 Reglas para: ${eventType}`);
 
     switch (eventType) {
         case "booking.request.created": {
             // Solo durante las primeras 12h desde la creación
             const shouldSendCreated = !hasPassedTwelveHours;
-            console.log(`[shouldSendNotification] 📝 booking.request.created`, {
-                hasPassedTwelveHours,
-                shouldSend: shouldSendCreated,
-            });
+            // console.log(`[shouldSendNotification] 📝 booking.request.created`, {
+            //     hasPassedTwelveHours,
+            //     shouldSend: shouldSendCreated,
+            // });
             return shouldSendCreated;
         }
 
@@ -387,12 +387,13 @@ export function shouldSendNotification(
         case "booking.request.cancelled":
         case "booking.ended":
         case "booking.noShow":
+
             console.log(`[shouldSendNotification] ✅ ${eventType}: scheduleDate válido (UTC)`);
             return true;
 
         default:
             // Política conservadora para tipos desconocidos: permitir si pasó la Regla 1
-            console.log(`[shouldSendNotification] ⚠️ Evento no reconocido → permitir (conservador)`);
+            console.log(`[shouldSendNotification] ⚠️ Evento no reconocido → permitir (conservador) ${eventType}`);
             return true;
     }
 }

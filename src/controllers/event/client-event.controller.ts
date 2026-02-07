@@ -1,13 +1,14 @@
+import { CONSOLE_COLOR } from "../../constant/console-color";
+import { pickHttpStatus } from "../../constant/errors/codes";
 import { Response } from "../../models/messages/response";
+import { ActionKey } from "../../models/notification/util/action-to-senctions";
+import { createNotificationByClient } from "../../models/notification/util/trigger/for-action";
 import { BusinessHourService } from "../../services/@database/all-business-services/business-hours/business-hours.service";
 import { TemporaryBusinessHourService } from "../../services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service";
 import { WorkerBusinessHourService } from "../../services/@database/all-business-services/worker-business-hours/worker-business-hours.service";
-import { EventV2Service } from "../../services/@database/event/eventv2.service";
-import { CONSOLE_COLOR } from "../../constant/console-color";
-import { getServiceByIds } from "../../services/@service-token-client/api-ms/bookingPage.ms";
-import { JWTService } from "../../services/jwt/jwt.service";
 import { ClientEventService } from "../../services/@database/event/client-event.service";
-import { pickHttpStatus } from "../../constant/errors/codes";
+import { EventV2Service } from "../../services/@database/event/eventv2.service";
+import { JWTService } from "../../services/jwt/jwt.service";
 
 export class ClientEventController {
     public eventClientService: ClientEventService;
@@ -26,57 +27,68 @@ export class ClientEventController {
     }
 
 
-    addFromWeb = async (req: any, res: any) => {
-        try {
-            // Todo lo previo viene resuelto en middlewares:
-            const ctx = req.booking!.ctx;
+    // addFromWeb = async (req: any, res: any) => {
+    //     try {
+    //         // Todo lo previo viene resuelto en middlewares:
+    //         const ctx = req.booking!.ctx;
 
-            // deps para el caso de uso
-            const deps = {
-                timeZoneWorkspace: ctx.timeZoneWorkspace,
+    //         const autoConfirmClientBookings = ctx.workspace?.autoConfirmClientBookings ?? true;
 
-                businessHoursService: this.businessHoursService,
-                workerHoursService: this.workerHoursService,
-                temporaryHoursService: this.temporaryHoursService,
-                bookingConfig: ctx.config ?? { slot: { alignMode: "service" } },
-                // cache: si tienes uno, pasarlo aquí
-            };
+    //         // deps para el caso de uso
 
-            // payload final para el servicio
-            const servicePayload = {
-                ...ctx.input,
-                customer: {
-                    id: ctx.customer!.idClient,
-                    idClientWorkspace: ctx.customer!.idClientWorkspace,
-                    name: ctx.input.customer.name,
-                    phone: ctx.input.customer.phone,
-                    email: ctx.input.customer.email,
-                },
-            };
+    //         const deps = {
+    //             timeZoneWorkspace: ctx.timeZoneWorkspace,
+    //             autoConfirmClientBookings,
+    //             businessHoursService: this.businessHoursService,
+    //             workerHoursService: this.workerHoursService,
+    //             temporaryHoursService: this.temporaryHoursService,
+    //             bookingConfig: ctx.config ?? { slot: { alignMode: "service" } },
+    //             // cache: si tienes uno, pasarlo aquí
+    //         };
 
-            const result: any = await this.eventClientService.addEventFromWeb(servicePayload, deps);
+    //         // payload final para el servicio
+    //         const servicePayload = {
+    //             ...ctx.input,
+    //             customer: {
+    //                 id: ctx.customer!.idClient,
+    //                 idClientWorkspace: ctx.customer!.idClientWorkspace,
+    //                 name: ctx.input.customer.name,
+    //                 phone: ctx.input.customer.phone,
+    //                 email: ctx.input.customer.email,
+    //             },
+    //         };
 
-            // ▶️ Respuesta “amigable”
-            let status = 201;
-            let ok = true;
-            let message = "Evento creado";
 
-            if (result.outcome === "joined") {
-                status = 201;
-                ok = true;
-                message = "Te has unido al evento";
-            } else if (result.outcome === "already-in") {
-                status = 200; // idempotente
-                ok = false;   // para que el front no trate como creación
-                message = "Ya estabas inscrito en este evento";
-            }
+    //         const result: any = await this.eventClientService.addEventFromWeb(servicePayload, deps);
 
-            return res.status(status).json(Response.build(message, status, ok, result));
-        } catch (err: any) {
-            console.error(CONSOLE_COLOR.BgRed, "[EventController.addFromWeb]", err?.message, CONSOLE_COLOR.Reset);
-            return res.status(500).json({ message: err?.message ?? "Unexpected error" });
-        }
-    };
+
+    //         // Mandar notificación
+    //         if (result?.notification?.idBooking) {
+
+    //         }
+
+
+    //         // ▶️ Respuesta “amigable”
+    //         let status = 201;
+    //         let ok = true;
+    //         let message = "Evento creado";
+
+    //         if (result.outcome === "joined") {
+    //             status = 201;
+    //             ok = true;
+    //             message = "Te has unido al evento";
+    //         } else if (result.outcome === "already-in") {
+    //             status = 200; // idempotente
+    //             ok = false;   // para que el front no trate como creación
+    //             message = "Ya estabas inscrito en este evento";
+    //         }
+
+    //         return res.status(status).json(Response.build(message, status, ok, result));
+    //     } catch (err: any) {
+    //         console.error(CONSOLE_COLOR.BgRed, "[EventController.addFromWeb]", err?.message, CONSOLE_COLOR.Reset);
+    //         return res.status(500).json({ message: err?.message ?? "Unexpected error" });
+    //     }
+    // };
 
     // updateFromWeb = async (req: any, res: any) => {
     //     try {
@@ -157,6 +169,107 @@ export class ClientEventController {
     //             });
     //     }
     // };
+
+
+    addFromWeb = async (req: any, res: any) => {
+        try {
+            // Todo lo previo viene resuelto en middlewares:
+            const ctx = req.booking!.ctx;
+
+            const autoConfirmClientBookings =
+                ctx.workspace?.autoConfirmClientBookings ?? true;
+
+            // deps para el caso de uso
+            const deps = {
+                timeZoneWorkspace: ctx.timeZoneWorkspace,
+                autoConfirmClientBookings,
+                businessHoursService: this.businessHoursService,
+                workerHoursService: this.workerHoursService,
+                temporaryHoursService: this.temporaryHoursService,
+                bookingConfig: ctx.config ?? { slot: { alignMode: "service" } },
+                // cache: si tienes uno, pasarlo aquí
+            };
+
+            // payload final para el servicio
+            const servicePayload = {
+                ...ctx.input,
+                customer: {
+                    id: ctx.customer!.idClient,
+                    idClientWorkspace: ctx.customer!.idClientWorkspace,
+                    name: ctx.input.customer.name,
+                    phone: ctx.input.customer.phone,
+                    email: ctx.input.customer.email,
+                },
+            };
+
+            const result: any = await this.eventClientService.addEventFromWeb(
+                servicePayload,
+                deps
+            );
+
+            // ───────────────────── Notificación al CLIENTE ─────────────────────
+            // Solo tiene sentido si:
+            // - No es "already-in"
+            // - Hay eventos creados (o recuperados) en result.created
+            if (result && result.outcome !== "already-in") {
+                const createdRaw = Array.isArray(result.created)
+                    ? result.created
+                    : [];
+
+                // Normalizamos: puede venir { event, notification } o el evento plano
+                const eventsForNotification = createdRaw
+                    .map((item: any) => item?.event ?? item)
+                    .filter((ev: any) => ev && ev.idWorkspaceFk);
+
+                if (eventsForNotification.length > 0 && ctx.customer?.idClientWorkspace) {
+                    try {
+                        // Define aquí la acción que corresponda en tu motor de notificaciones
+                        const actionSectionType: ActionKey = autoConfirmClientBookings
+                            ? "addFromClientWithoutRequest"
+                            : "addFromClientWithRequest";
+
+                        await createNotificationByClient(
+                            eventsForNotification,
+                            { actionSectionType },
+                            [ctx.customer.idClientWorkspace] // preparado para futuro: array de clientes
+                        );
+                    } catch (err: any) {
+                        console.error(
+                            "[EventController.addFromWeb] error createNotificationByClient:",
+                            err?.message || err
+                        );
+                    }
+                }
+            }
+
+            // ▶️ Respuesta “amigable”
+            let status = 201;
+            let ok = true;
+            let message = "Evento creado";
+
+            if (result.outcome === "joined") {
+                status = 201;
+                ok = true;
+                message = "Te has unido al evento";
+            } else if (result.outcome === "already-in") {
+                status = 200; // idempotente
+                ok = false;   // para que el front no trate como creación
+                message = "Ya estabas inscrito en este evento";
+            }
+
+            return res.status(status).json(Response.build(message, status, ok, result));
+        } catch (err: any) {
+            console.error(
+                CONSOLE_COLOR.BgRed,
+                "[EventController.addFromWeb]",
+                err?.message,
+                CONSOLE_COLOR.Reset
+            );
+            return res
+                .status(500)
+                .json({ message: err?.message ?? "Unexpected error" });
+        }
+    };
 
 
     updateFromWeb = async (req: any, res: any) => {
@@ -329,74 +442,90 @@ export class ClientEventController {
 
     // public getEventByIdAndClientWorkspaceAndWorkspace = async (req: any, res: any, next: any) => {
     //     try {
-    //         // const { id, idClientWorkspace, idWorkspace } = req.params;
-    //         const { id } = req.body;
+    //         const { id: idEventFromFront, customer } = req.body;
     //         const ctx = req.booking?.ctx;
 
     //         const idWorkspace = ctx?.input?.idWorkspace;
     //         const idClientWorkspace = ctx?.customer?.idClientWorkspace;
+    //         const idEvent = idEventFromFront || customer?.id;
+    //         console.log("mira body", req.body);
 
-    //         if (!idWorkspace || !idClientWorkspace) {
+
+    //         if (!idEventFromFront || !idWorkspace || !idClientWorkspace) {
     //             return res.status(400).json({
     //                 ok: false,
-    //                 message: "No se pudo resolver idWorkspace o idClientWorkspace"
+    //                 message: "No se pudo resolver id, idWorkspace o idClientWorkspace"
     //             });
     //         }
+
     //         const token = req.token;
     //         await this.jwtService.verify(token);
 
-    //         console.log(`${CONSOLE_COLOR.BgYellow}[ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace] Params recibidos:${CONSOLE_COLOR.Reset}`, { id, idClientWorkspace, idWorkspace });
-    //         const result = await this.eventClientService.getEventByIdAndClientWorkspaceAndWorkspace(
-    //             id,
+    //         console.log(
+    //             `${CONSOLE_COLOR.BgYellow}[ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace] Params recibidos:${CONSOLE_COLOR.Reset}`,
+    //             { idEvent, idClientWorkspace, idWorkspace }
+    //         );
+
+    //         // ⬇️ Ahora usamos el método que agrupa por (idGroup ?? id)
+    //         const booking = await this.eventClientService.getEventByIdAndClientWorkspaceAndWorkspace(
+    //             idEvent,
     //             idClientWorkspace,
     //             idWorkspace
     //         );
 
-    //         if (result) {
-    //             let service = await getServiceByIds([result.idServiceFk], result.idWorkspaceFk);
-    //             result.service = service[0] ?? null;
+    //         console.log("booking obtenido:", booking);
+
+    //         if (!booking) {
+    //             return res
+    //                 .status(404)
+    //                 .json(Response.build("Cita no encontrada", 404, false));
     //         }
 
-    //         if (!result) {
-    //             return res.status(404).json(Response.build("Evento no encontrado", 404, false));
-    //         }
-
-    //         res.status(200).json(Response.build("Evento encontrado", 200, true, result));
+    //         // booking es de tipo ClientAppointment (booking lógico con services[])
+    //         return res
+    //             .status(200)
+    //             .json(Response.build("Cita encontrada", 200, true, booking));
     //     } catch (err: any) {
-    //         res.status(500).json({ message: err.message });
+    //         return res.status(500).json({ ok: false, message: err.message });
     //     }
-    // }
+    // };
 
 
-    public getEventByIdAndClientWorkspaceAndWorkspace = async (req: any, res: any, next: any) => {
+    public getEventByIdAndClientWorkspaceAndWorkspace = async (
+        req: any,
+        res: any,
+        next: any
+    ) => {
         try {
-            const { id: idEventFromFront, customer } = req.body;
-            const ctx = req.booking?.ctx;
+            // Ahora el front envía el idGroup en body.id
+            const { id: bookingIdFromFront, idWorkspace } = req.body;
+            const ctx = (req as any).booking?.ctx; // según tu middleware actual
 
-            const idWorkspace = ctx?.input?.idWorkspace;
-            const idClientWorkspace = ctx?.customer?.idClientWorkspace;
-            const idEvent = idEventFromFront || customer?.id;
-            console.log("mira body", req.body);
+            const idClientWorkspace: string | undefined = ctx?.customer?.idClientWorkspace;
 
-
-            if (!idEventFromFront || !idWorkspace || !idClientWorkspace) {
+            if (!bookingIdFromFront || !idWorkspace || !idClientWorkspace) {
                 return res.status(400).json({
                     ok: false,
-                    message: "No se pudo resolver id, idWorkspace o idClientWorkspace"
+                    message: "No se pudo resolver bookingId, idWorkspace o idClientWorkspace",
                 });
             }
 
-            const token = req.token;
+            const token = (req as any).token;
             await this.jwtService.verify(token);
 
             console.log(
                 `${CONSOLE_COLOR.BgYellow}[ClientEventController.getEventByIdAndClientWorkspaceAndWorkspace] Params recibidos:${CONSOLE_COLOR.Reset}`,
-                { idEvent, idClientWorkspace, idWorkspace }
+                {
+                    bookingId: bookingIdFromFront,
+                    idClientWorkspace,
+                    idWorkspace,
+                }
             );
 
-            // ⬇️ Ahora usamos el método que agrupa por (idGroup ?? id)
-            const booking = await this.eventClientService.getEventByIdAndClientWorkspaceAndWorkspace(
-                idEvent,
+           
+            // Ahora pasamos el bookingId (idGroup) directamente
+            const booking = await this.eventClientService.getEventByGroupIdAndClientWorkspaceAndWorkspace(
+                bookingIdFromFront,
                 idClientWorkspace,
                 idWorkspace
             );
@@ -409,45 +538,45 @@ export class ClientEventController {
                     .json(Response.build("Cita no encontrada", 404, false));
             }
 
-            // booking es de tipo ClientAppointment (booking lógico con services[])
             return res
                 .status(200)
                 .json(Response.build("Cita encontrada", 200, true, booking));
         } catch (err: any) {
+            // Si ya tienes middleware de errores podrías hacer: return next(err);
             return res.status(500).json({ ok: false, message: err.message });
         }
     };
 
-
-    changeEventStatusFromWeb = async (req: any, res: any, next: any) => {
+    cancelEventFromWeb = async (req: any, res: any, next: any) => {
         try {
-            const { id, status } = req.body;
+            const { idEvent, idWorkspace, customer } = req.body;
+            const ctx = req.booking?.ctx;
+            const idClientWorkspaceCtx = ctx?.customer?.idClientWorkspace;
+
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.eventService.changeEventStatus(id, status);
-            res.status(200).json(Response.build("Estado del evento actualizado", 200, true, result));
+            const result = await this.eventClientService.cancelEventFromWeb(idEvent, idClientWorkspaceCtx, idWorkspace);
+            res.status(200).json(Response.build("Evento cancelado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            return res.status(500).json({ ok: false, message: err.message });
         }
     }
 
-    changeEventStatusByParticipantFromWeb = async (req: any, res: any, next: any) => {
+    confirmEventFromWeb = async (req: any, res: any, next: any) => {
         try {
-            const { id, idClient, idClientWorkspace, action } = req.body;
+            const { idEvent, idWorkspace, customer } = req.body;
+            const ctx = req.booking?.ctx;
+            const idClientWorkspaceCtx = ctx?.customer?.idClientWorkspace;
+
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.eventService.changeParticipantStatus(
-                id,
-                idClient,
-                idClientWorkspace,
-                action
-            );
-            res.status(200).json(Response.build("Estado del evento actualizado", 200, true, result));
+            const result = await this.eventClientService.confirmEventFromWeb(idEvent, idClientWorkspaceCtx, idWorkspace);
+            res.status(200).json(Response.build("Evento confirmado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            return res.status(500).json({ ok: false, message: err.message });
         }
-    }
+    };
 
 }

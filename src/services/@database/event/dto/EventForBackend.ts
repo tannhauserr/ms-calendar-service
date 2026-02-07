@@ -54,6 +54,7 @@ export interface EventForBackend {
         idWorkspaceFk: string,
         idCompanyFk: string,
         idServiceFk?: string | null
+        idGroup?: string | null
         // Se puede meter service, pero vendria del MS-BookingPage
         service?: {
             id: string,
@@ -63,7 +64,8 @@ export interface EventForBackend {
             discount: number,
             serviceType: string | null,
             color: string,
-            image?: string | null
+            image?: string | null,
+            maxParticipants?: number | null
         },
 
 
@@ -71,6 +73,7 @@ export interface EventForBackend {
         servicePriceSnapshot?: number | null
         serviceDiscountSnapshot?: number | null
         serviceDurationSnapshot?: number | null // duración en minutos
+        serviceMaxParticipantsSnapshot?: number | null
 
 
 

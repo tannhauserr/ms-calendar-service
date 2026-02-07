@@ -93,6 +93,17 @@ export async function getEventsOverlappingRange_SPECIAL(
     // Evitar query inútil
     if (!userIds || userIds.length === 0) return [];
 
+    // Excluir eventos cancelados para permitir sobreescribir el mismo slot
+    // Si el evento tiene uno de estos estados, no se devuelve:
+    // 'CANCELLED_BY_CLIENT', 'CANCELLED_BY_CLIENT_REMOVED', 'CANCELLED_BY_PLATFORM'
+    const CANCELLED_STATES = [
+        'CANCELLED_BY_CLIENT',
+        'CANCELLED_BY_CLIENT_REMOVED',
+        "CANCELLED"
+    ];
+
+ 
+
     const parseStart = (s: string) =>
         s.length > 10
             ? moment.utc(s)
@@ -106,10 +117,13 @@ export async function getEventsOverlappingRange_SPECIAL(
     const end = parseEnd(endISOOrDay).toDate();
 
     const where: any = {
-        idWorkspaceFk: idWorkspace,          // 🔹 clave para filtrar bien
         idUserPlatformFk: { in: userIds },
         startDate: { lt: end },
         endDate: { gt: start },
+        groupEvents: {
+            idWorkspaceFk: idWorkspace,          // 🔹 clave para filtrar bien
+            eventStatusType: { notIn: CANCELLED_STATES },
+        },
         // Cuando quieras cerrarlo más:
         // deletedDate: null,
         // eventStatusType: { in: ["PENDING", "CONFIRMED"] },

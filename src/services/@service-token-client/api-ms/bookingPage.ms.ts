@@ -14,21 +14,42 @@ const TARGET_MS_NAME = process.env.MS_BOOKING_PAGE_NAME || "bookingPage";
 // 🔹 “sub” = este MS (quién llama). Usa tu var real si es otra.
 const THIS_MS_NAME = process.env.MS_NAME || process.env.MS_CALENDAR_NAME || "calendar";
 
+// 🔹 Secret interno para comunicación entre microservicios
+const internalSecret = process.env.INTERNAL_MS_SECRET;
 // ✅ Cliente propio de este archivo (singleton del módulo)
 const client = axios.create({
     baseURL: `${process.env.URL_BACK_MS_GATEWAY}/${TARGET_MS_NAME}/api/ms`,
     timeout: 5000,
+    headers: internalSecret
+        ? { "x-internal-ms-secret": internalSecret }
+        : {},
 });
 
-// 👉 Enganchamos el interceptor aquí (aud=receiver, sub=this)
-attachServiceAuth(client, TARGET_MS_NAME, THIS_MS_NAME);
-
-// (Opcional) pequeño log para confirmar que va el Authorization
 client.interceptors.request.use((cfg) => {
-    const hasAuth = !!cfg.headers?.Authorization;
-    console.log("[ms-client-file] →", cfg.method?.toUpperCase(), cfg.url, { hasAuth });
+    const h: any = cfg.headers;
+    const auth =
+        (typeof h?.get === "function" ? h.get("Authorization") : undefined) ??
+        h?.Authorization ??
+        h?.authorization;
+
+    console.log("[ms-client-file] →", cfg.method?.toUpperCase(), cfg.baseURL + (cfg.url ?? ""), {
+        hasAuth: Boolean(auth),
+        authPrefix: typeof auth === "string" ? auth.slice(0, 20) : undefined,
+    });
+
     return cfg;
 });
+
+
+// Enganchamos el interceptor aquí (aud=receiver, sub=this)
+// attachServiceAuth(client, TARGET_MS_NAME, THIS_MS_NAME);
+
+// // (Opcional) pequeño log para confirmar que va el Authorization
+// client.interceptors.request.use((cfg) => {
+//     const hasAuth = !!cfg.headers?.Authorization;
+//     console.log("[ms-client-file] →", cfg.method?.toUpperCase(), cfg.url, { hasAuth });
+//     return cfg;
+// });
 
 /**
  * Obtiene snapshots de BookingPages por IDs con cache-first
@@ -119,9 +140,30 @@ export async function getServiceByIds(ids: string[], idWorkspace: string) {
 
         return validIds.map((id) => byId.get(id)!).filter(Boolean);
     } catch (err: any) {
+        if (axios.isAxiosError(err)) {
+            const h: any = err.config?.headers;
+            const auth =
+                (typeof h?.get === "function" ? h.get("Authorization") : undefined) ??
+                h?.Authorization ??
+                h?.authorization;
+
+            console.error("[getServiceByIds] axios error", {
+                message: err.message,
+                code: err.code,
+                method: err.config?.method,
+                url: (err.config?.baseURL ?? "") + (err.config?.url ?? ""),
+                status: err.response?.status,
+                data: err.response?.data,
+                hasAuth: Boolean(auth),
+            });
+        } else {
+            console.error("[getServiceByIds] non-axios error", err);
+        }
+
         new CustomError(`${CONSOLE_COLOR.BgRed} [getServiceByIds] error ${CONSOLE_COLOR.Reset}`, err);
         return [];
     }
+
 }
 
 /**
@@ -182,6 +224,39 @@ export async function getServiceByUserIds(userIds: string[], idWorkspace?: strin
         return uniqueServices;
     } catch (err: any) {
         console.error(`${CONSOLE_COLOR.BgRed} [getServiceByUserIds] error ${CONSOLE_COLOR.Reset}`, err);
+        return [];
+    }
+}
+
+
+/**
+ * Obtiene el catálogo (categorías u otro) por company + workspace
+ */
+export async function getCatalogByIdWorkspaceAndIdCompany(idCompany: string, idWorkspace?: string) {
+    try {
+        if (!idCompany || typeof idCompany !== "string" || idCompany.trim() === "") {
+            console.log(CONSOLE_COLOR.FgYellow, `[getCatalogByIdWorkspaceAndIdCompany] idCompany inválido`, CONSOLE_COLOR.Reset);
+            return [];
+        }
+
+        if (!idWorkspace || typeof idWorkspace !== "string" || idWorkspace.trim() === "") {
+            console.log(CONSOLE_COLOR.FgYellow, `[getCatalogByIdWorkspaceAndIdCompany] idWorkspace inválido`, CONSOLE_COLOR.Reset);
+            return [];
+        }
+
+        const url = `/categories/company/${encodeURIComponent(idCompany)}/workspace/${encodeURIComponent(idWorkspace)}`;
+        const { data } = await client.get(url);
+
+        if (data?.ok) {
+            return data.items || [];
+        } else {
+            console.log(CONSOLE_COLOR.FgYellow, `[getCatalogByIdWorkspaceAndIdCompany] Respuesta no OK del backend`, CONSOLE_COLOR.Reset);
+            return [];
+        }
+
+
+    } catch (err: any) {
+        new CustomError(`${CONSOLE_COLOR.BgRed} [getCatalogByIdWorkspaceAndIdCompany] error ${CONSOLE_COLOR.Reset}`, err);
         return [];
     }
 }

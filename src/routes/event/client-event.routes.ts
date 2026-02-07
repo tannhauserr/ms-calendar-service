@@ -1,12 +1,9 @@
 import express from 'express';
 
-import { JWTService } from '../../services/jwt/jwt.service';
-import { EventMiddleware } from '../../middlewares/event/event.middleware';
-import { OnlyAdminMiddleware } from '../../middlewares/only-admin.middleware';
-import { CheckCompanyMiddleware } from '../../middlewares/check-company/check-company.middleware';
-import { BookingGuardsMiddleware } from '../../middlewares/booiking-guard/booking-guard.middleware';
 import { ClientEventController } from '../../controllers/event/client-event.controller';
 import { PublicEventController } from '../../controllers/event/public-event.controller';
+import { BookingGuardsMiddleware } from '../../middlewares/booiking-guard/booking-guard.middleware';
+import { JWTService } from '../../services/jwt/jwt.service';
 
 
 const router = express.Router();
@@ -58,7 +55,7 @@ router.post('/events/client-web/available-times',
         JWTService.authCookieOrBearer,
         BookingGuardsMiddleware.BaseValidationAndNormalize(),
         BookingGuardsMiddleware.ResolveWorkspace(),
-        BookingGuardsMiddleware.ResolveBookingPage(),
+        // BookingGuardsMiddleware.ResolveBookingPage(),
     ],
     publicEventController.publicGetAvailableTimeSlots
 );
@@ -70,7 +67,7 @@ router.post(
         JWTService.authCookieOrBearer,                 // auth
         BookingGuardsMiddleware.BaseValidationAndNormalize(),    // valida + normaliza input -> ctx.input
         BookingGuardsMiddleware.ResolveWorkspace(),              // resuelve workspace + config + tz -> ctx.workspace/config/timeZoneWorkspace
-        BookingGuardsMiddleware.ResolveBookingPage(),
+        // BookingGuardsMiddleware.ResolveBookingPage(),
         BookingGuardsMiddleware.ResolveClientWorkspace(),        // resuelve idClientWorkspace -> ctx.customer
         BookingGuardsMiddleware.EnforceTimeRules(),              // reglas de ventana / lead times / etc. -> ctx.when
         BookingGuardsMiddleware.EnforceUserLimits(),             // límites por usuario -> bloquea si excede
@@ -91,5 +88,18 @@ router.post('/events/client-update', [
 ], controller.updateFromWeb);
 
 
+router.post('/events/client-cancel', [
+    JWTService.authCookieOrBearer,
+    BookingGuardsMiddleware.BaseContextSimple(),    // valida + normaliza input -> ctx.input
+    BookingGuardsMiddleware.ResolveWorkspace(),              // resuelve workspace + config + tz -> ctx.workspace/config/timeZoneWorkspace
+    BookingGuardsMiddleware.ResolveClientWorkspace(),        // resuelve idClientWorkspace -> ctx.customer
+], controller.cancelEventFromWeb);
+
+router.post('/events/client-confirm', [
+    JWTService.authCookieOrBearer,
+    BookingGuardsMiddleware.BaseContextSimple(),    // valida + normaliza input -> ctx.input
+    BookingGuardsMiddleware.ResolveWorkspace(),              // resuelve workspace + config + tz -> ctx.workspace/config/timeZoneWorkspace
+    BookingGuardsMiddleware.ResolveClientWorkspace(),        // resuelve idClientWorkspace -> ctx.customer
+], controller.confirmEventFromWeb);
 
 module.exports = router;

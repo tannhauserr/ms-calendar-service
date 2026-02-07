@@ -1,38 +1,60 @@
 // src/services/@service-token-client/api-ms/client-workspace.ms.ts
 import axios from "axios";
 import { attachServiceAuth } from "../service-token-client.service";
-import { RedisStrategyFactory } from "../../@redis/cache/strategies/redisStrategyFactory";
+// import { RedisStrategyFactory } from "../../@redis/cache/strategies/redisStrategyFactory";
 import { CONSOLE_COLOR } from "../../../constant/console-color";
 import CustomError from "../../../models/custom-error/CustomError";
 import type { ClientWorkspaceBrief } from "../../@redis/cache/interfaces/models/client-brief";
 import type { IRedisClientWorkspaceBriefStrategy } from "../../@redis/cache/interfaces/interfaces";
+import { create } from "domain";
+import { RedisStrategyFactory } from "../../@redis/cache/strategies/redisStrategyFactory";
 
 const TARGET_MS_NAME = process.env.MS_CLIENT_NAME || "client";
 const THIS_MS_NAME = process.env.MS_NAME || process.env.MS_CALENDAR_NAME || "calendar";
 
+
+// 🔹 Secret interno para comunicación entre microservicios
+const internalSecret = process.env.INTERNAL_MS_SECRET;
+// ✅ Cliente propio de este archivo (singleton del módulo)
 const client = axios.create({
     baseURL: `${process.env.URL_BACK_MS_GATEWAY}/${TARGET_MS_NAME}/api/ms`,
     timeout: 5000,
+    headers: internalSecret
+        ? { "x-internal-ms-secret": internalSecret }
+        : {},
 });
-attachServiceAuth(client, TARGET_MS_NAME, THIS_MS_NAME);
+
 client.interceptors.request.use((cfg) => {
-    const hasAuth = !!cfg.headers?.Authorization;
-    console.log("[ms-client-ws] →", cfg.method?.toUpperCase(), cfg.url, { hasAuth });
+    const h: any = cfg.headers;
+    const auth =
+        (typeof h?.get === "function" ? h.get("Authorization") : undefined) ??
+        h?.Authorization ??
+        h?.authorization;
+
+    console.log("[ms-client-file] →", cfg.method?.toUpperCase(), cfg.baseURL + (cfg.url ?? ""), {
+        hasAuth: Boolean(auth),
+        authPrefix: typeof auth === "string" ? auth.slice(0, 20) : undefined,
+    });
+
     return cfg;
 });
+
+
+// Enganchamos el interceptor aquí (aud=receiver, sub=this)
+// attachServiceAuth(client, TARGET_MS_NAME, THIS_MS_NAME);
 
 const normEmail = (s?: string) => (s ?? "").trim().toLowerCase();
 
 export async function getClientWorkspacesByIds(
-    ids: string[],
-    idWorkspace?: string
+    idClientWorkspaceList: string[],
+    idCompany: string
 ): Promise<ClientWorkspaceBrief[]> {
     try {
-        const valid = (ids || []).filter((x) => x && x.trim() !== "");
+        const valid = (idClientWorkspaceList || []).filter((x) => x && x.trim() !== "");
         if (!valid.length) return [];
-        const redis = RedisStrategyFactory.getStrategy("clientWorkspaceBrief") as IRedisClientWorkspaceBriefStrategy;
+        const redis = RedisStrategyFactory.getStrategy("clientWorkspaceBrief") as unknown as IRedisClientWorkspaceBriefStrategy;
 
-        const cached = await Promise.all(valid.map((id) => redis.getClientWorkspaceById(id, idWorkspace)));
+        const cached = await Promise.all(valid.map((id) => redis.getClientWorkspaceById(id, idCompany)));
         const map = new Map<string, ClientWorkspaceBrief>();
         (cached.filter(Boolean) as ClientWorkspaceBrief[]).forEach((cw) => map.set(cw.id, cw));
 
@@ -41,7 +63,7 @@ export async function getClientWorkspacesByIds(
 
         let fetched: ClientWorkspaceBrief[] = [];
         if (miss.length) {
-            const { data } = await client.post(`/internal/client-workspaces/_batch`, { ids: miss, idWorkspace });
+            const { data } = await client.post(`/internal/client-workspaces/_batch`, { ids: miss, idCompany });
             fetched = (data.items as ClientWorkspaceBrief[]) || [];
             for (const cw of fetched) await redis.setClientWorkspace(cw);
         }
@@ -54,17 +76,23 @@ export async function getClientWorkspacesByIds(
     }
 }
 
+/**
+ * Se recibe el registro cliente ligado con la compañía 
+ * @param clientIds 
+ * @param idCompany 
+ * @returns 
+ */
 export async function getClientWorkspacesByClientIds(
     clientIds: string[],
-    idWorkspace?: string
+    idCompany?: string
 ): Promise<ClientWorkspaceBrief[]> {
     try {
         const valid = (clientIds || []).filter((x) => x && x.trim() !== "");
         if (!valid.length) return [];
-        const redis = RedisStrategyFactory.getStrategy("clientWorkspaceBrief") as IRedisClientWorkspaceBriefStrategy;
+        const redis = RedisStrategyFactory.getStrategy("clientWorkspaceBrief") as unknown as IRedisClientWorkspaceBriefStrategy;
 
         // 1) Cache
-        const cachedLists = await Promise.all(valid.map((cid) => redis.getClientWorkspacesByClientId(cid, idWorkspace)));
+        const cachedLists = await Promise.all(valid.map((cid) => redis.getClientWorkspacesByClientId(cid, idCompany)));
         const have = cachedLists.flat();
         const haveSet = new Set(have.map((cw) => `${cw.idWorkspaceFk}:${cw.id}`)); // clave única
 
@@ -74,7 +102,7 @@ export async function getClientWorkspacesByClientIds(
         if (miss.length) {
             const { data } = await client.post(`/internal/client-workspaces/clientIds/_batch`, {
                 clientIds: miss,
-                idWorkspace,
+                idCompany,
             });
             fetched = (data.items as ClientWorkspaceBrief[]) || [];
             for (const cw of fetched) await redis.setClientWorkspace(cw);
@@ -89,6 +117,30 @@ export async function getClientWorkspacesByClientIds(
     } catch (err: any) {
         new CustomError(`${CONSOLE_COLOR.BgRed} [getClientWorkspacesByClientIds] error ${CONSOLE_COLOR.Reset}`, err);
         return [];
+    }
+}
+
+export async function createClientWorkspaceByClientAndWorkspace(idClient: string, idWorkspace: string, idCompany: string): Promise<ClientWorkspaceBrief | null> {
+    try {
+
+        const { data } = await client.post(`/internal/client-workspaces/create-from-microservices`, {
+            idClient,
+            idWorkspace,
+            idCompany
+        });
+
+        const cw = data?.item as ClientWorkspaceBrief;
+        console.log("mira que es cw", cw);
+        if (data?.ok && cw) {
+            const redis = RedisStrategyFactory.getStrategy("clientWorkspaceBrief") as unknown as IRedisClientWorkspaceBriefStrategy;
+            await redis.setClientWorkspace(cw);
+            return cw;
+        }
+
+        return null;
+    } catch (err: any) {
+        new CustomError(`${CONSOLE_COLOR.BgRed} [createClientWorkspaceByClientAndWorkspace] error ${CONSOLE_COLOR.Reset}`, err);
+        return null;
     }
 }
 

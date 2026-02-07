@@ -1,58 +1,3 @@
-// src/services/@redis/cache/interfaces/models/client-brief.ts
-
-// export interface ClientBrief {
-//   // Client base info
-//   id: string;
-//   username: string;
-//   name?: string;
-//   surname1?: string;
-//   surname2?: string;
-//   email: string;
-//   languageType: 'es' | 'en';
-//   clientStatusType: 'UNVERIFIED' | 'VERIFIED' | 'INACTIVE';
-//   phoneCode?: string;
-//   phoneNumber?: string;
-//   image?: string;
-
-//   // Variables para el cliente. Tienen un mayor peso que las del admin
-//   allowNotifications: boolean;
-//   allowEmailNotifications: boolean;
-//   allowWhatsappNotifications: boolean;
-//   allowSmsNotifications: boolean;
-//   allowPushNotifications: boolean;
-//   // Variables para el admin de la plataforma
-//   noEmailNotifications: boolean;
-//   noWhatsappNotifications: boolean;
-//   noSmsNotifications: boolean;
-//   noPushNotifications: boolean;
-
-//   timeZone: string;
-
-//   // ClientWorkspace info (nested)
-//   clientWorkspaces: ClientWorkspaceBrief[];
-// }
-
-// export interface ClientWorkspaceBrief {
-//   id: string;
-//   name: string;
-//   surname1?: string;
-//   surname2?: string;
-//   email?: string;
-//   image?: string;
-//   phoneCode?: string;
-//   phoneNumber?: string;
-//   comments?: string;
-//   idClientFk?: string;
-//   idWorkspaceFk: string;
-//   idCompanyFk?: string;
-
-//   // Client reference (will be populated with full client data)
-//   client?: ClientBrief;
-// }
-
-
-
-
 export interface ClientBrief {
   // Client base info
   id: string;
@@ -83,6 +28,9 @@ export interface ClientBrief {
 
   timeZone: string;
 
+  // Ban information
+  isBanned?: boolean;
+
   // ClientWorkspace info (nested)
   clientWorkspaces: ClientWorkspaceBrief[];
 }
@@ -100,6 +48,9 @@ export interface ClientWorkspaceBrief {
   idClientFk?: string;
   idWorkspaceFk: string;
   idCompanyFk?: string;
+
+  // Ban information
+  isBanned?: boolean;
 
   // Client reference (will be populated with full client data)
   client?: ClientBrief;

@@ -4,7 +4,7 @@ export type ReminderChannel =
     | "email"
     | "whatsapp"
     | "sms"
-    | "webpush"
+    | "push"
     | "websocket";
 
 /**
@@ -15,7 +15,7 @@ export type ReminderChannel =
  *  - Evita madrugada (antes de 8h) para todos los canales.
  *  - Email: preferible entre 8h–19h.
  *  - WhatsApp/SMS: 8h–21h.
- *  - Webpush/Websocket: 7h–22h (más permisivos, porque son instantáneos).
+ *  - push/Websocket: 7h–22h (más permisivos, porque son instantáneos).
  */
 export function getSuggestedReminderTime(
     bookingStartUtc: string,
@@ -32,7 +32,7 @@ export function getSuggestedReminderTime(
         email: { min: 8, max: 19 },
         whatsapp: { min: 8, max: 21 },
         sms: { min: 8, max: 21 },
-        webpush: { min: 7, max: 22 },
+        push: { min: 7, max: 22 },
         websocket: { min: 7, max: 22 },
     };
 

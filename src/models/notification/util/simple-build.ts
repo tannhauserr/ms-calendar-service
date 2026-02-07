@@ -7,8 +7,8 @@ import { CONSOLE_COLOR } from "../../../constant/console-color";
 
 const mapChannel = (
     ch: string
-): "email" | "whatsapp" | "sms" | "webpush" | "websocket" =>
-    ch === "push" ? "webpush" : (ch as any);
+): "email" | "whatsapp" | "sms" | "push" | "websocket" =>
+    ch === "push" ? "push" : (ch as any);
 
 export type BookingSnap = {
     id: string;
@@ -16,7 +16,9 @@ export type BookingSnap = {
     updatedAt?: string;       // ISO
     startAtLocal?: string;    // ISO
     endAtLocal?: string;      // ISO
+
     client?: { id: string; email?: string; phoneE164?: string };
+    // Datos del organizador/negocio
     business?: { id: string; email?: string; phoneE164?: string };
     idService: string;
     idGroup?: string;
@@ -237,268 +239,6 @@ function hasExplicitZone(iso: string): boolean {
     return /[zZ]|[+\-]\d{2}:\d{2}$/.test(iso);
 }
 
-// /**
-//  * Calcula la fecha programada en UTC. Si la política es "antes de" y el resultado
-//  * cayó en el pasado, solo clampa si está dentro de una ventana de gracia corta.
-//  * Si no, se hace skip (undefined) para evitar disparos de citas ya pasadas.
-//  * Logs planos si NOTIF_DEBUG_TIME=1.
-//  */
-// function computeWhen(
-//     policy: Policy | undefined,
-//     b: BookingSnap,
-//     timeZoneStaff: string,
-//     timeZoneParticipant: string
-// ): string | undefined {
-//     if (!policy) {
-//         console.warn("[computeWhen] policy=undefined → scheduledDate=undefined");
-//         return undefined;
-//     }
-
-//     const GRACE_MINUTES =
-//         Number(process.env.NOTIF_GRACE_MINUTES ?? 3) || 3; // ventana de gracia
-//     const GRACE_MS = GRACE_MINUTES * 60_000;
-
-//     const { relativeTo, unit = "minutes" } = policy;
-//     const value = Number(policy.value ?? 0);
-
-//     let refIso =
-//         relativeTo === "booking.updatedAt"
-//             ? b.updatedAt
-//             : relativeTo === "booking.startAtLocal"
-//                 ? b.startAtLocal
-//                 : relativeTo === "booking.endAtLocal"
-//                     ? b.endAtLocal
-//                     : b.createdAt;
-
-//     if (!refIso) {
-//         console.warn(
-//             `[computeWhen] refIso=undefined (relativeTo=${relativeTo}) → scheduledDate=undefined`
-//         );
-//         return undefined;
-//     }
-
-//     const isEventRelative =
-//         relativeTo === "booking.startAtLocal" ||
-//         relativeTo === "booking.endAtLocal";
-
-//     // Resolver zona: si el campo es "local" y viene sin Z/±HH:MM, interpretarlo en el TZ del workspace
-//     let base: Date;
-//     if (typeof refIso === "string" && !hasExplicitZone(refIso) && isEventRelative) {
-//         if (!timeZoneStaff) {
-//             throw new Error(
-//                 `[computeWhen] ${relativeTo} es "local" pero "${refIso}" no trae zona y falta timeZoneWorkspace`
-//             );
-//         }
-//         base = zonedNaiveIsoToUtc(refIso, timeZoneStaff);
-//     } else {
-//         base = new Date(refIso); // ya con zona explícita o no es "local"
-//     }
-//     assertValidDate("base", base, refIso);
-
-//     const now = new Date();
-//     const mult = unitToMs(unit);
-//     const delta = value * mult;
-
-//     // Semántica actual: para start/end consideramos "antes de" (resta el delta)
-//     const whenUtc = new Date(base.getTime() + (isEventRelative ? -delta : +delta));
-//     assertValidDate("whenUtc", whenUtc, whenUtc);
-
-//     let scheduled: Date | undefined;
-
-//     if (isEventRelative) {
-//         // Si el target está en el pasado, decidir clamp o skip según gracia
-//         if (whenUtc.getTime() < now.getTime()) {
-//             const pastByMs = now.getTime() - whenUtc.getTime();
-//             if (pastByMs <= GRACE_MS) {
-//                 scheduled = now; // pequeño retraso tolerado
-//                 console.log(
-//                     `[computeWhen] past target within grace → clamp to now (pastBy=${Math.round(
-//                         pastByMs / 60000
-//                     )}m, grace=${GRACE_MINUTES}m)`
-//                 );
-//             } else {
-//                 console.log(
-//                     `[computeWhen] skip: event-relative time in past beyond grace (pastBy=${Math.round(
-//                         pastByMs / 60000
-//                     )}m, grace=${GRACE_MINUTES}m)`
-//                 );
-//                 return undefined; // <- clave: no disparamos recordatorios de citas en pasado
-//             }
-//         } else {
-//             scheduled = whenUtc; // futuro OK
-//         }
-//     } else {
-//         // createdAt/updatedAt: mantener comportamiento de clamp para jobs atrasados
-//         scheduled =
-//             whenUtc.getTime() < now.getTime() ? now : whenUtc;
-//     }
-
-//     // Logs de diagnóstico
-//     const mins_base_minus_now = diffMin(base, now);
-//     const mins_when_minus_now = diffMin(whenUtc, now);
-//     const mins_sched_minus_now = diffMin(scheduled, now);
-
-//     console.log(
-//         `[computeWhen] rel=${relativeTo ?? "createdAt*"} value=${value} ${unit} ` +
-//         `ref=${fmt(base)} when=${fmt(whenUtc)} scheduled=${fmt(scheduled)} ` +
-//         `(Δwhen-now=${mins_when_minus_now}m)`
-//     );
-//     console.log(
-//         `[computeWhen] inputs: bookingId=${b.id} createdAt=${fmt(
-//             b.createdAt
-//         )} updatedAt=${fmt(b.updatedAt)} startAtLocal=${fmt(
-//             b.startAtLocal
-//         )} endAtLocal=${fmt(b.endAtLocal)}`
-//     );
-//     console.log(
-//         `[computeWhen] derived: now=${fmt(
-//             now
-//         )} base-now=${mins_base_minus_now}m isEventRelative=${isEventRelative} deltaMs=${delta} grace=${GRACE_MINUTES}m`
-//     );
-//     console.log(
-//         `[computeWhen] output: scheduled-now=${mins_sched_minus_now}m`
-//     );
-
-//     return scheduled.toISOString();
-// }
-
-
-// /**
-//  * Calcula la fecha programada en UTC. No usa TZ del negocio:
-//  * - Interpreta fechas "locales" en el TZ del receptor: participant (cliente) y, si no hay, staff (usuario).
-//  * - Para start/end: si cae en el pasado, clampa sólo dentro de una "gracia" corta; si no, skip (undefined).
-//  * - Para createdAt/updatedAt: clampa a "now" si quedó atrás (jobs retrasados).
-//  *
-//  * @param policy               Política (offset simple).
-//  * @param b                    BookingSnap (si añades startAtUtc/endAtUtc, se priorizan).
-//  * @param timeZoneStaff        IANA del staff/usuario receptor (p.ej. "Europe/Madrid").
-//  * @param timeZoneParticipant  IANA del cliente/participante receptor.
-//  */
-// function computeWhen(
-//     policy: Policy | undefined,
-//     b: BookingSnap & { startAtUtc?: string; endAtUtc?: string },
-//     timeZoneStaff: string,
-//     timeZoneParticipant: string
-// ): string | undefined {
-//     if (!policy) {
-//         console.warn("[computeWhen] policy=undefined → scheduledDate=undefined");
-//         return undefined;
-//     }
-
-//     const GRACE_MINUTES = Number(process.env.NOTIF_GRACE_MINUTES ?? 3) || 3;
-//     const GRACE_MS = GRACE_MINUTES * 60_000;
-
-//     const { relativeTo, unit = "minutes" } = policy;
-//     const value = Number(policy.value ?? 0);
-
-//     // 1) Elige la referencia de tiempo
-//     let referenceISO =
-//         relativeTo === "booking.updatedAt" ? b.updatedAt
-//             : relativeTo === "booking.startAtLocal" ? (b.startAtUtc ?? b.startAtLocal)
-//                 : relativeTo === "booking.endAtLocal" ? (b.endAtUtc ?? b.endAtLocal)
-//                     : b.createdAt;
-
-//     if (!referenceISO) {
-//         console.warn(`[computeWhen] refIso=undefined (relativeTo=${relativeTo}) → scheduledDate=undefined`);
-//         return undefined;
-//     }
-
-//     const isEventRelative =
-//         relativeTo === "booking.startAtLocal" ||
-//         relativeTo === "booking.endAtLocal";
-
-//     // 2) Resolver base (UTC) con la zona del receptor cuando haga falta
-//     let base: Date;
-//     if (isEventRelative) {
-//         // Si ya hay UTC explícito, úsalo
-//         if (relativeTo === "booking.startAtLocal" && b.startAtUtc) {
-//             base = new Date(b.startAtUtc);
-//         } else if (relativeTo === "booking.endAtLocal" && b.endAtUtc) {
-//             base = new Date(b.endAtUtc);
-//         } else if (typeof referenceISO === "string" && !hasExplicitZone(referenceISO)) {
-//             // Naïve → interpretar con TZ del receptor (participant primero, si no staff)
-//             const tzReceiver = timeZoneParticipant || timeZoneStaff;
-//             if (!tzReceiver) {
-//                 throw new Error(
-//                     `[computeWhen] ${relativeTo} viene sin zona ("${referenceISO}") y no hay TZ del receptor (participant/staff)`
-//                 );
-//             }
-//             base = zonedNaiveIsoToUtc(referenceISO, tzReceiver);
-//         } else {
-//             // Ya viene con Z/±HH:MM (o Date)
-//             base = new Date(referenceISO as any);
-//         }
-//     } else {
-//         // createdAt/updatedAt: normalmente ya con Z; si no, se interpreta tal cual
-//         base = new Date(referenceISO as any);
-//     }
-
-//     assertValidDate("base", base, referenceISO);
-
-//     // 3) Aplicar offset
-//     const mult = unitToMs(unit);
-//     const delta = value * mult;
-
-//     const whenUtc = new Date(base.getTime() + (isEventRelative ? -delta : +delta));
-//     assertValidDate("whenUtc", whenUtc, whenUtc);
-
-//     // 4) Clamp/skip según tipo
-//     const now = new Date();
-//     let scheduled: Date | undefined;
-
-//     if (isEventRelative) {
-//         if (whenUtc.getTime() < now.getTime()) {
-//             const pastByMs = now.getTime() - whenUtc.getTime();
-//             if (pastByMs <= GRACE_MS) {
-//                 scheduled = now; // pequeño retraso tolerable
-//                 console.log(
-//                     `[computeWhen] past target within grace → clamp to now (pastBy=${Math.round(
-//                         pastByMs / 60000
-//                     )}m, grace=${GRACE_MINUTES}m)`
-//                 );
-//             } else {
-//                 console.log(
-//                     `[computeWhen] skip: event-relative time in past beyond grace (pastBy=${Math.round(
-//                         pastByMs / 60000
-//                     )}m, grace=${GRACE_MINUTES}m)`
-//                 );
-//                 return undefined; // no dispares recordatorios de citas ya pasadas
-//             }
-//         } else {
-//             scheduled = whenUtc; // futuro OK
-//         }
-//     } else {
-//         // createdAt/updatedAt: clamp a now si quedó atrás
-//         scheduled = whenUtc.getTime() < now.getTime() ? now : whenUtc;
-//     }
-
-//     // 5) Logs
-//     const mins_base_minus_now = diffMin(base, now);
-//     const mins_when_minus_now = diffMin(whenUtc, now);
-//     const mins_sched_minus_now = diffMin(scheduled, now);
-
-//     console.log(
-//         `[computeWhen] rel=${relativeTo ?? "createdAt*"} value=${value} ${unit} ` +
-//         `ref=${fmt(base)} when=${fmt(whenUtc)} scheduled=${fmt(scheduled)} ` +
-//         `(Δwhen-now=${mins_when_minus_now}m)`
-//     );
-//     console.log(
-//         `[computeWhen] inputs: bookingId=${b.id} createdAt=${fmt(
-//             b.createdAt
-//         )} updatedAt=${fmt(b.updatedAt)} startAtLocal=${fmt(
-//             b.startAtLocal
-//         )} endAtLocal=${fmt(b.endAtLocal)}`
-//     );
-//     console.log(
-//         `[computeWhen] derived: now=${fmt(
-//             now
-//         )} base-now=${mins_base_minus_now}m isEventRelative=${isEventRelative} deltaMs=${delta} grace=${GRACE_MINUTES}m`
-//     );
-//     console.log(`[computeWhen] output: scheduled-now=${mins_sched_minus_now}m`);
-
-//     return scheduled.toISOString();
-// }
-
 
 /**
  * computeWhen (versión pura):
@@ -519,7 +259,7 @@ function computeWhen(
 
     const { relativeTo, unit = "minutes" } = policy;
     const value = Number(policy.value ?? 0);
-
+    console.log("mira que es policy", policy?.type, policy?.unit, policy?.value, policy?.relativeTo);
     // 1) Referencia
     let referenceISO =
         relativeTo === "booking.updatedAt" ? b.updatedAt
@@ -588,7 +328,7 @@ function resolveTo(
 
     if (ch === "email" && who.email) return { email: who.email };
     if ((ch === "whatsapp" || ch === "sms") && who.phoneE164) return { phoneE164: who.phoneE164 };
-    if (ch === "webpush") return { subscriptionId: "1234_subscriptionId_inventado" }; // TODO: sustituir por real
+    if (ch === "push") return { subscriptionId: "1234_subscriptionId_inventado" }; // TODO: sustituir por real
     if (ch === "websocket") return {}; // si tu layer lo resuelve por audienceRef
 
     return undefined;
@@ -719,6 +459,7 @@ export function buildFromSections(params: {
             }
 
             // Programación
+            console.log(`${CONSOLE_COLOR.BgYellow}[simple-build] Calculando scheduledDate para acción ${s.id}...${CONSOLE_COLOR.Reset}`);
             const scheduledDate = computeWhen(
                 a.policy as Policy,
                 booking,
@@ -732,6 +473,8 @@ export function buildFromSections(params: {
             console.log("Mira aqui cuando empieza el evento:", booking.startAtLocal);
 
             // Dedupe
+            // TODO: Ten en cuenta que si un servicio se edita y se agregan más, 
+            // el idGroup será el mismo porque se usa el id del servicio primario.
             const idBooking = booking?.idGroup ? `booking:${booking.idGroup}` : `booking:${booking.id}`;
             const offset = `offset:${a.policy?.value ?? 0}${a.policy?.unit?.charAt(0) ?? "m"}`;
             const dedupeKey = `${s.id}:${idBooking}:${ch}:${audience}:${offset}`;
@@ -746,7 +489,8 @@ export function buildFromSections(params: {
                     id: randomUUID(),
                     workspaceId,
                     companyId,
-                    eventId: booking?.id,
+                    eventId: booking?.idGroup ? booking.idGroup : booking.id,
+                    bookingId: booking?.idGroup ? booking.idGroup : booking.id,
                     kind,
                     audienceType: audience === "client" ? "CLIENT" : "USER",
                     audienceRef: audienceRef ?? undefined,

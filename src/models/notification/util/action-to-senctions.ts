@@ -15,10 +15,14 @@ export type ActionKey =
 
 export const ACTION_TO_SECTIONS: Record<ActionKey, NotificationEvent[]> = {
     // Actions relacionados con solicitudes (requests)
+    // Cliente crea solicitud (estado del evento PENDING)
     addFromClientWithRequest: ["booking.request.created", "booking.reminder.beforeStart", "booking.ended"],
+    // Cliente crea reserva directa (sin solicitud, estado del evento ACCEPTED)
     addFromClientWithoutRequest: ["booking.request.accepted", "booking.reminder.beforeStart", "booking.ended"],
 
+    // Organizador rechaza solicitud
     rejectRequest: ["booking.request.cancelled"],
+    // Organizador acepta solicitud
     acceptRequest: ["booking.request.accepted", "booking.reminder.beforeStart", "booking.ended"],
 
     // Actions relacionados con bookings normales

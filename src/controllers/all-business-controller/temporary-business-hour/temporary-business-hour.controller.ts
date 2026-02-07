@@ -1,9 +1,7 @@
 import { Response } from "../../../models/messages/response";
 import { Pagination } from "../../../models/pagination";
 import { TemporaryBusinessHourService } from "../../../services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service";
-
-
-
+import { TemporaryHoursStrategy } from "../../../services/@redis/cache/strategies/temporaryHours/temporaryHours.strategy";
 import { JWTService } from "../../../services/jwt/jwt.service";
 
 
@@ -24,7 +22,15 @@ export class TemporaryBusinessHourController {
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workBusinessHourService.addTemporaryBusinessHour(body);
+            const { idEventFk, ...payload } = body;
+            const result = await this.workBusinessHourService.addTemporaryBusinessHour(payload);
+
+            const temporaryHoursStrategy = new TemporaryHoursStrategy();
+            if (result?.temporary?.idWorkspaceFk && result?.temporary?.idUserFk) {
+                await temporaryHoursStrategy.deleteTemporaryHours(result.temporary.idWorkspaceFk, result.temporary.idUserFk);
+            }
+
+
             res.status(200).json(Response.build("Registro creado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -105,7 +111,17 @@ export class TemporaryBusinessHourController {
             const token = req.token;
             await this.jwtService.verify(token);
 
+            if (!body?.id && req.params?.id) {
+                body.id = req.params.id;
+            }
+
             const result = await this.workBusinessHourService.updateTemporaryBusinessHour(body);
+            const temporaryHoursStrategy = new TemporaryHoursStrategy();
+            if (result?.temporary?.idWorkspaceFk && result?.temporary?.idUserFk) {
+                await temporaryHoursStrategy.deleteTemporaryHours(result.temporary.idWorkspaceFk, result.temporary.idUserFk);
+            }
+
+
             res.status(200).json(Response.build("Registro actualizado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -161,9 +177,9 @@ export class TemporaryBusinessHourController {
             await this.jwtService.verify(token);
 
             const result = await this.workBusinessHourService.getTemporaryHoursFromRedis(idUserList, idWorkspace);
-            
+
             console.log("mira el result de redis", result);
-         
+
             res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });

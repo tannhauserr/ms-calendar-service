@@ -1,6 +1,7 @@
 import { Response } from "../../../models/messages/response";
 import { Pagination } from "../../../models/pagination";
 import { WorkerBusinessHourService } from "../../../services/@database/all-business-services/worker-business-hours/worker-business-hours.service";
+import { WorkerHoursStrategy } from "../../../services/@redis/cache/strategies/workerHours/workerHours.strategy";
 
 
 import { JWTService } from "../../../services/jwt/jwt.service";
@@ -24,6 +25,12 @@ export class WorkerBusinessHourController {
             await this.jwtService.verify(token);
 
             const result = await this.workBusinessHourService.addWorkerBusinessHour(body);
+
+            const workerHoursStrategy = new WorkerHoursStrategy();
+            if (body?.idWorkspaceFk && body?.idUserFk) {
+                await workerHoursStrategy.deleteWorkerHours(result.idWorkspaceFk, result.idUserFk);
+            }
+
             res.status(200).json(Response.build("Registro creado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -89,6 +96,11 @@ export class WorkerBusinessHourController {
             await this.jwtService.verify(token);
 
             const result = await this.workBusinessHourService.updateWorkerBusinessHour(body);
+            const workerHoursStrategy = new WorkerHoursStrategy();
+            if (body?.idWorkspaceFk && body?.idUserFk) {
+                await workerHoursStrategy.deleteWorkerHours(result.idWorkspaceFk, result.idUserFk);
+            }
+            
             res.status(200).json(Response.build("Registro actualizado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });

@@ -50,15 +50,10 @@ export interface IRedisSavedBasicInformationToCreateReservationByIdWorkspaceStra
  * 
  */
 // export interface IRedisBusinessHoursStrategy {
-//     getBusinessHours(companyId: string): Promise<BusinessHoursType | null>;
-//     saveBusinessHours(companyId: string, businessHours: BusinessHoursType, ttl?: number): Promise<void>;
-//     deleteBusinessHours(companyId: string): Promise<void>;
+//     getBusinessHours(workspaceId: string): Promise<BusinessHoursType | null>;
+//     saveBusinessHours(workspaceId: string, businessHours: BusinessHoursType, ttl?: number): Promise<void>;
+//     deleteBusinessHours(workspaceId: string): Promise<void>;
 // }
-export interface IRedisBusinessHoursStrategy {
-    getBusinessHours(workspaceId: string): Promise<BusinessHoursType | null>;
-    saveBusinessHours(workspaceId: string, businessHours: BusinessHoursType, ttl?: number): Promise<void>;
-    deleteBusinessHours(workspaceId: string): Promise<void>;
-}
 
 /**
  * Usada en getAvailableTimeSlots
@@ -165,36 +160,6 @@ export interface IRedisSavedWorkspaceStrategy {
 
 
 
-export interface IRedisRoundRobinStrategy {
-    pickWeightedSmoothRR(params: {
-        idWorkspace: string;
-        idBookingPage: string;               // ← nuevo ámbito
-        idService?: string;
-        eligibles: string[];                 // staff ya filtrados por skill + disponibilidad
-        weights?: Record<string, number>;    // 0–100 (default 100 si falta)
-        stateTTLSec?: number;                // TTL opcional para el estado RR
-    }): Promise<string | null>;
-
-    getState(idWorkspace: string, idBookingPage: string, idService: string):
-        Promise<Record<string, { weight: number; current: number }>>;
-    resetState(idWorkspace: string, idBookingPage: string, idService: string): Promise<void>;
-
-    acquireHold(params: {
-        idWorkspace: string;
-        idBookingPage: string;
-        idService: string;
-        startISO: string;
-        endISO: string;
-        ttlSec?: number;                     // default 60s
-    }): Promise<boolean>;
-    releaseHold(params: {
-        idWorkspace: string;
-        idBookingPage: string;
-        idService: string;
-        startISO: string;
-        endISO: string;
-    }): Promise<void>;
-}
 
 
 // Brief

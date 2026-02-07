@@ -1,6 +1,5 @@
 import express from 'express';
 import { EventController } from '../../controllers/event/event.controller';
-import { CheckCompanyMiddleware } from '../../middlewares/check-company/check-company.middleware';
 import { OnlyAdminMiddleware } from '../../middlewares/only-admin.middleware';
 import { JWTService } from '../../services/jwt/jwt.service';
 
@@ -31,60 +30,21 @@ router.post('/events/company/:idCompany/workspace/:idWorkspace/get-event-extra-d
 );
 
 
-// Añadir un nuevo evento
-// router.post('/events/add', JWTService.authCookieOrBearer, controller.add);
-router.post('/events/add', [
-    JWTService.authCookieOrBearer,
-    OnlyAdminMiddleware.allowRoles(['ROLE_OWNER', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_SUPER_ADMIN', 'ROLE_DEVELOPER', "ROLE_SUPPORT"]),
-    OnlyAdminMiddleware.accessAuthorized,
-    // EventMiddleware.preventPastEvent,
-    // EventMiddleware.checkEventConflict,
-], controller.add);
-
-
-// TODO: Movido a las rutas de client-event
-// // TODO: crear middleware para confirmar que el id de cliente es válido
-// router.post(
-//     "/events/client-add",
-//     [
-//         JWTService.authCookieOrBearer,                 // auth
-//         BookingGuardsMiddleware.BaseValidationAndNormalize(),    // valida + normaliza input -> ctx.input
-//         BookingGuardsMiddleware.ResolveWorkspace(),              // resuelve workspace + config + tz -> ctx.workspace/config/timeZoneWorkspace
-//         BookingGuardsMiddleware.ResolveClientWorkspace(),        // resuelve idClientWorkspace -> ctx.customer
-//         BookingGuardsMiddleware.EnforceTimeRules(),              // reglas de ventana / lead times / etc. -> ctx.when
-//         BookingGuardsMiddleware.EnforceUserLimits(),             // límites por usuario -> bloquea si excede
-//         // BookingGuards.FeatureFlagsAndIdempotency(), // opcional (deja TODOs)
-//     ],
-//     controller.addFromWeb
-// );
-
-// Esto es para cuando se añade un evento desde el front del cliente
-// router.post('/events/client/:id/add', [
-//     JWTService.authCookieOrBearer,
-
-//     // TODO: Estaría bien crear un middleware que compruebe si el cliente
-//     // pertenece al establecimiento del evento
-
-//     // EventMiddleware.preventPastEvent,
-//     // EventMiddleware.checkEventConflict,
-// ], controller.add);
-
 // Obtener un evento por su ID
 router.get('/events-:id', JWTService.authCookieOrBearer, controller.getById);
 
-// Actualizar un evento
-router.post('/events/update-:id', [
+
+// Marcar comentario de cliente como leído, es solo para roles de usuario normal
+router.post('/events/mark-as-read', [
     JWTService.authCookieOrBearer,
-    OnlyAdminMiddleware.allowRoles(['ROLE_OWNER', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_SUPER_ADMIN', 'ROLE_DEVELOPER', "ROLE_SUPPORT"]),
+    OnlyAdminMiddleware.allowRoles(['ROLE_OWNER', 'ROLE_ADMIN', 'ROLE_MANAGER', "ROLE_USER"]),
     OnlyAdminMiddleware.accessAuthorized,
 
-
-    CheckCompanyMiddleware.checkCompanyInEvent,
     // TODO: Ahora si se puede actualizar pasado
     // EventMiddleware.preventPastEvent,
     // EventMiddleware.checkEventConflict,
     // EventMiddleware.validateEventStatusChange_DESFASADO
-], controller.update);
+], controller.markCommentAsRead);
 
 
 // Borrar un evento
@@ -93,17 +53,26 @@ router.post('/events/delete',
         JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.allowRoles(['ROLE_OWNER', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_SUPER_ADMIN', 'ROLE_DEVELOPER', "ROLE_SUPPORT"]),
         OnlyAdminMiddleware.accessAuthorized,
-        CheckCompanyMiddleware.checkCompanyInEvent,
+
     ], controller.deleteEvent);
 // router.post('/events/delete-google-total', JWTService.authCookieOrBearer, controller.deleteGoogleTotal);
 
 router.post('/events/change-status',
     [
         JWTService.authCookieOrBearer,
-        CheckCompanyMiddleware.checkCompanyInEvent,
         OnlyAdminMiddleware.accessOnlyAdminOrManagerOrUser,
     ],
     controller.changeEventStatus);
+
+// Upsert de eventos desde la plataforma (sidebar)
+router.post('/events/v2/platform/manage-event',
+    [
+        JWTService.authCookieOrBearer,
+        OnlyAdminMiddleware.allowRoles(['ROLE_USER', 'ROLE_OWNER', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_SUPER_ADMIN', 'ROLE_DEVELOPER', 'ROLE_SUPPORT']),
+        OnlyAdminMiddleware.accessAuthorized,
+    ],
+    controller.upsertEventByPlatform
+);
 
 
 module.exports = router;

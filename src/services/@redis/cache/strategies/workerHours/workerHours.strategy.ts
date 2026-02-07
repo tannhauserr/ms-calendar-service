@@ -54,7 +54,8 @@ export class WorkerHoursStrategy implements IRedisWorkerHoursStrategy {
 
         const parsed: { [weekday: string]: string[][] | null } = JSON.parse(data);
 
-        const norm = normalizeRange(range);
+        const hasRange = !!(range && (range.date || range.start || range.end));
+        const norm = normalizeRange(range, hasRange);
         if (!norm) return parsed; // sin rango → todo
 
         // Filtrado por weekdays presentes en el rango pedido
