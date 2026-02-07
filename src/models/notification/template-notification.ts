@@ -1,5 +1,13 @@
 /** Tipos alineados con el backend */
-export type NotificationChannel = "email" | "whatsapp" | "sms" | "push" | "websocket" | "webhook";
+export type NotificationChannel = 
+"email" 
+| "whatsapp" 
+| "sms" 
+| "push" 
+| "websocket" 
+| "webhook"
+| "platform_internal"; 
+
 export type OwnerScope = "PLATFORM" | "COMPANY" | "WORKSPACE" | "BOOKING_PAGE" | "USER";
 
 export type LanguageType =
@@ -15,8 +23,8 @@ export interface TemplateNotification {
     channel: NotificationChannel;
     key: string;
     language: LanguageType;
-    subject?: string | null;        // email/webpush opcional
-    body?: string | null;           // email/sms/webpush opcional
+    subject?: string | null;        // email/push opcional
+    body?: string | null;           // email/sms/push opcional
     waTemplateName?: string | null; // whatsapp opcional
     isActive?: boolean;
 };

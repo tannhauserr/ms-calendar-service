@@ -7,28 +7,42 @@ import CustomError from "../../../models/custom-error/CustomError";
 import { CONSOLE_COLOR } from "../../../constant/console-color";
 import { IRedisUserBriefStrategy, IRedisWorkspaceBriefStrategy } from "../../@redis/cache/interfaces/interfaces";
 import { UserBrief } from "../../@redis/cache/interfaces/models/user-brief";
+import { TIME_SECONDS } from "../../../constant/time";
 
 // 🔹 MS receptor (login/auth)
 const TARGET_MS_NAME = process.env.MS_LOGIN_NAME || "auth";
 // 🔹 Quién llama (este microservicio)
 const THIS_MS_NAME = process.env.MS_NAME || process.env.MS_CALENDAR_NAME || "calendar";
 
-// ✅ Cliente propio del módulo con interceptores
+// 🔹 Secret interno para comunicación entre microservicios
+const internalSecret = process.env.INTERNAL_MS_SECRET;
+// ✅ Cliente propio de este archivo (singleton del módulo)
 const client = axios.create({
     baseURL: `${process.env.URL_BACK_MS_GATEWAY}/${TARGET_MS_NAME}/api/ms`,
     timeout: 5000,
+    headers: internalSecret
+        ? { "x-internal-ms-secret": internalSecret }
+        : {},
 });
 
-// 👉 Engancha el interceptor de token (aud = receptor, sub = este MS)
-attachServiceAuth(client, TARGET_MS_NAME, THIS_MS_NAME);
-
-// (Opcional) log para confirmar que se añade Authorization
 client.interceptors.request.use((cfg) => {
-    const hasAuth = !!cfg.headers?.Authorization;
-    console.log("[auth-ms-client] →", cfg.method?.toUpperCase(), cfg.url, { hasAuth });
+    const h: any = cfg.headers;
+    const auth =
+        (typeof h?.get === "function" ? h.get("Authorization") : undefined) ??
+        h?.Authorization ??
+        h?.authorization;
+
+    console.log("[ms-client-file] →", cfg.method?.toUpperCase(), cfg.baseURL + (cfg.url ?? ""), {
+        hasAuth: Boolean(auth),
+        authPrefix: typeof auth === "string" ? auth.slice(0, 20) : undefined,
+    });
+
     return cfg;
 });
 
+
+// Enganchamos el interceptor aquí (aud=receiver, sub=this)
+// attachServiceAuth(client, TARGET_MS_NAME, THIS_MS_NAME);
 
 /**
  * Obtiene snapshots de Users por IDs con cache-first
@@ -103,7 +117,8 @@ export async function getWorkspacesByIds(ids: string[]) {
         if (missingIds.length) {
             const { data } = await client.post(`/internal/workspaces/_batch`, { ids: missingIds });
             fetched = (data.items as WorkspaceBrief[]) || [];
-            for (const ws of fetched) await strategy.setWorkspace(ws);
+            for (const ws of fetched) await strategy.setWorkspace(ws, TIME_SECONDS.MINUTE * 1);
+
         }
 
         // Merge cache + fetched respetando el orden solicitado en validIds

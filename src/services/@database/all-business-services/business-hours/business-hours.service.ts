@@ -89,13 +89,30 @@ export class BusinessHourService {
         try {
             console.log('idList', idList);
             let listAux = Array.isArray(idList) ? idList : [idList];
-            return await prisma.businessHour.deleteMany({
+
+            // 🟢 Obtener registros antes de eliminar para saber qué workspaces invalidar
+            const records = await prisma.businessHour.findMany({
+                where: { id: { in: listAux } },
+                select: { idWorkspaceFk: true }
+            });
+
+            const result = await prisma.businessHour.deleteMany({
                 where: {
                     id: {
                         in: listAux,
                     },
                 },
             });
+
+            // 🟢 Invalidar Redis para cada workspace único afectado
+            const businessHoursStrategy = new BusinessHoursStrategy();
+            const uniqueWorkspaces = new Set(records.map(r => r.idWorkspaceFk));
+
+            for (const workspaceId of uniqueWorkspaces) {
+                await businessHoursStrategy.deleteBusinessHours(workspaceId);
+            }
+
+            return result;
         } catch (error: any) {
             throw new CustomError('BusinessHourBusinessHour.deleteBusinessHour', error);
         }
@@ -270,7 +287,7 @@ export class BusinessHourService {
         // Si no están en Redis, obtenerlos de la base de datos
         const businessHoursRecords = await prisma.businessHour.findMany({
             where: {
-                idCompanyFk: idCompany,
+                // idCompanyFk: idCompany,
                 idWorkspaceFk: idWorkspace,
                 deletedDate: null,
             },

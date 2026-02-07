@@ -95,132 +95,93 @@ export class RecurrenceRuleService {
         }
     }
 
-    // /**
-    //  * Lista reglas con paginación genérica
-    //  */
+
     // async getRules(pagination: Pagination): Promise<{
     //     rows: RecurrenceRuleWithClients[];
     //     pagination: Pagination;
     // }> {
     //     try {
+    //         // 1) Trae solo las reglas (sin participantes)
+    //         const { rows, pagination: newPagination } = await getGeneric(
+    //             pagination,
+    //             "recurrenceRule",
+    //             {
+    //                 id: true,
+    //                 idCalendarFk: true,
+    //                 dtstart: true,
+    //                 until: true,
+    //                 rrule: true,
+    //                 tzid: true,
+    //                 recurrenceStatusType: true,
+    //                 idUserFk: true,
+    //             }
+    //         );
 
-    //         let select: Prisma.RecurrenceRuleSelect = {
-    //             id: true,
-    //             idCalendarFk: true,
-    //             dtstart: true,
-    //             until: true,
-    //             rrule: true,
-    //             tzid: true,
-    //             recurrenceStatusType: true,
-    //             idUserFk: true,
+    //         // Extrae los IDs de las reglas
+    //         const ruleIds = rows.map((r) => r.id);
 
-    //             events: {
-    //                 select: {
-    //                     id: true,
-    //                     eventParticipant: {
-    //                         select: {
-    //                             id: true,
-    //                             idClientWorkspaceFk: true,
-    //                             idClientFk: true,
-    //                         },
+    //         // 2) Trae SOLO los participantes ligados a esas reglas,
+    //         //    sin usar `distinct` (que sólo acepta campos escalares de EventParticipant)
+    //         //    y seleccionando el campo de la relación `event.idRecurrenceRuleFk`
+    //         const participants = await prisma.eventParticipant.findMany({
+    //             where: {
+    //                 event: {
+    //                     idRecurrenceRuleFk: { in: ruleIds },
+    //                 },
+    //             },
+    //             select: {
+    //                 idClientFk: true,
+    //                 idClientWorkspaceFk: true,
+    //                 // Para luego saber a qué regla pertenece cada participante:
+    //                 event: {
+    //                     select: {
+    //                         idRecurrenceRuleFk: true,
     //                     },
     //                 },
+    //             },
+    //         });
+
+    //         // 3) Agrupa en memoria, eliminando duplicados de cliente+establecimiento
+    //         interface ClientInfo { idClientFk: string; idClientWorkspaceFk: string }
+    //         const mapByRule = new Map<string, ClientInfo[]>();
+
+    //         for (const p of participants) {
+    //             const ruleId = p.event.idRecurrenceRuleFk!;
+    //             if (!mapByRule.has(ruleId)) {
+    //                 mapByRule.set(ruleId, []);
     //             }
+    //             const arr = mapByRule.get(ruleId)!;
+    //             // dedupe simple por stringify
+    //             const key = `${p.idClientFk}|${p.idClientWorkspaceFk}`;
+    //             if (!arr.some(c => `${c.idClientFk}|${c.idClientWorkspaceFk}` === key)) {
+    //                 arr.push({
+    //                     idClientFk: p.idClientFk,
+    //                     idClientWorkspaceFk: p.idClientWorkspaceFk,
+    //                 });
+    //             }
+    //         }
 
-    //         };
+    //         // 4) Combina reglas + clientes
+    //         const rowsWithClients: RecurrenceRuleWithClients[] = rows.map((r) => ({
+    //             ...r,
+    //             clients: mapByRule.get(r.id) ?? [],
+    //         }));
 
-    //         return await getGeneric(pagination, "recurrenceRule", select);
+    //         return { rows: rowsWithClients, pagination: newPagination };
     //     } catch (error: any) {
     //         throw new CustomError("RecurrenceRuleService.getRules", error);
     //     }
     // }
-
-    async getRules(pagination: Pagination): Promise<{
-        rows: RecurrenceRuleWithClients[];
-        pagination: Pagination;
-    }> {
-        try {
-            // 1) Trae solo las reglas (sin participantes)
-            const { rows, pagination: newPagination } = await getGeneric(
-                pagination,
-                "recurrenceRule",
-                {
-                    id: true,
-                    idCalendarFk: true,
-                    dtstart: true,
-                    until: true,
-                    rrule: true,
-                    tzid: true,
-                    recurrenceStatusType: true,
-                    idUserFk: true,
-                }
-            );
-
-            // Extrae los IDs de las reglas
-            const ruleIds = rows.map((r) => r.id);
-
-            // 2) Trae SOLO los participantes ligados a esas reglas,
-            //    sin usar `distinct` (que sólo acepta campos escalares de EventParticipant)
-            //    y seleccionando el campo de la relación `event.idRecurrenceRuleFk`
-            const participants = await prisma.eventParticipant.findMany({
-                where: {
-                    event: {
-                        idRecurrenceRuleFk: { in: ruleIds },
-                    },
-                },
-                select: {
-                    idClientFk: true,
-                    idClientWorkspaceFk: true,
-                    // Para luego saber a qué regla pertenece cada participante:
-                    event: {
-                        select: {
-                            idRecurrenceRuleFk: true,
-                        },
-                    },
-                },
-            });
-
-            // 3) Agrupa en memoria, eliminando duplicados de cliente+establecimiento
-            interface ClientInfo { idClientFk: string; idClientWorkspaceFk: string }
-            const mapByRule = new Map<string, ClientInfo[]>();
-
-            for (const p of participants) {
-                const ruleId = p.event.idRecurrenceRuleFk!;
-                if (!mapByRule.has(ruleId)) {
-                    mapByRule.set(ruleId, []);
-                }
-                const arr = mapByRule.get(ruleId)!;
-                // dedupe simple por stringify
-                const key = `${p.idClientFk}|${p.idClientWorkspaceFk}`;
-                if (!arr.some(c => `${c.idClientFk}|${c.idClientWorkspaceFk}` === key)) {
-                    arr.push({
-                        idClientFk: p.idClientFk,
-                        idClientWorkspaceFk: p.idClientWorkspaceFk,
-                    });
-                }
-            }
-
-            // 4) Combina reglas + clientes
-            const rowsWithClients: RecurrenceRuleWithClients[] = rows.map((r) => ({
-                ...r,
-                clients: mapByRule.get(r.id) ?? [],
-            }));
-
-            return { rows: rowsWithClients, pagination: newPagination };
-        } catch (error: any) {
-            throw new CustomError("RecurrenceRuleService.getRules", error);
-        }
-    }
 
 
 
     /**
      * Lista todas las reglas de un calendario dado
      */
-    async getRulesByCalendar(calendarId: string): Promise<RecurrenceRule[]> {
+    async getRulesByCalendar(idWorkspace: string): Promise<RecurrenceRule[]> {
         try {
             return await prisma.recurrenceRule.findMany({
-                where: { idCalendarFk: calendarId },
+                where: { idWorkspaceFk: idWorkspace },
                 orderBy: { dtstart: "asc" },
             });
         } catch (error: any) {

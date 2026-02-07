@@ -15,9 +15,47 @@ export type HoursRangeInput = {
 };
 
 // Normaliza solo si viene range; si no hay range -> undefined (para devolver todo)
-export function normalizeRange(range?: HoursRangeInput): { start: DateISO; end: DateISO } | undefined {
-    if (!range) return undefined;
+// export function normalizeRange(range?: HoursRangeInput): { start: DateISO; end: DateISO } | undefined {
+//     if (!range) return undefined;
 
+//     if (range.date) {
+//         const d = moment(range.date, "YYYY-MM-DD", true);
+//         if (d.isValid()) {
+//             const iso = d.format("YYYY-MM-DD");
+//             return { start: iso, end: iso };
+//         }
+//         return undefined;
+//     }
+
+//     if (!range.start || !range.end) return undefined;
+
+//     const s = moment(range.start, "YYYY-MM-DD", true);
+//     const e = moment(range.end, "YYYY-MM-DD", true);
+//     if (!s.isValid() || !e.isValid() || e.isBefore(s, "day")) return undefined;
+
+//     return { start: s.format("YYYY-MM-DD"), end: e.format("YYYY-MM-DD") };
+// }
+
+// Normaliza solo si viene range.
+// Si no hay range -> undefined (para devolver todo)
+// Si autoDefaultIfMissing = true y no viene range -> [ayer, +32 días]
+export function normalizeRange(
+    range?: HoursRangeInput,
+    autoDefaultIfMissing: boolean = false
+): { start: DateISO; end: DateISO } | undefined {
+    // 1) No llega rango
+    if (!range) {
+        if (!autoDefaultIfMissing) {
+            return undefined;
+        }
+
+        // Rango automático: ayer hasta dentro de 32 días
+        const start = moment().subtract(1, "day").format("YYYY-MM-DD"); // ayer
+        const end = moment().add(32, "day").format("YYYY-MM-DD");      // +32 días
+        return { start, end };
+    }
+
+    // 2) Caso range.date (un solo día)
     if (range.date) {
         const d = moment(range.date, "YYYY-MM-DD", true);
         if (d.isValid()) {
@@ -27,14 +65,22 @@ export function normalizeRange(range?: HoursRangeInput): { start: DateISO; end: 
         return undefined;
     }
 
+    // 3) Caso start/end
     if (!range.start || !range.end) return undefined;
 
     const s = moment(range.start, "YYYY-MM-DD", true);
     const e = moment(range.end, "YYYY-MM-DD", true);
-    if (!s.isValid() || !e.isValid() || e.isBefore(s, "day")) return undefined;
 
-    return { start: s.format("YYYY-MM-DD"), end: e.format("YYYY-MM-DD") };
+    if (!s.isValid() || !e.isValid() || e.isBefore(s, "day")) {
+        return undefined;
+    }
+
+    return {
+        start: s.format("YYYY-MM-DD"),
+        end: e.format("YYYY-MM-DD"),
+    };
 }
+
 
 export function listDaysInclusive(startISO: DateISO, endISO: DateISO): DateISO[] {
     const out: DateISO[] = [];

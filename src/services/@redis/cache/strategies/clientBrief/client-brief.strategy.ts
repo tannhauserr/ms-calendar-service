@@ -1,26 +1,48 @@
-// src/services/@redis/cache/strategies/client/client-workspace-brief.strategy.ts
+import { ClientWorkspaceBrief } from "../../interfaces/models/client-brief";
 import { RedisCacheService } from "../../redis.service";
-import type { ClientBrief, ClientWorkspaceBrief } from "../../interfaces/models/client-brief";
-import type { IRedisClientWorkspaceBriefStrategy } from "../../interfaces/interfaces";
+
+
+/**
+ * Estrategia Redis para ClientBrief (cache de clientes por compañía)
+ */
+export interface IRedisClientWorkspaceBriefStrategy {
+    setClientWorkspace(cw: ClientWorkspaceBrief, ttlSec?: number): Promise<void>;
+
+    getClientWorkspaceById(idClientWorkspace: string, idCompany?: string): Promise<ClientWorkspaceBrief | null>;
+    getClientWorkspacesByCompany(idCompany: string): Promise<ClientWorkspaceBrief[]>;
+
+    // Índices útiles
+    getClientWorkspacesByClientId(idClient: string, idCompany?: string): Promise<ClientWorkspaceBrief[]>;
+    getClientWorkspaceByEmail(idCompany: string, email: string): Promise<ClientWorkspaceBrief | null>;
+    getClientWorkspaceByPhone(idCompany: string, e164Phone: string): Promise<ClientWorkspaceBrief | null>;
+
+    deleteClientWorkspace(
+        idClientWorkspace: string,
+        idCompany: string,
+        email?: string,
+        phoneE164?: string
+    ): Promise<void>;
+}
+
 
 export const REDIS_CW_PREFIX_BRIEF = "clientWS:brief";
-export const REDIS_CW_PREFIX_WS2IDS = "clientWS:ws2ids";
+export const REDIS_CW_PREFIX_COMPANY2IDS = "clientWS:company2ids";
 export const REDIS_CW_PREFIX_EMAIL = "clientWS:email";
 export const REDIS_CW_PREFIX_PHONE = "clientWS:phone";
-export const REDIS_CW_PREFIX_ID2WS = "clientWS:id2ws";
-export const REDIS_CW_PREFIX_CLIENT_WS = "clientWS:clientId2clientWSIds";
+export const REDIS_CW_PREFIX_ID2COMPANY = "clientWS:id2company";
+export const REDIS_CW_PREFIX_CLIENT_COMPANY = "clientWS:clientId2clientWSIds";
 export const REDIS_CW_PREFIX_CLIENT_ALL = "clientWS:clientId2clientWSIdsGlobal";
 
 export const DEFAULT_CW_TTL_SEC = 21600; // 6h
 export const MAX_CW_TTL_SEC = 604800; // 7d
 
-const wsTag = (wsId: string) => `{ws:${wsId}}`;
-const kBrief = (wsId: string, clientWSId: string) => `${REDIS_CW_PREFIX_BRIEF}:${wsTag(wsId)}:${clientWSId}`;
-const kWs2Ids = (wsId: string) => `${REDIS_CW_PREFIX_WS2IDS}:${wsTag(wsId)}`;
-const kEmail = (wsId: string, email: string) => `${REDIS_CW_PREFIX_EMAIL}:${wsTag(wsId)}:${email.toLowerCase()}`;
-const kPhone = (wsId: string, e164: string) => `${REDIS_CW_PREFIX_PHONE}:${wsTag(wsId)}:${e164}`;
-const kId2Ws = (clientWSId: string) => `${REDIS_CW_PREFIX_ID2WS}:${clientWSId}`;
-const kClientWs = (wsId: string, clientId: string) => `${REDIS_CW_PREFIX_CLIENT_WS}:${wsTag(wsId)}:${clientId}`;
+const companyTag = (companyId: string) => `{company:${companyId}}`;
+const kBrief = (companyId: string, clientWSId: string) => `${REDIS_CW_PREFIX_BRIEF}:${companyTag(companyId)}:${clientWSId}`;
+const kCompany2Ids = (companyId: string) => `${REDIS_CW_PREFIX_COMPANY2IDS}:${companyTag(companyId)}`;
+const kEmail = (companyId: string, email: string) => `${REDIS_CW_PREFIX_EMAIL}:${companyTag(companyId)}:${email.toLowerCase()}`;
+const kPhone = (companyId: string, e164: string) => `${REDIS_CW_PREFIX_PHONE}:${companyTag(companyId)}:${e164}`;
+const kId2Company = (clientWSId: string) => `${REDIS_CW_PREFIX_ID2COMPANY}:${clientWSId}`;
+const kClientCompany = (companyId: string, clientId: string) => `${REDIS_CW_PREFIX_CLIENT_COMPANY}:${companyTag(companyId)}:${clientId}`;
 const kClientAll = (clientId: string) => `${REDIS_CW_PREFIX_CLIENT_ALL}:${clientId}`;
 
 const normEmail = (s?: string) => (s ?? "").trim().toLowerCase();
@@ -47,45 +69,45 @@ export class ClientWorkspaceBriefStrategy implements IRedisClientWorkspaceBriefS
     }
 
     async setClientWorkspace(clientWS: ClientWorkspaceBrief, ttl?: number): Promise<void> {
-        const wsId = clientWS.idWorkspaceFk;
+        const companyId = clientWS.idCompanyFk;
         const clientWSId = clientWS.id;
-        if (!wsId || !clientWSId) return;
+        if (!companyId || !clientWSId) return;
 
         // Derivar email/phone preferidos (en CW)
         const email = normEmail(clientWS.email);
         const e164 = toE164(clientWS.phoneCode, clientWS.phoneNumber);
 
-        // Índices de workspace
-        const list = await this.readList(kWs2Ids(wsId));
+        // Índices de compañía
+        const list = await this.readList(kCompany2Ids(companyId));
         if (!list.includes(clientWSId)) list.push(clientWSId);
 
-        // Índice clientId -> [clientWSIds] en este workspace
+        // Índice clientId -> [clientWSIds] en esta compañía
         const clientId = clientWS.idClientFk || clientWS.client?.id;
-        let clientWSIdsForClientWs: string[] = [];
+        let clientWSIdsForClientCompany: string[] = [];
         if (clientId) {
-            clientWSIdsForClientWs = await this.readList(kClientWs(wsId, clientId));
-            if (!clientWSIdsForClientWs.includes(clientWSId)) clientWSIdsForClientWs.push(clientWSId);
+            clientWSIdsForClientCompany = await this.readList(kClientCompany(companyId, clientId));
+            if (!clientWSIdsForClientCompany.includes(clientWSId)) clientWSIdsForClientCompany.push(clientWSId);
         }
 
-        // Índice global de clientId -> [{ wsId, clientWSId }]
-        let allEntries: { wsId: string; clientWSId: string }[] = [];
+        // Índice global de clientId -> [{ companyId, clientWSId }]
+        let allEntries: { companyId: string; clientWSId: string }[] = [];
         if (clientId) {
             const raw = await this.redis.get(kClientAll(clientId));
             if (raw) { try { allEntries = JSON.parse(raw); } catch { allEntries = []; } }
-            if (!allEntries.some(x => x.wsId === wsId && x.clientWSId === clientWSId)) {
-                allEntries.push({ wsId, clientWSId });
+            if (!allEntries.some(x => x.companyId === companyId && x.clientWSId === clientWSId)) {
+                allEntries.push({ companyId, clientWSId });
             }
         }
 
-        // Snapshot + índices (co-localizados por {ws:<id>})
+        // Snapshot + índices (co-localizados por {company:<id>})
         const p = this.redis.pipeline()
-            .set(kBrief(wsId, clientWSId), JSON.stringify(clientWS), this.ttl(ttl))
-            .set(kId2Ws(clientWSId), wsId, this.ttl(ttl))
-            .set(kWs2Ids(wsId), JSON.stringify(list), this.ttl(ttl));
+            .set(kBrief(companyId, clientWSId), JSON.stringify(clientWS), this.ttl(ttl))
+            .set(kId2Company(clientWSId), companyId, this.ttl(ttl))
+            .set(kCompany2Ids(companyId), JSON.stringify(list), this.ttl(ttl));
 
-        if (email) p.set(kEmail(wsId, email), clientWSId, this.ttl(ttl));
-        if (e164) p.set(kPhone(wsId, e164), clientWSId, this.ttl(ttl));
-        if (clientId) p.set(kClientWs(wsId, clientId), JSON.stringify(clientWSIdsForClientWs), this.ttl(ttl));
+        if (email) p.set(kEmail(companyId, email), clientWSId, this.ttl(ttl));
+        if (e164) p.set(kPhone(companyId, e164), clientWSId, this.ttl(ttl));
+        if (clientId) p.set(kClientCompany(companyId, clientId), JSON.stringify(clientWSIdsForClientCompany), this.ttl(ttl));
 
         await p.exec();
 
@@ -94,84 +116,84 @@ export class ClientWorkspaceBriefStrategy implements IRedisClientWorkspaceBriefS
         }
     }
 
-    async getClientWorkspaceById(idClientWorkspace: string, idWorkspace?: string): Promise<ClientWorkspaceBrief | null> {
-        let wsId = idWorkspace;
-        if (!wsId) {
-            wsId = await this.redis.get(kId2Ws(idClientWorkspace)) || undefined;
-            if (!wsId) return null;
+    async getClientWorkspaceById(idClientWorkspace: string, idCompany?: string): Promise<ClientWorkspaceBrief | null> {
+        let companyId = idCompany;
+        if (!companyId) {
+            companyId = await this.redis.get(kId2Company(idClientWorkspace)) || undefined;
+            if (!companyId) return null;
         }
-        const raw = await this.redis.get(kBrief(wsId, idClientWorkspace));
+        const raw = await this.redis.get(kBrief(companyId, idClientWorkspace));
         return raw ? (JSON.parse(raw) as ClientWorkspaceBrief) : null;
     }
 
-    async getClientWorkspacesByWorkspace(idWorkspace: string): Promise<ClientWorkspaceBrief[]> {
-        const ids = await this.readList(kWs2Ids(idWorkspace));
+    async getClientWorkspacesByCompany(idCompany: string): Promise<ClientWorkspaceBrief[]> {
+        const ids = await this.readList(kCompany2Ids(idCompany));
         if (!ids.length) return [];
-        const items = await Promise.all(ids.map((id) => this.getClientWorkspaceById(id, idWorkspace)));
+        const items = await Promise.all(ids.map((id) => this.getClientWorkspaceById(id, idCompany)));
         return items.filter(Boolean) as ClientWorkspaceBrief[];
     }
 
-    async getClientWorkspacesByClientId(idClient: string, idWorkspace?: string): Promise<ClientWorkspaceBrief[]> {
-        if (idWorkspace) {
-            const clientWSIds = await this.readList(kClientWs(idWorkspace, idClient));
+    async getClientWorkspacesByClientId(idClient: string, idCompany?: string): Promise<ClientWorkspaceBrief[]> {
+        if (idCompany) {
+            const clientWSIds = await this.readList(kClientCompany(idCompany, idClient));
             if (!clientWSIds.length) return [];
-            const items = await Promise.all(clientWSIds.map((id) => this.getClientWorkspaceById(id, idWorkspace)));
+            const items = await Promise.all(clientWSIds.map((id) => this.getClientWorkspaceById(id, idCompany)));
             return items.filter(Boolean) as ClientWorkspaceBrief[];
         }
-        // Global (varios workspaces)
+        // Global (varias compañías)
         const raw = await this.redis.get(kClientAll(idClient));
         if (!raw) return [];
-        let pairs: { wsId: string; clientWSId: string }[] = [];
+        let pairs: { companyId: string; clientWSId: string }[] = [];
         try { pairs = JSON.parse(raw); } catch { pairs = []; }
-        const items = await Promise.all(pairs.map(({ wsId, clientWSId }) => this.getClientWorkspaceById(clientWSId, wsId)));
+        const items = await Promise.all(pairs.map(({ companyId, clientWSId }) => this.getClientWorkspaceById(clientWSId, companyId)));
         return items.filter(Boolean) as ClientWorkspaceBrief[];
     }
 
-    async getClientWorkspaceByEmail(idWorkspace: string, email: string): Promise<ClientWorkspaceBrief | null> {
-        const clientWSId = await this.redis.get(kEmail(idWorkspace, email));
+    async getClientWorkspaceByEmail(idCompany: string, email: string): Promise<ClientWorkspaceBrief | null> {
+        const clientWSId = await this.redis.get(kEmail(idCompany, email));
         if (!clientWSId) return null;
-        return this.getClientWorkspaceById(clientWSId, idWorkspace);
+        return this.getClientWorkspaceById(clientWSId, idCompany);
     }
 
-    async getClientWorkspaceByPhone(idWorkspace: string, e164: string): Promise<ClientWorkspaceBrief | null> {
-        const clientWSId = await this.redis.get(kPhone(idWorkspace, e164));
+    async getClientWorkspaceByPhone(idCompany: string, e164: string): Promise<ClientWorkspaceBrief | null> {
+        const clientWSId = await this.redis.get(kPhone(idCompany, e164));
         if (!clientWSId) return null;
-        return this.getClientWorkspaceById(clientWSId, idWorkspace);
+        return this.getClientWorkspaceById(clientWSId, idCompany);
     }
 
     async deleteClientWorkspace(
         idClientWorkspace: string,
-        idWorkspace: string,
+        idCompany: string,
         email?: string,
         phoneE164?: string
     ): Promise<void> {
-        const ids = await this.readList(kWs2Ids(idWorkspace));
+        const ids = await this.readList(kCompany2Ids(idCompany));
         const next = ids.filter((x) => x !== idClientWorkspace);
 
-        // Quitar de clientId2clientWSIds en ws y global
-        const snapshot = await this.getClientWorkspaceById(idClientWorkspace, idWorkspace);
+        // Quitar de clientId2clientWSIds en company y global
+        const snapshot = await this.getClientWorkspaceById(idClientWorkspace, idCompany);
         const clientId = snapshot?.idClientFk || snapshot?.client?.id;
 
         const p = this.redis.pipeline()
-            .del(kBrief(idWorkspace, idClientWorkspace))
-            .del(kId2Ws(idClientWorkspace))
-            .set(kWs2Ids(idWorkspace), JSON.stringify(next));
+            .del(kBrief(idCompany, idClientWorkspace))
+            .del(kId2Company(idClientWorkspace))
+            .set(kCompany2Ids(idCompany), JSON.stringify(next));
 
-        if (email) p.del(kEmail(idWorkspace, normEmail(email)));
-        if (phoneE164) p.del(kPhone(idWorkspace, phoneE164));
+        if (email) p.del(kEmail(idCompany, normEmail(email)));
+        if (phoneE164) p.del(kPhone(idCompany, phoneE164));
         if (clientId) {
-            const list = await this.readList(kClientWs(idWorkspace, clientId));
+            const list = await this.readList(kClientCompany(idCompany, clientId));
             const nextList = list.filter((x) => x !== idClientWorkspace);
-            p.set(kClientWs(idWorkspace, clientId), JSON.stringify(nextList));
+            p.set(kClientCompany(idCompany, clientId), JSON.stringify(nextList));
         }
 
         await p.exec();
 
         if (clientId) {
             const raw = await this.redis.get(kClientAll(clientId));
-            let pairs: { wsId: string; clientWSId: string }[] = [];
+            let pairs: { companyId: string; clientWSId: string }[] = [];
             if (raw) { try { pairs = JSON.parse(raw); } catch { pairs = []; } }
-            const nextPairs = pairs.filter(({ wsId, clientWSId }) => !(wsId === idWorkspace && clientWSId === idClientWorkspace));
+            const nextPairs = pairs.filter(({ companyId, clientWSId }) => !(companyId === idCompany && clientWSId === idClientWorkspace));
             await this.redis.set(kClientAll(clientId), JSON.stringify(nextPairs));
         }
     }

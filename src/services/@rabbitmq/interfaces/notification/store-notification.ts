@@ -38,6 +38,7 @@ export type StoreNotificationCreatedV1 = {
         workspaceId?: string;
         companyId?: string;
         eventId?: string;
+        bookingId: string;
 
         kind:
         | "booking"
@@ -59,7 +60,7 @@ export type StoreNotificationCreatedV1 = {
         expiresDate?: string;   // ISO 8601
 
         /** AHORA en raíz (no existe targets[]) */
-        channel: "email" | "whatsapp" | "sms" | "webpush" | "websocket";
+        channel: "email" | "whatsapp" | "sms" | "push" | "websocket";
         to?: { email?: string; phoneE164?: string; subscriptionId?: string };
 
         render?: {
@@ -76,6 +77,12 @@ export type StoreNotificationCreatedV1 = {
 export type StoreNotificationDeletedV1 = {
     v: 1;
     id: string; // Notification.id
+    trace: { correlationId: string; producedAt: string };
+};
+
+export type StoreNotificationPurgeByBookingV1 = {
+    v: 1;
+    bookingId: string; // corresponde a Notification.idBooking (tu “idGroup”)
     trace: { correlationId: string; producedAt: string };
 };
 
@@ -106,7 +113,7 @@ export const StoreNotificationCreatedV1Schema = z.object({
         scheduledDate: z.string().datetime().optional(),
         expiresDate: z.string().datetime().optional(),
 
-        channel: z.enum(["email", "whatsapp", "sms", "webpush", "websocket"]),
+        channel: z.enum(["email", "whatsapp", "sms", "push", "websocket"]),
         to: z.object({
             email: z.string().email().optional(),
             phoneE164: z.string().optional(),
@@ -130,6 +137,15 @@ export const StoreNotificationCreatedV1Schema = z.object({
 export const StoreNotificationDeletedV1Schema = z.object({
     v: z.literal(1),
     id: z.string().uuid(),
+    trace: z.object({
+        correlationId: z.string().uuid(),
+        producedAt: z.string().datetime(),
+    }),
+});
+
+export const StoreNotificationPurgeByBookingV1Schema = z.object({
+    v: z.literal(1),
+    bookingId: z.string().uuid(),
     trace: z.object({
         correlationId: z.string().uuid(),
         producedAt: z.string().datetime(),

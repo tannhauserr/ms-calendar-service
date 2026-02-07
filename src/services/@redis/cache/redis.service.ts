@@ -99,7 +99,7 @@ export class RedisCacheService {
      */
     public pipeline() {
         const pipeline = this.redisClient.multi();
-        
+
         const wrapper = {
             set: (key: string, value: string, ttl?: number, condition: boolean = true) => {
                 if (condition) {
@@ -119,7 +119,7 @@ export class RedisCacheService {
             },
             exec: () => pipeline.exec()
         };
-        
+
         return wrapper;
     }
 
@@ -127,11 +127,11 @@ export class RedisCacheService {
      * Ejecuta múltiples operaciones SET en un pipeline
      * @param operations Array de operaciones {key, value, ttl?}
      */
-    public async batchSet(operations: Array<{key: string, value: string, ttl?: number}>): Promise<void> {
+    public async batchSet(operations: Array<{ key: string, value: string, ttl?: number }>): Promise<void> {
         if (operations.length === 0) return;
 
         const pipeline = this.redisClient.multi();
-        
+
         for (const op of operations) {
             if (op.ttl) {
                 pipeline.set(op.key, op.value, { EX: op.ttl });
@@ -153,5 +153,28 @@ export class RedisCacheService {
         const pipeline = this.redisClient.multi();
         keys.forEach(key => pipeline.del(key));
         await pipeline.exec();
+    }
+
+
+
+    /**
+     * Escanea y elimina keys que coincidan con un patrón dado
+     * @param pattern 
+     */
+    async deleteByPattern(pattern: string): Promise<void> {
+        let cursor = 0; // número
+
+        do {
+            const { cursor: nextCursor, keys } = await this.redisClient.scan(cursor, {
+                MATCH: pattern,
+                COUNT: 100,
+            });
+
+            if (keys.length > 0) {
+                await this.redisClient.del(keys);
+            }
+
+            cursor = nextCursor;
+        } while (cursor !== 0);
     }
 }

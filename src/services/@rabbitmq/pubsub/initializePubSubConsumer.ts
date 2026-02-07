@@ -1,16 +1,14 @@
-import { deleteRecordsConsumers, recurrenceWorkerConsumer, updateServiceInEventConsumer } from "./consumer";
-
-
-
+import {
+    deleteSOFTRecordsConsumers,
+    // recurrenceWorkerConsumer,
+    updateServiceInEventConsumer
+} from "./consumer";
 
 export const initializeConsumerPubSub_RabbitMQ = () => {
-
     console.log("INICIALIZANDO RABBIT PUBSUB CONSUMER");
-    deleteRecordsConsumers.deleteRecordsConsumer();
-    deleteRecordsConsumers.deleteRecordsDLQConsumer();
+    deleteSOFTRecordsConsumers.deleteSOFTRecordsConsumer();
+    deleteSOFTRecordsConsumers.deleteSOFTRecordsDLQConsumer();
 
-    recurrenceWorkerConsumer();
+    // recurrenceWorkerConsumer();
     updateServiceInEventConsumer();
-
-
 }

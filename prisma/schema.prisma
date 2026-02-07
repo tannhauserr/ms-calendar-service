@@ -374,23 +374,27 @@ datasource db {
 // ────────────────────────────────────────────────────────────────────────────
 
 model Event {
-  id                 String          @id @default(uuid())
-  title              String          @db.VarChar(256)
-  description        String?         @db.VarChar(512)
-  startDate          DateTime        @db.Timestamptz(6)
-  endDate            DateTime        @db.Timestamptz(6)
-  idCompanyFk        String
-  idWorkspaceFk      String
-  idServiceFk        String?
-  idUserPlatformFk   String?
-  commentClient      String?         @db.VarChar(300)
-  eventSourceType    EventSourceType @default(PLATFORM)
-  isEditableByClient Boolean         @default(true)
-  numberUpdates      Int?            @default(0)
-  eventStatusType    EventStatusType @default(PENDING)
-  timeZone           String          @default("Europe/Madrid") @db.VarChar(50)
-  allDay             Boolean         @default(false)
-  idGroup            String?
+  id                   String   @id @default(uuid())
+  idGroup              String
+  idCompanyFk          String
+  title                String   @db.VarChar(120)
+  description          String?  @db.VarChar(512)
+  descriptionHash      String?
+  encryptionKeyVersion Int      @default(1)
+  startDate            DateTime @db.Timestamptz(6)
+  endDate              DateTime @db.Timestamptz(6)
+  // idCompanyFk      String
+  // idWorkspaceFk    String
+  idServiceFk          String?
+  idUserPlatformFk     String?
+  // commentClient      String?         @db.VarChar(512)
+  // isCommentRead      Boolean         @default(false)
+  // eventSourceType  EventSourceType @default(PLATFORM)
+  // // isEditableByClient Boolean         @default(true)
+  // numberUpdates    Int?            @default(0)
+  // eventStatusType  EventStatusType @default(PENDING)
+  // timeZone         String   @default("Europe/Madrid") @db.VarChar(50)
+  allDay               Boolean  @default(false)
 
   // Snapshots de servicio en el momento de crear el evento
   serviceNameSnapshot            String? @db.VarChar(100)
@@ -409,24 +413,63 @@ model Event {
   recurrenceRule RecurrenceRule? @relation("recurrenceRules", fields: [idRecurrenceRuleFk], references: [id])
 
   workerAbsence         WorkerAbsence[]
+  temporaryBusinessHour TemporaryBusinessHour[]
   externalCalendarEvent ExternalCalendarEvent?
-  eventParticipant      EventParticipant[]
+  // eventParticipant      EventParticipant[]
   // notificationPlan      NotificationPlan[]
   eventLineItem         EventLineItem[]
+  groupEvents           GroupEvents?            @relation("groupEvents", fields: [idGroup], references: [id])
 
-  @@index([idWorkspaceFk, idUserPlatformFk, startDate], map: "idx_events_availability_ws_user_start")
   @@index([idUserPlatformFk, startDate, endDate], map: "idx_events_user_start_end")
   @@index([idUserPlatformFk, endDate], map: "idx_events_user_end")
   @@index([startDate], type: Brin, map: "idx_events_start_brin")
+  @@index([idCompanyFk])
+  @@index([idCompanyFk, descriptionHash])
   @@index([idServiceFk])
   @@index([idUserPlatformFk])
-  @@index([idWorkspaceFk])
   @@map("events")
 }
 
+model GroupEvents {
+  id                 String          @id @default(uuid())
+  startDate          DateTime        @db.Timestamptz(6)
+  endDate            DateTime        @db.Timestamptz(6)
+  title              String          @db.VarChar(120)
+  idCompanyFk        String
+  idWorkspaceFk      String
+  commentClient      String?         @db.VarChar(512)
+  commentClientHash  String?
+  isCommentRead      Boolean         @default(false)
+  description        String?         @db.VarChar(512)
+  descriptionHash    String?
+  encryptionKeyVersion Int           @default(1)
+  eventSourceType    EventSourceType @default(PLATFORM)
+  isEditableByClient Boolean         @default(true)
+  numberUpdates      Int?            @default(0)
+  eventStatusType    EventStatusType @default(PENDING)
+  timeZone           String          @default("Europe/Madrid") @db.VarChar(50)
+  hasNotifications   Boolean         @default(false)
+
+  eventParticipant EventParticipant[]
+
+  createdDate DateTime  @default(now())
+  updatedDate DateTime  @updatedAt
+  deletedDate DateTime?
+
+  events Event[] @relation("groupEvents")
+
+  @@index([idWorkspaceFk])
+  @@index([idCompanyFk])
+  @@index([idCompanyFk, commentClientHash])
+  @@index([idCompanyFk, descriptionHash])
+  @@map("groupEvents")
+}
+
 model EventParticipant {
-  id                  String          @id @default(uuid())
-  idEventFk           String
+  id      String @id @default(uuid())
+  // idEventFk String
+  idGroup String
+
   idClientWorkspaceFk String?
   idClientFk          String?
   eventStatusType     EventStatusType @default(PENDING)
@@ -435,12 +478,13 @@ model EventParticipant {
   updatedDate DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
   deletedDate DateTime?
 
-  event Event @relation(fields: [idEventFk], references: [id], onDelete: Cascade)
+  groupEvents GroupEvents? @relation(fields: [idGroup], references: [id])
 
-  @@index([idEventFk])
+  // @@index([idEventFk])
   @@index([idClientWorkspaceFk])
   @@index([idClientFk])
-  @@index([idEventFk, eventStatusType])
+  // @@index([idEventFk, eventStatusType])
+  @@index([idGroup, eventStatusType])
   @@map("eventParticipants")
 }
 
@@ -448,15 +492,8 @@ model EventLineItem {
   id        String @id @default(uuid())
   idEventFk String
 
-  // si es un servicio
-  idServiceFk String?
-
   // si es un addon (id que venga del ms catálogo)
-  idAddonFk          String?
-  // a qué línea de servicio pertenece este addon
-  idParentLineItemFk String?
-
-  lineItemType EventLineItemType @default(SERVICE)
+  idAddonFk String?
 
   // snapshots genéricos (sirven para servicio o addon)
   itemNameSnapshot     String? @db.VarChar(100)
@@ -472,33 +509,8 @@ model EventLineItem {
   event Event @relation(fields: [idEventFk], references: [id], onDelete: Cascade)
 
   @@index([idEventFk])
-  @@index([idParentLineItemFk])
   @@map("eventLineItems")
 }
-
-// model NotificationPlan {
-//   id            String @id @default(uuid())
-//   idEventFk     String
-//   idWorkspaceFk String
-//   idCompanyFk   String
-
-//   actionSectionType ActionSectionType
-
-//   eventStartDate DateTime   @db.Timestamptz(6)
-//   status         PlanStatus @default(planned)
-//   dedupeKey      String     @unique
-//   sentDate       DateTime?
-
-//   createdDate DateTime @default(now()) @db.Timestamptz(3)
-//   updatedDate DateTime @updatedAt @db.Timestamptz(3)
-
-//   event Event @relation(fields: [idEventFk], references: [id], onDelete: Cascade)
-
-//   // @@index([status, eventStartDate])
-//   @@index([idEventFk, status])
-//   @@index([idEventFk])
-//   @@map("notificationPlans")
-// }
 
 model RecurrenceRule {
   id                   String               @id @default(uuid())
@@ -581,9 +593,12 @@ model WorkerBusinessHour {
 
 model TemporaryBusinessHour {
   id            String    @id @default(uuid())
+  title         String?   @db.VarChar(120)
+  description   String?   @db.VarChar(256)
   idCompanyFk   String
   idWorkspaceFk String    @default("")
   idUserFk      String?
+  idEventFk     String
   date          DateTime
   startTime     String?   @db.VarChar(5) // "HH:mm"
   endTime       String?   @db.VarChar(5) // "HH:mm"
@@ -591,6 +606,8 @@ model TemporaryBusinessHour {
   createdDate   DateTime  @default(now()) @db.Timestamptz(3)
   updatedDate   DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
   deletedDate   DateTime?
+
+  event Event @relation(fields: [idEventFk], references: [id], onDelete: Cascade)
 
   @@index([idWorkspaceFk])
   @@index([idUserFk, idWorkspaceFk])
@@ -610,13 +627,33 @@ model WorkerAbsence {
   endDate          DateTime
   eventPurposeType EventPurposeType @default(SICK_LEAVE)
   startDate        DateTime
-  title            String?          @db.VarChar(100)
+  title            String?          @db.VarChar(120)
 
   event Event @relation(fields: [idEventFk], references: [id], onDelete: Cascade)
 
   @@index([idWorkspaceFk])
   @@index([idUserFk, idWorkspaceFk])
   @@map("workerAbsences")
+}
+
+model WaitList {
+  id              String    @id @default(uuid())
+  idClientFk      String
+  idWorkspaceFk   String
+  startDate       DateTime  @db.Timestamptz(6)
+  endDate         DateTime  @db.Timestamptz(6)
+  messageWasSent  Boolean   @default(false)
+  messageSentDate DateTime?
+  vipLevel        Int       @default(0)
+  createdDate     DateTime  @default(now())
+  updatedDate     DateTime  @updatedAt
+  deletedDate     DateTime?
+
+  @@index([idWorkspaceFk])
+  @@index([idClientFk])
+  @@index([messageWasSent, endDate])
+  @@index([vipLevel, createdDate])
+  @@map("waitLists")
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -714,6 +751,8 @@ enum EventSourceType {
   PLATFORM
   BOT
   GOOGLE
+  WEB
+  WIDGET
 }
 
 enum ServiceType {
@@ -746,6 +785,7 @@ enum EventPurposeType {
   SICK_LEAVE
   PERSONAL_DAY
   UNPAID_LEAVE
+  TEMPORARY_BLOCK
   OTHER
 }
 
@@ -763,23 +803,6 @@ enum RecurrenceStatusType {
   ACTIVE
   PAUSED
   CANCELLED
-}
-
-enum PlanStatus {
-  planned
-  queued
-}
-
-enum ActionSectionType {
-  add
-  addFromRecurrence
-  addFromClientWithRequest
-  update
-  cancel
-  rejectRequest
-  acceptRequest
-  markNoShow
-  end
 }
 
 enum EventLineItemType {

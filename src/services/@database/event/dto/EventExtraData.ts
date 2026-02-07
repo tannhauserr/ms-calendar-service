@@ -7,10 +7,13 @@ export interface EventExtraData {
     id: string;
     idServiceFk?: string | null;
     description?: string | null;
+    commentClient?: string | null;
+    isCommentRead?: boolean | null;
     serviceNameSnapshot?: string;
     servicePriceSnapshot?: number;
     serviceDiscountSnapshot?: number;
     serviceDurationSnapshot?: number; // duración en minutos
+    serviceMaxParticipantsSnapshot?: number;
 
     // Participantes
     eventParticipant: {
