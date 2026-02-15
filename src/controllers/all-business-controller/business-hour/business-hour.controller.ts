@@ -152,4 +152,19 @@ export class BusinessHourController {
     //         res.status(500).json({ message: err.message });
     //     }
     // }
+
+    public internalGenerateWorkspaceBusinessHours = async (req: any, res: any, next: any) => {
+        try {
+            const { idCompany, idWorkspace, businessHours } = req.body;
+
+            const result = await this.businessHourBusinessHour.internalGenerateWorkspaceBusinessHours(
+                idCompany,
+                idWorkspace,
+                businessHours
+            );
+            res.status(200).json(Response.build("Horario de workspace generado", 200, true, result));
+        } catch (err: any) {
+            res.status(500).json({ message: err.message });
+        }
+    }
 }

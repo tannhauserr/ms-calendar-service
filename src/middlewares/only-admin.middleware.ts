@@ -96,7 +96,7 @@ export class OnlyAdminMiddleware {
             const token = req.token;
             const decode = await JWTService.instance.verify(token);
             if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
-                if (decode.role !== 'ROLE_ADMIN') {
+                if (decode.role !== 'ROLE_OWNER' && decode.role !== 'ROLE_ADMIN') {
                     res.status(400).json({ message: "[AUTH_003] No tienes permisos para realizar esta acción" });
                     return;
                 }
@@ -115,7 +115,7 @@ export class OnlyAdminMiddleware {
             const decode = await JWTService.instance.verify(token);
             if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
 
-                if (decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
+                if (decode.role !== 'ROLE_OWNER' && decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
                     res.status(400).json({ message: "[AUTH_004] No tienes permisos para realizar esta acción" });
                     return;
                 }
@@ -146,11 +146,11 @@ export class OnlyAdminMiddleware {
 
             if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
 
-                if (decode.role !== 'ROLE_ADMIN' && object?.myId !== decode.idUser) {
+                if ((decode.role !== 'ROLE_OWNER' && decode.role !== 'ROLE_ADMIN') && object?.myId !== decode.idUser) {
                     // LOG: Mandar petición log de que no tiene permisos para realizar esta acción
                     res.status(400).json({ message: "[AUTH_005] No tienes permisos para realizar esta acción" });
                     return;
-                } else if (decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
+                } else if (decode.role !== 'ROLE_OWNER' && decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
                     // LOG: Mandar petición log de que no tiene permisos para realizar esta acción
                     res.status(400).json({ message: "[AUTH_006] No tienes permisos para realizar esta acción" });
                     return;
@@ -185,7 +185,7 @@ export class OnlyAdminMiddleware {
             console.log(decode.idUser, typeof decode.idUser, object.myId, typeof object.myId);
 
             if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
-                if (decode.role !== 'ROLE_ADMIN' && object?.myId !== decode.idUser) {
+                if (decode.role !== 'ROLE_OWNER' && decode.role !== 'ROLE_ADMIN' && object?.myId !== decode.idUser) {
                     res.status(400).json({ message: "[AUTH_007] No tienes permisos para realizar esta acción" });
                     return;
                 }
@@ -210,6 +210,7 @@ export class OnlyAdminMiddleware {
                     return next();
                 }
 
+            
                 // Si no está dentro de los roles permitidos, 403
                 if (!permittedRoles.includes(decode.role)) {
                     return res.status(403).json({
