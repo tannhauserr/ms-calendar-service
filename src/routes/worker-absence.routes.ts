@@ -10,7 +10,7 @@ const controller = new WorkerAbsenceController();
 // Obtener todas las ausencias de trabajadores
 router.post('/worker-absences',
     JWTService.authCookieOrBearer,
-    OnlyAdminMiddleware.allowRoles(['ROLE_ADMIN', 'ROLE_MANAGER']),
+    OnlyAdminMiddleware.allowRoles(['ROLE_OWNER', 'ROLE_ADMIN', 'ROLE_MANAGER']),
     OnlyAdminMiddleware.accessAuthorized,
     controller.get
 );

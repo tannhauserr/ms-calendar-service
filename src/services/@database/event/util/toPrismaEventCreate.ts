@@ -1,69 +1,20 @@
-// src/services/event/utils/prismaEventMappers.ts
-import { Prisma } from '@prisma/client';
 import { EventForBackend } from '../dto/EventForBackend';
 
-export function toPrismaEventCreate(
-    event: EventForBackend['event']
-): Omit<Prisma.EventCreateInput, 'recurrenceRule' | 'eventParticipant'> {
-    const {
-        id,                    // se lo quitas
-        idRecurrenceRuleFk,    // idem
-        service,               // idem (o mapéalo por nested si lo tienes)
-        // idCalendarFk,
-        idWorkspaceFk,
-        idCompanyFk,
-        idServiceFk,
-        startDate,
-        endDate,
-        title,
-        description,
-        idUserPlatformFk,
-        commentClient,
-        eventSourceType,
-        eventPurposeType,
-        isEditableByClient,
-        numberUpdates,
-        eventStatusType,
-
-
-
-        serviceNameSnapshot,
-        servicePriceSnapshot,
-        serviceDiscountSnapshot,
-        serviceDurationSnapshot,
-        serviceMaxParticipantsSnapshot,
-       
-   
-        // ignora createdDate, updatedDate, relaciones extras…
-    } = event;
-
+// Recurrencia deshabilitada: mapper legacy mantenido en modo passthrough seguro.
+export function toPrismaEventCreate(event: EventForBackend['event']): any {
     return {
-        title,
-        description,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        idUserPlatformFk,
-        idWorkspaceFk,
-        idCompanyFk,
-        idServiceFk,
-        commentClient,
-        eventSourceType,
-        eventPurposeType,
-        isEditableByClient,
-        numberUpdates,
-        eventStatusType,
-        serviceNameSnapshot,
-        servicePriceSnapshot,
-        serviceDiscountSnapshot,
-        serviceDurationSnapshot,
-        serviceMaxParticipantsSnapshot,
-        // idRecurrenceRuleFk, // lo manejamos aparte
-        // idServiceFk: service ? service.id : null, // lo manejamos aparte
-        // idCalendarFk, // lo manejamos aparte
-
-        // **nested connect** en lugar de FK raw:
-        // calendar: {
-        //     connect: { id: idCalendarFk }
-        // }
+        title: event?.title,
+        description: event?.description,
+        startDate: event?.startDate ? new Date(event.startDate) : undefined,
+        endDate: event?.endDate ? new Date(event.endDate) : undefined,
+        idUserPlatformFk: event?.idUserPlatformFk,
+        idServiceFk: event?.idServiceFk ?? null,
+        eventPurposeType: event?.eventPurposeType,
+        serviceNameSnapshot: event?.serviceNameSnapshot || event?.service?.name || null,
+        servicePriceSnapshot: event?.servicePriceSnapshot || event?.service?.price || null,
+        serviceDiscountSnapshot: event?.serviceDiscountSnapshot || event?.service?.discount || null,
+        serviceDurationSnapshot: event?.serviceDurationSnapshot || event?.service?.duration || null,
+        serviceMaxParticipantsSnapshot:
+            event?.serviceMaxParticipantsSnapshot || event?.service?.maxParticipants || null,
     };
 }

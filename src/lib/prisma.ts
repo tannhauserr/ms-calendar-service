@@ -46,6 +46,8 @@ const isPlainObject = (value: unknown): value is Record<string, any> =>
 const hasOwn = (obj: object, key: string): boolean =>
     Object.prototype.hasOwnProperty.call(obj, key);
 
+const isBlankString = (value: string): boolean => value.trim().length === 0;
+
 const resolveCreateCompanyId = (data: Record<string, any>, model: SupportedModel): string => {
     const direct = typeof data.idCompanyFk === "string" ? data.idCompanyFk.trim() : "";
     if (direct) return direct;
@@ -137,6 +139,23 @@ const encryptDataForModel = (
         const plainValue = isEncryptedClientValue(value)
             ? decryptClientValue(value)
             : value;
+
+        if (isBlankString(plainValue)) {
+            if (action === "create" || action === "createMany") {
+                data[fieldName] = wrapFieldValue(originalRaw, isSetOp, null);
+                if (hashFieldName) {
+                    data[hashFieldName] = wrapFieldValue(data[hashFieldName], isSetOp, null);
+                }
+                touchedEncryptedField = true;
+            } else {
+                delete data[fieldName];
+                if (hashFieldName) {
+                    delete data[hashFieldName];
+                }
+            }
+            continue;
+        }
+
         const encryptedValue = isEncryptedClientValue(value)
             ? value
             : encryptClientValue(plainValue);
