@@ -142,7 +142,7 @@ async function deleteRecordsConsumer(): Promise<void> {
               await tx.workerAbsence.deleteMany({ where: { idCompanyFk: { in: batch } } });
 
               await tx.event.deleteMany({
-                where: { idWorkspaceFk: { in: batch } },
+                where: { idCompanyFk: { in: batch } },
               });
 
               // --- Comentado por refactor (mantener) ---
@@ -258,21 +258,8 @@ async function deleteRecordsConsumer(): Promise<void> {
                 where: { idClientWorkspaceFk: { in: batch }, createdDate: { gte: now } },
               });
 
-              // Opcional: eliminar eventos futuros que se queden sin participantes
-              const eventsWithoutParticipants = await tx.event.findMany({
-                where: {
-                  eventParticipant: { none: {} },
-                },
-                select: { id: true },
-              });
-
-              if (eventsWithoutParticipants.length > 0) {
-                const eventIdsToDelete = eventsWithoutParticipants.map(e => e.id);
-                await tx.event.deleteMany({
-                  where: { id: { in: eventIdsToDelete } },
-                });
-                console.log(`[Calendar-MS][Delete] Eliminados ${eventIdsToDelete.length} eventos sin participantes`);
-              }
+              // Lógica legacy deshabilitada:
+              // El modelo actual no tiene la relación directa eventParticipant en Event.
             });
           }
         } else if (table === "clients") {
@@ -285,21 +272,8 @@ async function deleteRecordsConsumer(): Promise<void> {
                 where: { idClientFk: { in: batch }, createdDate: { gte: now } },
               });
 
-              // Opcional: eliminar eventos futuros que se queden sin participantes
-              const eventsWithoutParticipants = await tx.event.findMany({
-                where: {
-                  eventParticipant: { none: {} },
-                },
-                select: { id: true },
-              });
-
-              if (eventsWithoutParticipants.length > 0) {
-                const eventIdsToDelete = eventsWithoutParticipants.map(e => e.id);
-                await tx.event.deleteMany({
-                  where: { id: { in: eventIdsToDelete } },
-                });
-                console.log(`[Calendar-MS][Delete] Eliminados ${eventIdsToDelete.length} eventos sin participantes`);
-              }
+              // Lógica legacy deshabilitada:
+              // El modelo actual no tiene la relación directa eventParticipant en Event.
             });
           }
         } else if (table === "users") {

@@ -40,6 +40,7 @@ router.post(
     [
         JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.allowRoles([
+            'ROLE_OWNER', 
             'ROLE_ADMIN',
             'ROLE_MANAGER',
             'ROLE_SUPER_ADMIN',

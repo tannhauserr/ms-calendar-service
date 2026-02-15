@@ -1,11 +1,13 @@
 import express from 'express';
 import { EventController } from '../../controllers/event/event.controller';
+import { UpdateEventByIdController } from '../../controllers/event/update-event-by-id.controller';
 import { OnlyAdminMiddleware } from '../../middlewares/only-admin.middleware';
 import { JWTService } from '../../services/jwt/jwt.service';
 
 
 const router = express.Router();
 const controller = new EventController();
+const updateEventByIdController = new UpdateEventByIdController();
 
 // Obtener eventos con paginación
 // router.post('/eventstest', controller.get);
@@ -63,6 +65,24 @@ router.post('/events/change-status',
         OnlyAdminMiddleware.accessOnlyAdminOrManagerOrUser,
     ],
     controller.changeEventStatus);
+
+// Legacy (comentado):
+// router.post('/events/update-id', JWTService.authCookieOrBearer, controller.update);
+router.post('/events/update-id',
+    [
+        JWTService.authCookieOrBearer,
+        OnlyAdminMiddleware.allowRoles([
+            'ROLE_OWNER',
+            'ROLE_ADMIN',
+            'ROLE_MANAGER',
+            'ROLE_SUPER_ADMIN',
+            'ROLE_DEVELOPER',
+            'ROLE_SUPPORT',
+        ]),
+        OnlyAdminMiddleware.accessAuthorized,
+    ],
+    updateEventByIdController.updateById
+);
 
 // Upsert de eventos desde la plataforma (sidebar)
 router.post('/events/v2/platform/manage-event',
