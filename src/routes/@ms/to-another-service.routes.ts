@@ -24,6 +24,11 @@ router.post('/business-hours/data', [
     // MicroserviceAuthMiddleware.verify
 ], businessHoursController.getBusinessHoursFromRedis_internalMS);
 
+// generar horario base para un workspace
+router.post('/business-hours/generate-workspace', [
+    // MicroserviceAuthMiddleware.verify
+], businessHoursController.internalGenerateWorkspaceBusinessHours);
+
 // BookingPages (batch)
 // router.post('/booking-pages/_batch', [MicroserviceAuthMiddleware.verify], bookingPageController.internalBatchByIds);
 

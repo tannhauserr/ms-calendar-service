@@ -9,6 +9,76 @@ import { TIME_SECONDS } from "../../../../constant/time";
 export class BusinessHourService {
     constructor() { }
 
+    private normalizeInternalBusinessHours = (
+        businessHours?: Array<{
+            weekDayType: WeekDayType;
+            startTime?: string | null;
+            endTime?: string | null;
+            closed?: boolean;
+        }>
+    ): Array<{
+        weekDayType: WeekDayType;
+        startTime: string | null;
+        endTime: string | null;
+        closed: boolean;
+    }> | null => {
+        if (!Array.isArray(businessHours) || businessHours.length === 0) {
+            return null;
+        }
+
+        const allowedWeekDays = new Set(Object.values(WeekDayType));
+        const normalized = businessHours.map((item) => {
+            if (!item?.weekDayType || !allowedWeekDays.has(item.weekDayType)) {
+                throw new Error(`weekDayType inválido: ${item?.weekDayType}`);
+            }
+
+            const isClosed = !!item.closed;
+            if (isClosed) {
+                return {
+                    weekDayType: item.weekDayType,
+                    startTime: null,
+                    endTime: null,
+                    closed: true,
+                };
+            }
+
+            const rawStart = item.startTime ?? null;
+            const rawEnd = item.endTime ?? null;
+
+            if (!rawStart || !rawEnd) {
+                throw new Error(`startTime y endTime son obligatorios para ${item.weekDayType}`);
+            }
+
+            const startTime = this.toHHmm(rawStart);
+            const endTime = this.toHHmm(rawEnd);
+
+            if (startTime >= endTime) {
+                throw new Error(`Rango inválido para ${item.weekDayType}: startTime debe ser menor que endTime`);
+            }
+
+            return {
+                weekDayType: item.weekDayType,
+                startTime,
+                endTime,
+                closed: false,
+            };
+        });
+
+        const closedDays = new Set(
+            normalized.filter((x) => x.closed).map((x) => x.weekDayType)
+        );
+        for (const weekDayType of closedDays) {
+            const hasOpenOnSameDay = normalized.some(
+                (x) => x.weekDayType === weekDayType && !x.closed
+            );
+            if (hasOpenOnSameDay) {
+                throw new Error(`No se puede mezclar closed=true con franjas horarias en ${weekDayType}`);
+            }
+        }
+
+        return normalized;
+    }
+
     async addBusinessHour(item: Prisma.BusinessHourCreateInput): Promise<BusinessHour> {
         try {
             return await prisma.businessHour.create({
@@ -328,5 +398,87 @@ export class BusinessHourService {
         console.log("Horarios de negocio guardados en Redis");
 
         return businessHours;
+    }
+
+    internalGenerateWorkspaceBusinessHours = async (
+        idCompany: string,
+        idWorkspace: string,
+        businessHours?: Array<{
+            weekDayType: WeekDayType;
+            startTime?: string | null;
+            endTime?: string | null;
+            closed?: boolean;
+        }>
+    ): Promise<{ created: boolean; businessHours: BusinessHour[] }> => {
+        try {
+            if (!idCompany || !idWorkspace) {
+                throw new Error('idCompany e idWorkspace son obligatorios');
+            }
+
+            const result = await prisma.$transaction(async (tx) => {
+                const existingBusinessHours = await tx.businessHour.findMany({
+                    where: {
+                        idWorkspaceFk: idWorkspace,
+                        deletedDate: null,
+                    },
+                    orderBy: [{ weekDayType: 'asc' }, { startTime: 'asc' }],
+                });
+
+                if (existingBusinessHours.length > 0) {
+                    return { created: false, businessHours: existingBusinessHours };
+                }
+
+                const normalizedIncomingBusinessHours = this.normalizeInternalBusinessHours(businessHours);
+                const baseSchedule: Array<{
+                    weekDayType: WeekDayType;
+                    startTime: string | null;
+                    endTime: string | null;
+                    closed: boolean;
+                }> = [
+                    { weekDayType: WeekDayType.MONDAY, startTime: "09:00", endTime: "13:00", closed: false },
+                    { weekDayType: WeekDayType.MONDAY, startTime: "15:00", endTime: "20:00", closed: false },
+                    { weekDayType: WeekDayType.TUESDAY, startTime: "09:00", endTime: "13:00", closed: false },
+                    { weekDayType: WeekDayType.TUESDAY, startTime: "15:00", endTime: "20:00", closed: false },
+                    { weekDayType: WeekDayType.WEDNESDAY, startTime: "09:00", endTime: "13:00", closed: false },
+                    { weekDayType: WeekDayType.WEDNESDAY, startTime: "15:00", endTime: "20:00", closed: false },
+                    { weekDayType: WeekDayType.THURSDAY, startTime: "09:00", endTime: "13:00", closed: false },
+                    { weekDayType: WeekDayType.THURSDAY, startTime: "15:00", endTime: "20:00", closed: false },
+                    { weekDayType: WeekDayType.FRIDAY, startTime: "09:00", endTime: "13:00", closed: false },
+                    { weekDayType: WeekDayType.FRIDAY, startTime: "15:00", endTime: "20:00", closed: false },
+                    { weekDayType: WeekDayType.SATURDAY, startTime: "10:00", endTime: "14:00", closed: false },
+                    { weekDayType: WeekDayType.SUNDAY, startTime: null, endTime: null, closed: true },
+                ];
+
+                await tx.businessHour.createMany({
+                    data: (normalizedIncomingBusinessHours ?? baseSchedule).map((hour) => ({
+                        idCompanyFk: idCompany,
+                        idWorkspaceFk: idWorkspace,
+                        weekDayType: hour.weekDayType,
+                        startTime: hour.startTime,
+                        endTime: hour.endTime,
+                        closed: hour.closed,
+                        createdDate: new Date(),
+                        updatedDate: new Date(),
+                    })),
+                });
+
+                const createdBusinessHours = await tx.businessHour.findMany({
+                    where: {
+                        idWorkspaceFk: idWorkspace,
+                        deletedDate: null,
+                    },
+                    orderBy: [{ weekDayType: 'asc' }, { startTime: 'asc' }],
+                });
+
+                return { created: true, businessHours: createdBusinessHours };
+            });
+
+            const businessHoursStrategy = new BusinessHoursStrategy();
+            await businessHoursStrategy.deleteBusinessHours(idWorkspace);
+
+            return result;
+        } catch (error: any) {
+            throw new CustomError('BusinessHourBusinessHour.internalGenerateWorkspaceBusinessHours', error);
+        }
     }
 }

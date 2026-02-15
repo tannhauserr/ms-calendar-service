@@ -89,55 +89,13 @@ export class RecurrenceRuleController {
 
     public get = async (req: any, res: any, next: any) => {
         try {
-            const { pagination } = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const idWorkspace = pagination?.filters?.idWorkspaceFk?.value;
-            if (!idWorkspace) {
-                return res.status(400).json({ message: "Falta el id del establecimiento" });
-            }
-
-            // 1) Traigo las reglas con su lista 'clients'
-            const result = await this.recurrenceRuleService.getRules(pagination);
-            // const recurrenceRulesList: RecurrenceRuleWithClients[] = result.rows;
-            const recurrenceRulesList = result.rows as Array<
-                RecurrenceRuleWithClients & { clients: { idClientFk: string; idClientWorkspaceFk: string }[] }
-            >;
-            // 2) Extraigo todos los idClientFk de la propiedad 'clients'
-            const allIds = recurrenceRulesList
-                .flatMap(rule =>
-                    rule.clients.map(c => c.idClientFk)
-                );
-
-            // // 3) Elimino duplicados
-            // const uniqueIdsClient = Array.from(new Set(allIds));
-
-            // // 4) Obtengo datos de cliente por RPC
-            // const clientWorkspaceRPCList = await RPC.getClientstByIdClientAndIdWorkspace(
-            //     idWorkspace,
-            //     uniqueIdsClient
-            // );
-
-            // // 5) Construyo mapa { idClientFk → datosRPC }
-            // const clientMap = new Map(
-            //     clientWorkspaceRPCList.map(c => [c.idClientFk, c])
-            // );
-
-            // 6) Inyecto los datosRPC en cada regla
-            // const recurrenceRulesWithClients = recurrenceRulesList.map(rule => ({
-            //     ...rule,
-            //     clients: rule.clients.map(c => ({
-            //         ...c,
-            //         client: clientMap.get(c.idClientFk) ?? null
-            //     }))
-            // }));
-            const recurrenceRulesWithClients = recurrenceRulesList;
-
-            result.rows = recurrenceRulesWithClients;
+            // Recurrencia deshabilitada temporalmente en este MS.
             return res
-                .status(200)
-                .json(Response.build("Reglas encontradas", 200, true, result));
+                .status(410)
+                .json(Response.build("Recurrencia deshabilitada", 410, false, { rows: [] }));
 
         } catch (err: any) {
             return res.status(500).json({ message: err.message });
