@@ -30,36 +30,58 @@ const MODEL_CRYPTO_CONFIG: Record<SupportedModel, ModelCryptoConfig> = {
     },
 };
 
+const DEFAULT_COMPANY_ENV_KEYS = ["DEFAULT_ID_COMPANY_FK", "DEFAULT_COMPANY_FK"];
+
 const DECRYPTABLE_FIELDS = new Set<string>([
     ...MODEL_CRYPTO_CONFIG.Event.encryptedFields,
     ...MODEL_CRYPTO_CONFIG.GroupEvents.encryptedFields,
 ]);
 
-const DEFAULT_COMPANY_ENV_KEYS = ["DEFAULT_ID_COMPANY_FK", "DEFAULT_COMPANY_FK"];
-
 const isSupportedModel = (model: string | undefined): model is SupportedModel =>
     model === "Event" || model === "GroupEvents";
 
 const isPlainObject = (value: unknown): value is Record<string, any> =>
-    value !== null && typeof value === "object" && !Array.isArray(value);
+    Object.prototype.toString.call(value) === "[object Object]";
 
 const hasOwn = (obj: object, key: string): boolean =>
     Object.prototype.hasOwnProperty.call(obj, key);
 
-const isBlankString = (value: string): boolean => value.trim().length === 0;
-
-const resolveCreateCompanyId = (data: Record<string, any>, model: SupportedModel): string => {
-    const direct = typeof data.idCompanyFk === "string" ? data.idCompanyFk.trim() : "";
-    if (direct) return direct;
-
+const resolveDefaultCompanyFromEnv = (): string => {
     for (const key of DEFAULT_COMPANY_ENV_KEYS) {
         const candidate = process.env[key]?.trim();
         if (candidate) return candidate;
     }
 
-    throw new Error(
-        `${model}.idCompanyFk es obligatorio. Inclúyelo en el create o define DEFAULT_ID_COMPANY_FK`
-    );
+    throw new Error("DEFAULT_ID_COMPANY_FK no está definido en las variables de entorno");
+};
+
+const moveAliasCompanyField = (data: Record<string, any>) => {
+    const rawAlias =
+        typeof data.idCompany === "string"
+            ? data.idCompany.trim()
+            : typeof data.idCompanyFk === "string"
+              ? data.idCompanyFk.trim()
+              : "";
+
+    if (!rawAlias) {
+        if (hasOwn(data, "idCompany")) delete data.idCompany;
+        return;
+    }
+
+    data.idCompanyFk = rawAlias;
+    if (hasOwn(data, "idCompany")) delete data.idCompany;
+};
+
+const resolveCreateCompanyId = (data: Record<string, any>): string => {
+    moveAliasCompanyField(data);
+
+    if (typeof data.idCompanyFk === "string" && data.idCompanyFk.trim()) {
+        return data.idCompanyFk.trim();
+    }
+
+    const fallback = resolveDefaultCompanyFromEnv();
+    data.idCompanyFk = fallback;
+    return fallback;
 };
 
 const unwrapFieldValue = (container: Record<string, any>, fieldName: string) => {
@@ -112,8 +134,10 @@ const encryptDataForModel = (
 
     if (!isPlainObject(data)) return data;
 
+    moveAliasCompanyField(data);
+
     if (action === "create" || action === "createMany") {
-        data.idCompanyFk = resolveCreateCompanyId(data, model);
+        data.idCompanyFk = resolveCreateCompanyId(data);
     }
 
     const cfg = MODEL_CRYPTO_CONFIG[model];
@@ -139,23 +163,6 @@ const encryptDataForModel = (
         const plainValue = isEncryptedClientValue(value)
             ? decryptClientValue(value)
             : value;
-
-        if (isBlankString(plainValue)) {
-            if (action === "create" || action === "createMany") {
-                data[fieldName] = wrapFieldValue(originalRaw, isSetOp, null);
-                if (hashFieldName) {
-                    data[hashFieldName] = wrapFieldValue(data[hashFieldName], isSetOp, null);
-                }
-                touchedEncryptedField = true;
-            } else {
-                delete data[fieldName];
-                if (hashFieldName) {
-                    delete data[hashFieldName];
-                }
-            }
-            continue;
-        }
-
         const encryptedValue = isEncryptedClientValue(value)
             ? value
             : encryptClientValue(plainValue);
@@ -188,11 +195,7 @@ const decryptResultRecursive = (result: unknown): unknown => {
         if (value == null) continue;
 
         if (typeof value === "string" && DECRYPTABLE_FIELDS.has(key)) {
-            try {
-                result[key] = decryptClientValue(value);
-            } catch {
-                result[key] = value;
-            }
+            result[key] = decryptClientValue(value);
             continue;
         }
 
@@ -248,38 +251,3 @@ const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
 export default prisma;
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-
-// import { PrismaClient } from "@prisma/client"
-
-// const prismaClientSingleton = () => {
-//     const prisma = new PrismaClient({
-//         log: [
-//             { level: 'query', emit: 'event' },
-//             { level: 'error', emit: 'event' },
-//             { level: 'info', emit: 'event' },
-//             { level: 'warn', emit: 'event' },
-//         ],
-//     });
-
-//     prisma.$on('query', (e) => {
-
-//         console.log(JSON.stringify(e, null, 2));
-
-//         console.log('Query: ' + e.query);
-//         console.log('Duration: ' + e.duration + 'ms');
-//     });
-
-//     return prisma;
-// }
-
-// type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>
-
-// const globalForPrisma = globalThis as unknown as {
-//     prisma: PrismaClientSingleton | undefined
-// }
-
-// const prisma = globalForPrisma.prisma ?? prismaClientSingleton()
-
-// export default prisma
-
-// if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma

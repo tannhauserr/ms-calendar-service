@@ -1,67 +1,99 @@
-import fs from 'fs';
-import path from 'path';
-import { UtilGeneral } from '../../utils/util-general';
+import path from "path";
+import pino from "pino";
+import { CONSOLE_COLOR } from "../../constant/console-color";
 
+type MessageStoredType = "simple" | "verbose" | "none";
 
-type MessageStoredType = 'simple' | 'verbose' | 'none';
+const verboseLogPath = path.join(__dirname, "../../../error_service.log");
+const simpleLogPath = path.join(__dirname, "../../../error_service_simple.log");
+const isDevelopment = process.env.NODE_ENV !== "production";
+
+const verboseLogger = pino(
+    {
+        level: "error",
+        base: null,
+        timestamp: pino.stdTimeFunctions.isoTime,
+        transport: isDevelopment
+            ? {
+                  target: "pino-pretty",
+                  options: {
+                      colorize: true,
+                      translateTime: "yyyy-mm-dd HH:MM:ss",
+                      ignore: "pid,hostname",
+                      destination: verboseLogPath,
+                      mkdir: true,
+                  },
+              }
+            : undefined,
+    },
+    isDevelopment ? undefined : pino.destination({ dest: verboseLogPath, sync: false })
+);
+
+const simpleLogger = pino(
+    {
+        level: "error",
+        base: null,
+        timestamp: pino.stdTimeFunctions.isoTime,
+        transport: isDevelopment
+            ? {
+                  target: "pino-pretty",
+                  options: {
+                      colorize: true,
+                      translateTime: "yyyy-mm-dd HH:MM:ss",
+                      ignore: "pid,hostname",
+                      destination: simpleLogPath,
+                      mkdir: true,
+                  },
+              }
+            : undefined,
+    },
+    isDevelopment ? undefined : pino.destination({ dest: simpleLogPath, sync: false })
+);
 
 class CustomError extends Error {
     serviceName: string;
     originalError: Error;
+    errorFile?: string;
+    errorLine?: number;
 
-    errorFile: string;
-    errorLine: number;
-
-    constructor(serviceName: string, originalError: Error, messageStoredType: MessageStoredType = 'verbose') {
+    constructor(serviceName: string, originalError: Error, messageStoredType: MessageStoredType = "verbose") {
         super(`Error in service ${serviceName}: ${originalError.message}`);
-        this.name = 'CustomError';
+        this.name = "CustomError";
         this.serviceName = serviceName;
         this.originalError = originalError;
 
-        // Captura el archivo y la línea donde ocurrió el error
-        // const { errorFile, errorLine } = this.extractErrorLocation(originalError);
-        // this.errorFile = errorFile;
-        // this.errorLine = errorLine;
+        const { errorFile, errorLine } = this.extractErrorLocation(originalError);
+        this.errorFile = errorFile;
+        this.errorLine = errorLine;
 
-
-        // Log the error to a file
-        if (messageStoredType === 'simple') this.logErrorToFileSimple();
+        if (messageStoredType === "simple") this.logErrorToFileSimple();
         else if (messageStoredType === "verbose") this.logErrorToFileVerbose();
 
-        // Mantiene el stack trace del error original.
+        console.log(`${CONSOLE_COLOR.BgYellow}[CustomError]${CONSOLE_COLOR.Reset} ${serviceName} - ${originalError.message}`);
+        if (this.errorFile && this.errorLine) {
+            console.log(`    at ${this.errorFile}:${this.errorLine}`);
+        }
+
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, CustomError);
         }
     }
 
-
-
     public logErrorToFileVerbose = () => {
-        const logFilePath = path.join(__dirname, '../../../error_service.log');
-        const localISOTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString();
+        verboseLogger.error(
+            {
+                service: this.serviceName,
+                err: this.originalError,
+                errorFile: this.errorFile,
+                errorLine: this.errorLine,
+            },
+            "Error en servicio (verbose)"
+        );
+    };
 
-        const errorMessage = `
-    =====================================================
-    Date: ${localISOTime}
-    Service: ${this.serviceName}
-    Error Message: ${this.originalError.message}
-    Stack Trace: ${this.originalError.stack}
-    =====================================================
-    `;
+    private extractErrorLocation = (error: Error): { errorFile?: string; errorLine?: number } => {
+        const stackLines = error.stack?.split("\n") || [];
 
-        fs.appendFile(logFilePath, errorMessage, (err) => {
-            if (err) {
-                console.error('Failed to write error to log file:', err);
-            } else {
-                console.log('Error logged to file:', logFilePath);
-            }
-        });
-    }
-
-    private extractErrorLocation = (error: Error): { errorFile: string; errorLine: number } => {
-        const stackLines = error.stack?.split('\n') || [];
-
-        // Busca en cada línea del stack hasta encontrar una que contenga la ubicación del archivo
         for (const line of stackLines) {
             const match = line.match(/\((.*):(\d+):\d+\)/) || line.match(/at (.*):(\d+):\d+/);
             if (match) {
@@ -72,29 +104,20 @@ class CustomError extends Error {
             }
         }
 
-        return {
-            errorFile: undefined,
-            errorLine: undefined,
-        };
-    }
-
-    private logErrorToFileSimple = () => {
-        const logFilePath = path.join(__dirname, '../../../error_service_simple.log');
-        const currentTime = new Date();
-        const localTime = currentTime.toLocaleTimeString('es-Es', { hour12: false });
-        const formattedDate = currentTime.toISOString().split('T')[0]; // Solo la fecha en formato YYYY-MM-DD
-
-        const errorMessage = `[${formattedDate}][${localTime}][${this.serviceName}][${this.originalError.message}][File: ${this.errorFile}, Line: ${this.errorLine}]\n`;
-
-        fs.appendFile(logFilePath, errorMessage, (err) => {
-            if (err) {
-                console.error('Failed to write error to log file:', err);
-            } else {
-                console.log('Error logged to file:', logFilePath);
-            }
-        });
+        return {};
     };
 
+    private logErrorToFileSimple = () => {
+        simpleLogger.error(
+            {
+                service: this.serviceName,
+                message: this.originalError.message,
+                errorFile: this.errorFile,
+                errorLine: this.errorLine,
+            },
+            "Error en servicio (simple)"
+        );
+    };
 }
 
 export default CustomError;
