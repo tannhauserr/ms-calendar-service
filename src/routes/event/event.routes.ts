@@ -1,13 +1,11 @@
 import express from 'express';
-import { EventController } from '../../controllers/event/event.controller';
-import { UpdateEventByIdController } from '../../controllers/event/update-event-by-id.controller';
+import { EventPlatformController } from '../../features/event-platform/controllers/event-platform.controller';
 import { OnlyAdminMiddleware } from '../../middlewares/only-admin.middleware';
 import { JWTService } from '../../services/jwt/jwt.service';
 
 
 const router = express.Router();
-const controller = new EventController();
-const updateEventByIdController = new UpdateEventByIdController();
+const controller = new EventPlatformController();
 
 // Obtener eventos con paginación
 // router.post('/eventstest', controller.get);
@@ -81,7 +79,7 @@ router.post('/events/update-id',
         ]),
         OnlyAdminMiddleware.accessAuthorized,
     ],
-    updateEventByIdController.updateById
+    controller.updateById
 );
 
 // Upsert de eventos desde la plataforma (sidebar)
