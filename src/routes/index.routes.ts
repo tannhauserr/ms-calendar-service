@@ -1,10 +1,19 @@
 import { Router } from 'express';
+import businessHourRouter from '../features/businessHour';
+import temporaryBusinessHourRouter from '../features/temporary-business-hour';
+import workerAbsenceRouter from '../features/worker-absence';
+import workerBusinessHourRouter from '../features/worker-business-hour';
+import eventPlatformRouter from '../features/event-platform';
+import eventClientRouter from '../features/event-client';
+import publicEventRouter from '../features/public-event';
+import microservicesRouter from './@ms/microservices.routes';
 
 const router = Router();
 
-// Webhook routes
+// Health 
+router.get("/health", (_req, res) => res.status(200).json({ ok: true }));
 // Comunicación entre microservicios. Se usa en todos los MS
-router.use("/api/ms/internal", require('./@ms/to-another-service.routes'));
+router.use("/api/ms/internal", microservicesRouter);
 
 
 // Para acceder a archivos estáticos
@@ -19,51 +28,29 @@ router.use("/api", require('./upload-file/upload-file.routes'));
 
 
 // Event routes
-router.use("/api", require('./event/event.routes'));
-router.use("/api", require('./event/client-event.routes'));
-
-// Category routes
-// router.use("/api", require('./category/category.routes'));
-
-// CategoryWorkspace routes
-// router.use("/api", require('./category-workspace.routes'));
-// router.use("/api", require('./recurrence-rule.routes'));
-
-// CategoryService routes
-// router.use("/api", require('./category-service.routes'));
-
-// // Service routes
-// router.use("/api", require('./service.routes'));
-
-// // UserService routes
-// router.use("/api", require('./user-service.routes'));
-
-// UserCalendar routes
-// router.use("/api", require('./user-calendar.routes'));
+router.use("/api", eventPlatformRouter);
+router.use("/api", eventClientRouter);
 
 // businessHour routes
-router.use("/api", require('./business-hour.routes'));
+router.use("/api", businessHourRouter);
 
 // WorkerBusinessHour routes
-router.use("/api", require('./worker-business-hour.routes'));
+router.use("/api", workerBusinessHourRouter);
 
 // TemporaryBusinessHour routes
-router.use("/api", require('./temporary-business-hour.routes'));
+router.use("/api", temporaryBusinessHourRouter);
 
 // WorkerAbsence routes
-router.use("/api", require('./worker-absence.routes'));
+router.use("/api", workerAbsenceRouter);
 
 // WaitList routes
 router.use("/api", require('./wait-list.routes'));
 
 
-// Health check
-router.get("/health", (_req, res) => res.status(200).json({ ok: true }));
 
-// public
 
-// router.use("/api/public", require('./category/public-category.routes'));
 
-router.use("/api/public", require('./event/public-event.routes'));
+
+router.use("/api/public", publicEventRouter);
 
 export default router;
