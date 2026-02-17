@@ -170,9 +170,9 @@
 
 // BusinessHourMiddleware.ts
 import moment from "moment-timezone";
-import { BusinessHourService } from "../../services/@database/all-business-services/business-hours/business-hours.service";
-import { TemporaryBusinessHourService } from "../../services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service";
-import { WorkerBusinessHourService } from "../../services/@database/all-business-services/worker-business-hours/worker-business-hours.service";
+import { BusinessHourService } from "../../features/businessHour/services/business-hour.service";
+import { TemporaryBusinessHourService } from "../../features/temporary-business-hour/services/temporary-business-hour.service";
+import { WorkerBusinessHourService } from "../../features/worker-business-hour/services/worker-business-hour.service";
 import { Response } from "../../models/messages/response";
 
 export class BusinessHourMiddleware {
