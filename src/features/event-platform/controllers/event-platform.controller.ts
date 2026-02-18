@@ -3,6 +3,21 @@ import { CONSOLE_COLOR } from "../../../constant/console-color";
 import { Response } from "../../../models/messages/response";
 import { SidebarBackendBookingPayload } from "../../../services/@database/event/dto/SidebarBackendBookingPayload";
 import { JWTService } from "../../../services/jwt/jwt.service";
+import {
+    ChangeEventStatusBodyDto,
+    ChangeEventStatusByParticipantBodyDto,
+    DeleteEventBodyDto,
+    GetEventByIdParamsDto,
+    GetEventExtraDataBodyDto,
+    GetEventExtraDataParamsDto,
+    GetEventsBodyDto,
+    GetEventsListBodyDto,
+    InternalGetEventDataByIdBodyDto,
+    InternalGetGroupDataByIdBodyDto,
+    MarkCommentAsReadBodyDto,
+    UpdateByIdBodyDto,
+    UpsertEventByPlatformBodyDto,
+} from "../dto";
 import { EventPlatformQueryService } from "../services/event-platform.query.service";
 import { EventPlatformCommandService, UpdateEventByIdPayload } from "../services/event-platform.command.service";
 
@@ -15,7 +30,7 @@ export class EventPlatformController {
 
     public upsertEventByPlatform = async (req: any, res: any) => {
         try {
-            const payload: SidebarBackendBookingPayload = req.body;
+            const payload: UpsertEventByPlatformBodyDto & SidebarBackendBookingPayload = req.body;
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -54,7 +69,7 @@ export class EventPlatformController {
 
     public markCommentAsRead = async (req: any, res: any) => {
         try {
-            const { idEvent, idWorkspace } = req.body;
+            const { idEvent, idWorkspace } = req.body as MarkCommentAsReadBodyDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -67,11 +82,11 @@ export class EventPlatformController {
 
     public get = async (req: any, res: any) => {
         try {
-            const { pagination } = req.body;
+            const { pagination } = req.body as GetEventsBodyDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.queries.getEvents(pagination);
+            const result = await this.queries.getEvents(pagination as any);
             return res.status(200).json({ message: "Eventos encontrados", ok: true, item: result });
         } catch (err: any) {
             return res.status(500).json({ message: err.message });
@@ -80,8 +95,8 @@ export class EventPlatformController {
 
     public getEventExtraData = async (req: any, res: any) => {
         try {
-            const { idList } = req.body;
-            const { idCompany, idWorkspace } = req.params;
+            const { idList } = req.body as GetEventExtraDataBodyDto;
+            const { idCompany, idWorkspace } = req.params as GetEventExtraDataParamsDto;
 
             if (!Array.isArray(idList) || idList.length === 0) {
                 return res.status(400).json({ message: "Faltan ids de evento" });
@@ -105,14 +120,14 @@ export class EventPlatformController {
 
     public getList = async (req: any, res: any) => {
         try {
-            const { pagination } = req.body;
+            const { pagination, idCompany, idWorkspace } = req.body as GetEventsListBodyDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
             const result = await this.queries.getEventsList(
-                pagination,
-                req.body?.idCompany,
-                req.body?.idWorkspace
+                pagination as any,
+                idCompany,
+                idWorkspace
             );
 
             return res.status(200).json({ message: "Eventos encontrados", ok: true, item: result });
@@ -123,7 +138,7 @@ export class EventPlatformController {
 
     public getById = async (req: any, res: any) => {
         try {
-            const { id } = req.params;
+            const { id } = req.params as GetEventByIdParamsDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -140,7 +155,7 @@ export class EventPlatformController {
 
     public deleteEvent = async (req: any, res: any) => {
         try {
-            const { idList } = req.body;
+            const { idList } = req.body as DeleteEventBodyDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -154,7 +169,7 @@ export class EventPlatformController {
 
     public changeEventStatus = async (req: any, res: any) => {
         try {
-            const { id, status, allGroup = false } = req.body;
+            const { id, status, allGroup = false } = req.body as ChangeEventStatusBodyDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -176,7 +191,7 @@ export class EventPlatformController {
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const payload = (req.body ?? {}) as UpdateEventByIdPayload;
+            const payload = (req.body ?? {}) as UpdateByIdBodyDto & UpdateEventByIdPayload;
             const eventId = req.params?.id ?? payload?.event?.id;
 
             if (!eventId || typeof eventId !== "string") {
@@ -192,7 +207,8 @@ export class EventPlatformController {
 
     public changeEventStatusByParticipant = async (req: any, res: any) => {
         try {
-            const { id, idClient, idClientWorkspace, action } = req.body;
+            const { id, idClient, idClientWorkspace, action } =
+                req.body as ChangeEventStatusByParticipantBodyDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -211,7 +227,7 @@ export class EventPlatformController {
 
     public internalGetEventDataById = async (req: any, res: any) => {
         try {
-            const { id, idWorkspace } = req.body;
+            const { id, idWorkspace } = req.body as InternalGetEventDataByIdBodyDto;
             if (!id) {
                 return res.status(400).json({ ok: false, message: "id (string) is required" });
             }
@@ -228,7 +244,7 @@ export class EventPlatformController {
 
     public internalGetGroupDataById = async (req: any, res: any) => {
         try {
-            const { idGroup, idWorkspace } = req.body;
+            const { idGroup, idWorkspace } = req.body as InternalGetGroupDataByIdBodyDto;
             if (!idGroup) {
                 return res.status(400).json({ ok: false, message: "idGroup (string) is required" });
             }
