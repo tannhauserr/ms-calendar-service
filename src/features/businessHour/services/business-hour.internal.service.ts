@@ -1,4 +1,5 @@
 import { BusinessHourService } from "./business-hour.service";
+import { WorkspaceBusinessHourDraftDto } from "../dto";
 
 export class BusinessHourInternalService {
     private readonly businessHourService = new BusinessHourService();
@@ -12,7 +13,7 @@ export class BusinessHourInternalService {
     async generateWorkspaceBusinessHours(
         idCompany: string,
         idWorkspace: string,
-        businessHours: any[]
+        businessHours: WorkspaceBusinessHourDraftDto[]
     ) {
         return this.businessHourService.internalGenerateWorkspaceBusinessHours(
             idCompany,

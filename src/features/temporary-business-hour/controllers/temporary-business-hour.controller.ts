@@ -3,6 +3,18 @@ import { Pagination } from "../../../models/pagination";
 import { TemporaryBusinessHourService } from "../services/temporary-business-hour.service";
 import { TemporaryHoursStrategy } from "../../../services/@redis/cache/strategies/temporaryHours/temporaryHours.strategy";
 import { JWTService } from "../../../services/jwt/jwt.service";
+import {
+    AddTemporaryBusinessHourDto,
+    DeleteTemporaryBusinessHourDto,
+    GetTemporaryBusinessHoursDto,
+    TemporaryBusinessHourAutocompleteDto,
+    TemporaryBusinessHourByDateDto,
+    TemporaryBusinessHourByWorkerAndDateDto,
+    TemporaryBusinessHourIdParamsDto,
+    TemporaryBusinessHourWorkerExceptionDto,
+    TemporaryHoursRedisDto,
+    UpdateTemporaryBusinessHourDto,
+} from "../dto";
 
 
 
@@ -20,12 +32,12 @@ export class TemporaryBusinessHourController {
     /** Creates a temporary business-hour exception. */
     public add = async (req: any, res: any, next: any) => {
         try {
-            const body = req.body;
+            const body = req.body as AddTemporaryBusinessHourDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
             const { idEventFk, ...payload } = body;
-            const result = await this.workBusinessHourService.addTemporaryBusinessHour(payload);
+            const result = await this.workBusinessHourService.addTemporaryBusinessHour(payload as any);
 
             const temporaryHoursStrategy = new TemporaryHoursStrategy();
             if (result?.temporary?.idWorkspaceFk && result?.temporary?.idUserFk) {
@@ -42,7 +54,8 @@ export class TemporaryBusinessHourController {
     /** Returns temporary exceptions using pagination/filter payload. */
     public get = async (req: any, res: any, next: any) => {
         try {
-            const bodyPagination = (req.body?.pagination ?? {}) as Partial<Pagination>;
+            const body = req.body as GetTemporaryBusinessHoursDto;
+            const bodyPagination = (body?.pagination ?? {}) as Partial<Pagination>;
             const pageQuery = typeof req.query?.page === "string" ? Number(req.query.page) : undefined;
             const itemsPerPageQuery =
                 typeof req.query?.itemsPerPage === "string" ? Number(req.query.itemsPerPage) : undefined;
@@ -82,7 +95,7 @@ export class TemporaryBusinessHourController {
     /** Returns one temporary exception by id. */
     public getById = async (req: any, res: any, next: any) => {
         try {
-            const { id } = req.params;
+            const { id } = req.params as TemporaryBusinessHourIdParamsDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -96,11 +109,11 @@ export class TemporaryBusinessHourController {
     /** Returns temporary exceptions for one date. */
     public getByDate = async (req: any, res: any, next: any) => {
         try {
-            const { date } = req.body;
+            const { date } = req.body as TemporaryBusinessHourByDateDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workBusinessHourService.getTemporaryBusinessHourByDate(date);
+            const result = await this.workBusinessHourService.getTemporaryBusinessHourByDate(date as any);
             res.status(200).json(Response.build("Registro encontrado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -110,11 +123,14 @@ export class TemporaryBusinessHourController {
     /** Returns temporary exceptions for one worker and date. */
     public getByWorkerAndDate = async (req: any, res: any, next: any) => {
         try {
-            const { idWorker, date } = req.body;
+            const { idWorker, date } = req.body as TemporaryBusinessHourByWorkerAndDateDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workBusinessHourService.getTemporaryBusinessHourByWorkerAndDate(idWorker, date);
+            const result = await this.workBusinessHourService.getTemporaryBusinessHourByWorkerAndDate(
+                idWorker,
+                date as any
+            );
             res.status(200).json(Response.build("Registro encontrado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -125,11 +141,15 @@ export class TemporaryBusinessHourController {
     /** Returns dates that contain exceptions for one worker. */
     public getDistinctDatesWithExceptionsByWorker = async (req: any, res: any, next: any) => {
         try {
-            const { idWorker, minDate, maxDate } = req.body;
+            const { idWorker, minDate, maxDate } = req.body as TemporaryBusinessHourWorkerExceptionDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workBusinessHourService.getDistinctDatesWithExceptionsByWorker(idWorker, minDate, maxDate);
+            const result = await this.workBusinessHourService.getDistinctDatesWithExceptionsByWorker(
+                idWorker,
+                minDate as any,
+                maxDate as any
+            );
             res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -141,7 +161,7 @@ export class TemporaryBusinessHourController {
     /** Updates a temporary business-hour exception. */
     public update = async (req: any, res: any, next: any) => {
         try {
-            const body = req.body;
+            const body = req.body as UpdateTemporaryBusinessHourDto & { id?: string };
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -149,7 +169,7 @@ export class TemporaryBusinessHourController {
                 body.id = req.params.id;
             }
 
-            const result = await this.workBusinessHourService.updateTemporaryBusinessHour(body);
+            const result = await this.workBusinessHourService.updateTemporaryBusinessHour(body as any);
             const temporaryHoursStrategy = new TemporaryHoursStrategy();
             if (result?.temporary?.idWorkspaceFk && result?.temporary?.idUserFk) {
                 await temporaryHoursStrategy.deleteTemporaryHours(result.temporary.idWorkspaceFk, result.temporary.idUserFk);
@@ -165,11 +185,15 @@ export class TemporaryBusinessHourController {
     /** Deletes temporary exceptions and clears cache. */
     public delete = async (req: any, res: any, next: any) => {
         try {
-            const { idList, idWorkspace } = req.body;
+            const { idList, idWorkspace } = req.body as DeleteTemporaryBusinessHourDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workBusinessHourService.deleteTemporaryBusinessHourFromRedis(idList, idWorkspace);
+            const normalizedIdList = Array.isArray(idList) ? idList : [idList];
+            const result = await this.workBusinessHourService.deleteTemporaryBusinessHourFromRedis(
+                normalizedIdList,
+                idWorkspace
+            );
             res.status(200).json(Response.build("Registro eliminado", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -180,7 +204,7 @@ export class TemporaryBusinessHourController {
     /** Returns autocomplete data for temporary exceptions. */
     public autocomplete = async (req: any, res: any, next: any) => {
         try {
-            const { idUser } = req.body;
+            const { idUser } = req.body as TemporaryBusinessHourAutocompleteDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -191,7 +215,7 @@ export class TemporaryBusinessHourController {
             }
             if (idUser) {
                 pagination.filters = {
-                    idUserFk: idUser
+                    idUserFk: { value: idUser }
                 }
                 result = await this.workBusinessHourService.getTemporaryBusinessHours(pagination, false);
             } else {
@@ -207,7 +231,7 @@ export class TemporaryBusinessHourController {
     /** Returns temporary exceptions from cache/database by users and workspace. */
     getTemporaryHoursFromRedis = async (req: any, res: any, next: any) => {
         try {
-            const { idUserList, idWorkspace } = req.body;
+            const { idUserList, idWorkspace } = req.body as TemporaryHoursRedisDto;
             const token = req.token;
             await this.jwtService.verify(token);
 

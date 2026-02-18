@@ -2,6 +2,15 @@ import { Response } from "../../../models/messages/response";
 import { Pagination } from "../../../models/pagination";
 import { WorkerAbsenceService } from "../services/worker-absence.service";
 import { JWTService } from "../../../services/jwt/jwt.service";
+import {
+    AddWorkerAbsenceDto,
+    DeleteWorkerAbsenceDto,
+    GetWorkerAbsenceByUserDto,
+    GetWorkerAbsenceByWorkspaceDto,
+    GetWorkerAbsenceListDto,
+    UpdateWorkerAbsenceDto,
+    WorkerAbsenceIdParamsDto,
+} from "../dto";
 
 export class WorkerAbsenceController {
     public workerAbsenceService: WorkerAbsenceService;
@@ -14,7 +23,7 @@ export class WorkerAbsenceController {
 
     public get = async (req: any, res: any, next: any) => {
         try {
-            const { pagination } = req.body;
+            const { pagination } = req.body as GetWorkerAbsenceListDto;
             const token = req.token;
             await this.jwtService.verify(token);
             const result = await this.workerAbsenceService.getWorkerAbsences(pagination);
@@ -26,13 +35,13 @@ export class WorkerAbsenceController {
 
     public add = async (req: any, res: any, next: any) => {
         try {
-            const body = req.body;
+            const body = req.body as AddWorkerAbsenceDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
             const { idEventFk, ...rest } = body;
 
-            const result = await this.workerAbsenceService.addWorkerAbsence(rest);
+            const result = await this.workerAbsenceService.addWorkerAbsence(rest as any);
             res.status(200).json(Response.build("Ausencia registrada", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -54,7 +63,7 @@ export class WorkerAbsenceController {
 
     public getById = async (req: any, res: any, next: any) => {
         try {
-            const { id } = req.params;
+            const { id } = req.params as WorkerAbsenceIdParamsDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -68,7 +77,7 @@ export class WorkerAbsenceController {
     public getByWorkspace = async (req: any, res: any, next: any) => {
 
         try {
-            const { idWorkspace } = req.body;
+            const { idWorkspace } = req.body as GetWorkerAbsenceByWorkspaceDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -81,7 +90,7 @@ export class WorkerAbsenceController {
 
     public getByUser = async (req: any, res: any, next: any) => {
         try {
-            const { idUser } = req.body;
+            const { idUser } = req.body as GetWorkerAbsenceByUserDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -94,11 +103,11 @@ export class WorkerAbsenceController {
 
     public update = async (req: any, res: any, next: any) => {
         try {
-            const body = req.body;
+            const body = req.body as UpdateWorkerAbsenceDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workerAbsenceService.updateWorkerAbsence(body);
+            const result = await this.workerAbsenceService.updateWorkerAbsence(body as any);
             res.status(200).json(Response.build("Ausencia actualizada", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
@@ -107,11 +116,12 @@ export class WorkerAbsenceController {
 
     public delete = async (req: any, res: any, next: any) => {
         try {
-            const { idList } = req.body;
+            const { idList } = req.body as DeleteWorkerAbsenceDto;
             const token = req.token;
             await this.jwtService.verify(token);
 
-            const result = await this.workerAbsenceService.deleteWorkerAbsence(idList);
+            const normalizedIdList = Array.isArray(idList) ? idList : [idList];
+            const result = await this.workerAbsenceService.deleteWorkerAbsence(normalizedIdList);
             res.status(200).json(Response.build("Ausencia eliminada", 200, true, result));
         } catch (err: any) {
             res.status(500).json({ message: err.message });
