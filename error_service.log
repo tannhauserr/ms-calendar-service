@@ -1273,4 +1273,55 @@ Timed out fetching a new connection from the connection pool. More info: http://
     at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
     at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
     =====================================================
-    
+    [2026-02-17 09:39:49] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "TemporaryBusinessHour.getTemporaryBusinessHoursGrouped"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/temporary-business-hour/services/temporary-business-hour.service.ts"
+    [35merrorLine[39m: 577
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'page')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'page')
+              at TemporaryBusinessHourService.getTemporaryBusinessHours2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/temporary-business-hour/services/temporary-business-hour.service.ts:577:38)
+              at TemporaryBusinessHourController.get (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/temporary-business-hour/controllers/temporary-business-hour.controller.ts:46:63)
+              at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    }
+[2026-02-17 09:39:49] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "TemporaryBusinessHour.getTemporaryBusinessHoursGrouped"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/temporary-business-hour/services/temporary-business-hour.service.ts"
+    [35merrorLine[39m: 577
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'page')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'page')
+              at TemporaryBusinessHourService.getTemporaryBusinessHours2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/temporary-business-hour/services/temporary-business-hour.service.ts:577:38)
+              at TemporaryBusinessHourController.get (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/temporary-business-hour/controllers/temporary-business-hour.controller.ts:46:63)
+              at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    }
+[2026-02-17 09:42:12] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "TemporaryBusinessHour.getTemporaryBusinessHoursGrouped"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/temporary-business-hour/services/temporary-business-hour.service.ts"
+    [35merrorLine[39m: 577
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'page')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'page')
+              at TemporaryBusinessHourService.getTemporaryBusinessHours2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/temporary-business-hour/services/temporary-business-hour.service.ts:577:38)
+              at TemporaryBusinessHourController.get (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/temporary-business-hour/controllers/temporary-business-hour.controller.ts:46:63)
+              at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    }
+[2026-02-17 09:42:13] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "TemporaryBusinessHour.getTemporaryBusinessHoursGrouped"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/temporary-business-hour/services/temporary-business-hour.service.ts"
+    [35merrorLine[39m: 577
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'page')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'page')
+              at TemporaryBusinessHourService.getTemporaryBusinessHours2 (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/temporary-business-hour/services/temporary-business-hour.service.ts:577:38)
+              at TemporaryBusinessHourController.get (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/temporary-business-hour/controllers/temporary-business-hour.controller.ts:46:63)
+              at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    }

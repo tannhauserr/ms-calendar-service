@@ -80,6 +80,15 @@ export class RedisCacheService {
         }
     }
 
+    public async setIfNotExists(key: string, value: string, ttl: number): Promise<boolean> {
+        const result = await this.redisClient.set(key, value, {
+            EX: ttl,
+            NX: true,
+        });
+
+        return result === "OK";
+    }
+
     public async get(key: string): Promise<string | null> {
         return this.redisClient.get(key);
     }
