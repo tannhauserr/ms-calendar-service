@@ -1,29 +1,29 @@
+import type { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-type RequestLike = {
-    body?: unknown;
-    params?: unknown;
-    query?: unknown;
+const getIssueMessage = (issues: Array<{ path?: PropertyKey[]; message?: string }>) => {
+    const first = issues[0];
+    if (!first) {
+        return "Invalid request";
+    }
+
+    if (!first.path?.length) {
+        return first.message ?? "Invalid request";
+    }
+
+    const path = first.path.map((item) => String(item)).join(".");
+    return `${path}: ${first.message ?? "Invalid request"}`;
 };
 
-type ResponseLike = {
-    status(code: number): ResponseLike;
-    json(payload: unknown): unknown;
-};
-
-type NextLike = () => void;
-
-/**
- * Validates and normalizes request body using a zod schema.
- */
-export const validateBody = <T>(schema: z.ZodType<T>) => {
-    return (req: RequestLike, res: ResponseLike, next: NextLike) => {
+export const validateBody = (schema: z.ZodType<unknown>) => {
+    return (req: Request, res: Response, next: NextFunction) => {
         const parsed = schema.safeParse(req.body);
+
         if (!parsed.success) {
+            console.log("Validation error:", parsed.error.issues);
             return res.status(400).json({
                 ok: false,
-                message: "Invalid request body",
-                errors: parsed.error.issues,
+                message: getIssueMessage(parsed.error.issues),
             });
         }
 
@@ -32,41 +32,34 @@ export const validateBody = <T>(schema: z.ZodType<T>) => {
     };
 };
 
-/**
- * Validates and normalizes request params using a zod schema.
- */
-export const validateParams = <T>(schema: z.ZodType<T>) => {
-    return (req: RequestLike, res: ResponseLike, next: NextLike) => {
+export const validateParams = (schema: z.ZodType<unknown>) => {
+    return (req: Request, res: Response, next: NextFunction) => {
         const parsed = schema.safeParse(req.params);
+
         if (!parsed.success) {
             return res.status(400).json({
                 ok: false,
-                message: "Invalid request params",
-                errors: parsed.error.issues,
+                message: getIssueMessage(parsed.error.issues),
             });
         }
 
-        req.params = parsed.data;
+        req.params = parsed.data as Request["params"];
         return next();
     };
 };
 
-/**
- * Validates and normalizes request query using a zod schema.
- */
-export const validateQuery = <T>(schema: z.ZodType<T>) => {
-    return (req: RequestLike, res: ResponseLike, next: NextLike) => {
+export const validateQuery = (schema: z.ZodType<unknown>) => {
+    return (req: Request, res: Response, next: NextFunction) => {
         const parsed = schema.safeParse(req.query);
+
         if (!parsed.success) {
             return res.status(400).json({
                 ok: false,
-                message: "Invalid request query",
-                errors: parsed.error.issues,
+                message: getIssueMessage(parsed.error.issues),
             });
         }
 
-        req.query = parsed.data;
+        req.query = parsed.data as Request["query"];
         return next();
     };
 };
-
