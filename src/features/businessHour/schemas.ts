@@ -8,7 +8,7 @@ const businessHourBaseSchema = z.looseObject({
         id: idSchema.optional(),
         idCompanyFk: idSchema.optional(),
         idWorkspaceFk: idSchema.optional(),
-        weekDayType: z.nativeEnum(WeekDayType).optional(),
+        weekDayType: z.enum(WeekDayType).optional(),
         startTime: timeValueSchema.nullable().optional(),
         endTime: timeValueSchema.nullable().optional(),
         closed: z.boolean().optional(),
@@ -17,7 +17,7 @@ const businessHourBaseSchema = z.looseObject({
 export const addBusinessHourSchema = businessHourBaseSchema.extend({
     idWorkspaceFk: idSchema.optional(),
     idWorkspace: idSchema.optional(),
-    weekDayType: z.nativeEnum(WeekDayType),
+    weekDayType: z.enum(WeekDayType),
 })
     .refine((data) => !!(data.idWorkspaceFk ?? data.idWorkspace), {
         message: "idWorkspaceFk o idWorkspace es requerido",
