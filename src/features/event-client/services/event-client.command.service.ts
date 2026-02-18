@@ -4,36 +4,25 @@ import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
 import { ActionKey } from "../../../models/notification/util/action-to-senctions";
 import { createNotificationByClient } from "../../../models/notification/util/trigger/for-action";
-import { AddEventFromWebUseCase } from "../domain";
 import { BusinessHourService } from "../../../services/@database/all-business-services/business-hours/business-hours.service";
 import { TemporaryBusinessHourService } from "../../../services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service";
 import { WorkerBusinessHourService } from "../../../services/@database/all-business-services/worker-business-hours/worker-business-hours.service";
-import { EventClientWriteService } from "./event-client-write.service";
-import { ClientEventService } from "../../../services/@database/event/client-event.service";
-import moment from "moment-timezone";
+import { EventClientWriteService } from "./create-event/event-client-write.service";
+import { EventClientUpdateWriteService } from "./update-event/event-client-update-write.service";
+
 
 export class EventClientCommandService {
+
     private readonly businessHoursService = new BusinessHourService();
     private readonly workerHoursService = new WorkerBusinessHourService();
     private readonly temporaryHoursService = new TemporaryBusinessHourService();
-    private readonly addEventFromWebUseCase = new AddEventFromWebUseCase();
     private readonly eventClientWriteService = new EventClientWriteService();
-    private readonly legacyClientEventService = new ClientEventService();
+    private readonly eventClientUpdateWriteService = new EventClientUpdateWriteService();
 
     /**
      * Crea una cita desde web aplicando reglas de negocio y notificaciones.
      */
     public async addFromWeb(ctx: any) {
-        const validation = this._validateAddInput(ctx);
-        if (!validation.ok) {
-            return {
-                status: 400,
-                ok: false,
-                message: this._mapAddValidationError(validation.code),
-                item: null,
-            };
-        }
-
         const autoConfirmClientBookings = ctx.workspace?.autoConfirmClientBookings ?? true;
 
         const deps = {
@@ -46,7 +35,8 @@ export class EventClientCommandService {
         };
 
         const servicePayload = this._buildServicePayload(ctx, false);
-        const result: any = await this.eventClientWriteService.addEventFromWeb(servicePayload, deps);
+        const result: any = await this.eventClientWriteService
+            .addEventFromWeb(servicePayload, deps);
 
         if (result && result.outcome !== "already-in") {
             const createdRaw = Array.isArray(result.created) ? result.created : [];
@@ -98,53 +88,6 @@ export class EventClientCommandService {
     }
 
     /**
-     * Ejecuta validaciones de dominio previas para alta de reservas web.
-     */
-    private _validateAddInput(ctx: any) {
-        const startLocalISO: string | undefined = ctx?.input?.startLocalISO;
-        const timeZoneClient: string | undefined = ctx?.input?.timeZoneClient;
-
-        if (!startLocalISO || !timeZoneClient) {
-            return { ok: false as const, code: "BOOKING_IN_PAST" as const };
-        }
-
-        const startMoment = moment.tz(startLocalISO, "YYYY-MM-DDTHH:mm:ss", timeZoneClient);
-        if (!startMoment.isValid()) {
-            return { ok: false as const, code: "BOOKING_IN_PAST" as const };
-        }
-
-        const totalDurationMin = Array.isArray(ctx?.input?.attendees)
-            ? ctx.input.attendees.reduce((acc: number, attendee: any) => {
-                  return acc + (typeof attendee?.durationMin === "number" ? attendee.durationMin : 0);
-              }, 0)
-            : 0;
-
-        const endMoment = startMoment.clone().add(Math.max(0, totalDurationMin), "minutes");
-
-        return this.addEventFromWebUseCase.execute({
-            startDate: startMoment.toDate(),
-            endDate: endMoment.toDate(),
-            now: new Date(),
-            minLeadMinutes: Number(ctx?.config?.bookingWindow?.minLeadTimeMin ?? 0),
-        });
-    }
-
-    /**
-     * Traduce códigos de validación de dominio a mensajes de API.
-     */
-    private _mapAddValidationError(code: "BOOKING_IN_PAST" | "OUTSIDE_WORKSPACE_HOURS" | "NO_CAPACITY" | "VALID") {
-        switch (code) {
-            case "OUTSIDE_WORKSPACE_HOURS":
-                return "La reserva está fuera del horario permitido";
-            case "NO_CAPACITY":
-                return "No quedan plazas disponibles para este horario";
-            case "BOOKING_IN_PAST":
-            default:
-                return "No se puede reservar en una fecha/hora pasada";
-        }
-    }
-
-    /**
      * Construye el payload de negocio que usan los write services de clientes.
      */
     private _buildServicePayload(ctx: any, includeEventId: boolean) {
@@ -181,7 +124,7 @@ export class EventClientCommandService {
             servicePayload
         );
 
-        const result: any = await this.legacyClientEventService.updateSingleEventFromWeb(servicePayload, deps);
+        const result: any = await this.eventClientUpdateWriteService.updateEventFromWeb(servicePayload, deps);
 
         if (result?.notification) {
             const isSingle = result.notification.type === "single-event";

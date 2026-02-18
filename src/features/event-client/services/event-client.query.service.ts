@@ -24,26 +24,6 @@ type ClientAppointment = {
 
 export class EventClientQueryService {
     /**
-     * Aplana campos de groupEvents para mantener el contrato de salida actual.
-     */
-    private _withGroupFields<T extends { groupEvents?: any }>(event: T | null) {
-        if (!event || !event.groupEvents) return event;
-        const group = event.groupEvents;
-
-        return {
-            ...event,
-            idWorkspaceFk: group.idWorkspaceFk,
-            idCompanyFk: group.idCompanyFk,
-            commentClient: group.commentClient,
-            isCommentRead: group.isCommentRead,
-            eventSourceType: group.eventSourceType,
-            eventStatusType: group.eventStatusType,
-            timeZone: group.timeZone,
-            eventParticipant: group.eventParticipant ?? (event as any).eventParticipant ?? [],
-        };
-    }
-
-    /**
      * Devuelve citas del cliente por scope con paginación a nivel de booking.
      */
     public async getFromWeb(
@@ -68,6 +48,111 @@ export class EventClientQueryService {
             );
         } catch (error: any) {
             throw new CustomError("EventClientQueryService.getFromWeb", error);
+        }
+    }
+
+    /**
+     * Devuelve una cita agrupada por idGroup para cliente/workspace.
+     */
+    public async getEventByGroupIdAndClientWorkspaceAndWorkspace(
+        bookingId: string,
+        idClientWorkspace: string,
+        idWorkspace: string
+    ): Promise<ClientAppointment | null> {
+        try {
+            const excludedStatuses = ["CANCELLED", "CANCELLED_BY_CLIENT_REMOVED"];
+
+            const events = await prisma.event.findMany({
+                where: {
+                    deletedDate: null,
+                    groupEvents: {
+                        idWorkspaceFk: idWorkspace,
+                        eventStatusType: { notIn: excludedStatuses as any },
+                        eventParticipant: {
+                            some: {
+                                idClientWorkspaceFk: idClientWorkspace,
+                                deletedDate: null,
+                            },
+                        },
+                    },
+                    OR: [{ idGroup: bookingId }],
+                },
+                select: {
+                    id: true,
+                    idGroup: true,
+                    title: true,
+                    description: true,
+                    startDate: true,
+                    endDate: true,
+                    idUserPlatformFk: true,
+                    idServiceFk: true,
+                    eventPurposeType: true,
+                    allDay: true,
+                    serviceNameSnapshot: true,
+                    servicePriceSnapshot: true,
+                    serviceDiscountSnapshot: true,
+                    serviceDurationSnapshot: true,
+                    serviceMaxParticipantsSnapshot: true,
+                    groupEvents: {
+                        select: {
+                            commentClient: true,
+                            eventStatusType: true,
+                            eventSourceType: true,
+                            timeZone: true,
+                            eventParticipant: {
+                                where: { deletedDate: null },
+                                select: {
+                                    id: true,
+                                    idClientFk: true,
+                                    idClientWorkspaceFk: true,
+                                    eventStatusType: true,
+                                },
+                            },
+                        },
+                    },
+                },
+                orderBy: { startDate: "asc" },
+            });
+
+            if (!events.length) {
+                return null;
+            }
+
+            const grouped = this._buildClientBookingsFromEvents(
+                "upcoming",
+                events.map((event) => this._withGroupFields(event as any)),
+                1,
+                events.length || 10
+            );
+
+            const row = grouped.rows[0];
+            if (!row) {
+                return null;
+            }
+
+            return {
+                bookingId: row.bookingId,
+                primaryEventId: row.primaryEventId,
+                startDate: row.startDate.toISOString(),
+                endDate: row.endDate.toISOString(),
+                status: row.status,
+                commentClient: row.commentClient ?? null,
+                timeZone: row.timeZone,
+                services: row.services.map((service) => ({
+                    idEvent: service.idEvent,
+                    idService: service.idService ?? "",
+                    serviceName: service.serviceName,
+                    maxParticipants: service.maxParticipants ?? 1,
+                    durationMin: service.durationMin ?? 0,
+                    price: service.price ?? 0,
+                    staffId: service.staffId ?? undefined,
+                })),
+            };
+        } catch (error: any) {
+            throw new CustomError(
+                "EventClientQueryService.getEventByGroupIdAndClientWorkspaceAndWorkspace",
+                error
+            );
         }
     }
 
@@ -255,107 +340,22 @@ export class EventClientQueryService {
     }
 
     /**
-     * Devuelve una cita agrupada por idGroup para cliente/workspace.
+     * Aplana campos de groupEvents para mantener el contrato de salida actual.
      */
-    public async getEventByGroupIdAndClientWorkspaceAndWorkspace(
-        bookingId: string,
-        idClientWorkspace: string,
-        idWorkspace: string
-    ): Promise<ClientAppointment | null> {
-        try {
-            const excludedStatuses = ["CANCELLED", "CANCELLED_BY_CLIENT_REMOVED"];
+    private _withGroupFields<T extends { groupEvents?: any }>(event: T | null) {
+        if (!event || !event.groupEvents) return event;
+        const group = event.groupEvents;
 
-            const events = await prisma.event.findMany({
-                where: {
-                    deletedDate: null,
-                    groupEvents: {
-                        idWorkspaceFk: idWorkspace,
-                        eventStatusType: { notIn: excludedStatuses as any },
-                        eventParticipant: {
-                            some: {
-                                idClientWorkspaceFk: idClientWorkspace,
-                                deletedDate: null,
-                            },
-                        },
-                    },
-                    OR: [{ idGroup: bookingId }],
-                },
-                select: {
-                    id: true,
-                    idGroup: true,
-                    title: true,
-                    description: true,
-                    startDate: true,
-                    endDate: true,
-                    idUserPlatformFk: true,
-                    idServiceFk: true,
-                    eventPurposeType: true,
-                    allDay: true,
-                    serviceNameSnapshot: true,
-                    servicePriceSnapshot: true,
-                    serviceDiscountSnapshot: true,
-                    serviceDurationSnapshot: true,
-                    serviceMaxParticipantsSnapshot: true,
-                    groupEvents: {
-                        select: {
-                            commentClient: true,
-                            eventStatusType: true,
-                            eventSourceType: true,
-                            timeZone: true,
-                            eventParticipant: {
-                                where: { deletedDate: null },
-                                select: {
-                                    id: true,
-                                    idClientFk: true,
-                                    idClientWorkspaceFk: true,
-                                    eventStatusType: true,
-                                },
-                            },
-                        },
-                    },
-                },
-                orderBy: { startDate: "asc" },
-            });
-
-            if (!events.length) {
-                return null;
-            }
-
-            const grouped = this._buildClientBookingsFromEvents(
-                "upcoming",
-                events.map((event) => this._withGroupFields(event as any)),
-                1,
-                events.length || 10
-            );
-
-            const row = grouped.rows[0];
-            if (!row) {
-                return null;
-            }
-
-            return {
-                bookingId: row.bookingId,
-                primaryEventId: row.primaryEventId,
-                startDate: row.startDate.toISOString(),
-                endDate: row.endDate.toISOString(),
-                status: row.status,
-                commentClient: row.commentClient ?? null,
-                timeZone: row.timeZone,
-                services: row.services.map((service) => ({
-                    idEvent: service.idEvent,
-                    idService: service.idService ?? "",
-                    serviceName: service.serviceName,
-                    maxParticipants: service.maxParticipants ?? 1,
-                    durationMin: service.durationMin ?? 0,
-                    price: service.price ?? 0,
-                    staffId: service.staffId ?? undefined,
-                })),
-            };
-        } catch (error: any) {
-            throw new CustomError(
-                "EventClientQueryService.getEventByGroupIdAndClientWorkspaceAndWorkspace",
-                error
-            );
-        }
+        return {
+            ...event,
+            idWorkspaceFk: group.idWorkspaceFk,
+            idCompanyFk: group.idCompanyFk,
+            commentClient: group.commentClient,
+            isCommentRead: group.isCommentRead,
+            eventSourceType: group.eventSourceType,
+            eventStatusType: group.eventStatusType,
+            timeZone: group.timeZone,
+            eventParticipant: group.eventParticipant ?? (event as any).eventParticipant ?? [],
+        };
     }
 }
