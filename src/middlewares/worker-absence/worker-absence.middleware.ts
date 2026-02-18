@@ -1,14 +1,10 @@
 import moment from "moment";
-import { TemporaryBusinessHourService } from "../../services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service";
-
 import { Response } from "../../models/messages/response";
 import prisma from "../../lib/prisma";
 
 
 
 export class WorkerAbsenceMiddleware {
-
-    static temporaryBusinessHourService = new TemporaryBusinessHourService();
 
     static cleanExceptionDate = async (req: any, res: any, next: any) => {
         try {
