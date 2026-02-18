@@ -342,6 +342,7 @@ export class BusinessHourService {
         }>
     ): Promise<{ created: boolean; businessHours: BusinessHour[] }> => {
         try {
+            
             if (!idCompany || !idWorkspace) {
                 throw new Error('idCompany e idWorkspace son obligatorios');
             }
