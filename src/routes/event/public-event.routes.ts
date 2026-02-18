@@ -1,11 +1,11 @@
 import crypto from 'crypto';
 import express from 'express';
-import { PublicEventController } from '../../controllers/event/public-event.controller';
+import { PublicEventFeatureController } from '../../features/public-event/controllers/public-event.controller';
 import { BookingGuardsMiddleware } from '../../middlewares/booiking-guard/booking-guard.middleware';
 
 
 const router = express.Router();
-const controller = new PublicEventController();
+const controller = new PublicEventFeatureController();
 
 router.post('/events/available-days',
     [

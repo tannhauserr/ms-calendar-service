@@ -1,7 +1,7 @@
 import crypto from "crypto";
 
 const ENCRYPTED_PREFIX = "enc:v";
-const ENCRYPTED_REGEX = /^enc:v(\d+):([^:]+):([^:]+):(.+)$/;
+const ENCRYPTED_REGEX = /^enc:v(\d+):([^:]+):([^:]+):(.*)$/;
 const ALGORITHM = "aes-256-gcm";
 const IV_SIZE_BYTES = 12;
 

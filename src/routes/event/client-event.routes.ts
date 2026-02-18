@@ -1,15 +1,15 @@
 import express from 'express';
 
-import { ClientEventController } from '../../controllers/event/client-event.controller';
-import { PublicEventController } from '../../controllers/event/public-event.controller';
+import { EventClientController } from '../../features/event-client/controllers/event-client.controller';
+import { PublicEventFeatureController } from '../../features/public-event/controllers/public-event.controller';
 import { BookingGuardsMiddleware } from '../../middlewares/booiking-guard/booking-guard.middleware';
 import { JWTService } from '../../services/jwt/jwt.service';
 
 
 const router = express.Router();
-const controller = new ClientEventController();
+const controller = new EventClientController();
 // Se usa en client-event para reutilizar un par de funciones, pero en este caso usa el token de cliente
-const publicEventController = new PublicEventController();
+const publicEventController = new PublicEventFeatureController();
 
 
 // TODO: crear middleware para confirmar que el id de cliente es válido

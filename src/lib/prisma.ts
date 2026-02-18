@@ -163,9 +163,12 @@ const encryptDataForModel = (
         const plainValue = isEncryptedClientValue(value)
             ? decryptClientValue(value)
             : value;
+        const shouldSkipEncryption = plainValue === "";
         const encryptedValue = isEncryptedClientValue(value)
             ? value
-            : encryptClientValue(plainValue);
+            : shouldSkipEncryption
+              ? plainValue
+              : encryptClientValue(plainValue);
 
         data[fieldName] = wrapFieldValue(originalRaw, isSetOp, encryptedValue);
 
