@@ -7,9 +7,9 @@ type AddEventFromWebInput = {
     endDate: Date;
     now: Date;
     minLeadMinutes: number;
-    capacity: number;
-    currentParticipants: number;
-    windows: Array<{ start: Date; end: Date }>;
+    capacity?: number;
+    currentParticipants?: number;
+    windows?: Array<{ start: Date; end: Date }>;
 };
 
 type AddEventFromWebResult = {
@@ -29,11 +29,19 @@ export class AddEventFromWebUseCase {
             return { ok: false, code: "BOOKING_IN_PAST" };
         }
 
-        if (!WorkspaceHoursPolicy.isInsideWindows(input.startDate, input.endDate, input.windows)) {
+        if (
+            Array.isArray(input.windows) &&
+            input.windows.length > 0 &&
+            !WorkspaceHoursPolicy.isInsideWindows(input.startDate, input.endDate, input.windows)
+        ) {
             return { ok: false, code: "OUTSIDE_WORKSPACE_HOURS" };
         }
 
-        if (!CapacityPolicy.hasSeat(input.capacity, input.currentParticipants)) {
+        if (
+            typeof input.capacity === "number" &&
+            typeof input.currentParticipants === "number" &&
+            !CapacityPolicy.hasSeat(input.capacity, input.currentParticipants)
+        ) {
             return { ok: false, code: "NO_CAPACITY" };
         }
 
