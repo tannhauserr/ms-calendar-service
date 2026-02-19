@@ -1,10 +1,12 @@
 import { EventStatusType } from "@prisma/client";
 import prisma from "../../../../lib/prisma";
+import { ErrorCatalogByDomain } from "../../../../models/error-codes";
 
 export type ChangeEventStatusResult = {
     events: any[];
     notifyEvents: any[];
 };
+const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 const ALLOWED: Record<EventStatusType, EventStatusType[]> = {
     PENDING: [
@@ -56,11 +58,23 @@ export class ChangeEventStatusUseCase {
                 },
             });
 
-            if (!evt) throw new Error("Evento no encontrado");
+            if (!evt) {
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.controller.resource.RESOURCE_NOT_FOUND.message,
+                        "Evento no encontrado"
+                    )
+                );
+            }
 
             const current = evt.groupEvents?.eventStatusType;
             if (!current || !evt.idGroup) {
-                throw new Error("Evento sin grupo o estado inválido");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.controller.validation.VALIDATION_INVALID_PAYLOAD.message,
+                        "Evento sin grupo o estado inválido"
+                    )
+                );
             }
 
             if (!ALLOWED[current].includes(status)) {
