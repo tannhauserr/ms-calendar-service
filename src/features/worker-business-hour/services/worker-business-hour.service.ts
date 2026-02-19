@@ -1,12 +1,15 @@
 import { Prisma, WorkerBusinessHour, WeekDayType, $Enums } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
+import { ErrorCatalogByDomain } from "../../../models/error-codes";
 import { Pagination } from "../../../models/pagination";
 import { getGeneric } from "../../../utils/get-genetic/getGenetic";
 import { WorkerHoursMapType } from "../../../models/interfaces";
 import { WorkerHoursStrategy } from "../../../services/@redis/cache/strategies/workerHours/workerHours.strategy";
 import moment from "moment";
 import { TIME_SECONDS } from "../../../constant/time";
+
+const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 export class WorkerBusinessHourService {
     /** Creates a service instance. */
@@ -132,7 +135,12 @@ export class WorkerBusinessHourService {
             if (!id) {
                 throw new CustomError(
                     'WorkerBusinessHourWorkerBusinessHour.updateWorkerBusinessHour',
-                    new Error('Falta el campo "id" para la actualización')
+                    new Error(
+                        withCatalogMessage(
+                            ErrorCatalogByDomain.controller.validation.VALIDATION_REQUIRED_FIELD.message,
+                            'Falta el campo "id" para la actualización'
+                        )
+                    )
                 );
             }
 
@@ -255,7 +263,14 @@ export class WorkerBusinessHourService {
     /** Converts a time value to HH:mm format. */
     toHHmm = (v: string): string => {
         const m = String(v).trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
-        if (!m) throw new Error(`Hora inválida: ${v}`);
+        if (!m) {
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.middleware.businessHour.BUSINESS_HOUR_INVALID_TIME_FORMAT.message,
+                    `Hora inválida: ${v}`
+                )
+            );
+        }
         return `${m[1].padStart(2, '0')}:${m[2]}`;
     };
 
