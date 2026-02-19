@@ -2,6 +2,7 @@ import { EventParticipant, EventStatusType } from "@prisma/client";
 import { randomUUID } from "crypto";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
+import { ErrorCatalogByDomain } from "../../../models/error-codes";
 import { ActionKey } from "../../../models/notification/util/action-to-senctions";
 import { createNotification as createNotificationPlatform } from "../../../models/notification/util/trigger/util/for-action-platform";
 import { SidebarBackendBookingPayload } from "../../../services/@database/event/dto/SidebarBackendBookingPayload";
@@ -16,6 +17,7 @@ import {
 export type { UpdateEventByIdPayload } from "./use-cases/update-event-by-id.use-case";
 
 type ParticipantAction = "accept" | "cancel";
+const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 const PARTICIPANT_ALLOWED: Record<EventStatusType, EventStatusType[]> = {
     PENDING: [EventStatusType.ACCEPTED, EventStatusType.CANCELLED_BY_CLIENT],
@@ -84,7 +86,12 @@ export class EventPlatformCommandService {
     public async markCommentAsRead(eventId: string, idWorkspace: string) {
         try {
             if (!eventId) {
-                throw new Error("El id del evento es requerido");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.controller.validation.VALIDATION_REQUIRED_FIELD.message,
+                        "El id del evento es requerido"
+                    )
+                );
             }
 
             const event = await prisma.event.findUnique({
@@ -93,7 +100,12 @@ export class EventPlatformCommandService {
             });
 
             if (!event?.groupEvents || event.groupEvents.idWorkspaceFk !== idWorkspace) {
-                throw new Error("Evento no encontrado en este workspace");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.controller.resource.RESOURCE_NOT_FOUND.message,
+                        "Evento no encontrado en este workspace"
+                    )
+                );
             }
 
             await prisma.groupEvents.update({
@@ -240,7 +252,12 @@ export class EventPlatformCommandService {
             });
 
             if (!event?.idGroup) {
-                throw new Error("Evento sin grupo para actualizar participante");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.controller.validation.VALIDATION_INVALID_PAYLOAD.message,
+                        "Evento sin grupo para actualizar participante"
+                    )
+                );
             }
 
             const targetStatus = action === "accept"
@@ -256,7 +273,12 @@ export class EventPlatformCommandService {
             });
 
             if (!participant) {
-                throw new Error("No se encontró ese participante para este evento");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.controller.resource.RESOURCE_NOT_FOUND.message,
+                        "No se encontró ese participante para este evento"
+                    )
+                );
             }
 
             const current = participant.eventStatusType;
