@@ -1,0 +1,35 @@
+import express from 'express';
+import { EventController } from '../../controllers/event/event.controller';
+import { BusinessHourController } from '../../controllers/all-business-controller/business-hour/business-hour.controller';
+
+
+
+
+const router = express.Router();
+const eventController = new EventController();
+const businessHoursController = new BusinessHourController();
+
+// Obtener event
+router.post('/event/data', [
+    // MicroserviceAuthMiddleware.verify
+], eventController.getEventDataById);
+
+router.post('/event/group/data', [
+    // MicroserviceAuthMiddleware.verif
+], eventController.getGroupDataById);  
+
+// obtener business hour a partir del id Workspace
+router.post('/business-hours/data', [
+    // MicroserviceAuthMiddleware.verify
+], businessHoursController.getBusinessHoursFromRedis_internalMS);
+
+// generar horario base para un workspace
+router.post('/business-hours/generate-workspace', [
+    // MicroserviceAuthMiddleware.verify
+], businessHoursController.internalGenerateWorkspaceBusinessHours);
+
+// BookingPages (batch)
+// router.post('/booking-pages/_batch', [MicroserviceAuthMiddleware.verify], bookingPageController.internalBatchByIds);
+
+
+module.exports = router;
