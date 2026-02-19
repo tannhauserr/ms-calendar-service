@@ -1,7 +1,6 @@
-import { ErrorCatalogByDomain } from "../../../../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../../../models/error-codes";
 import type { UpdateFlowContext } from "./types";
 import type { UpdateFlowStrategy } from "./update-flow.strategy";
-const withCatalogMessage = (catalogMessage: string, detail: string) => `${catalogMessage} ${detail}`;
 
 /**
  * Selecciona la primera estrategia de flujo que aplique al contexto.

@@ -1,7 +1,7 @@
 import { Event, Prisma } from "@prisma/client";
 import prisma from "../../../../lib/prisma";
 import CustomError from "../../../../models/custom-error/CustomError";
-import { ErrorCatalogByDomain } from "../../../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../../models/error-codes";
 import moment from "moment";
 import { CONSOLE_COLOR } from "../../../../constant/console-color";
 import { TIME_SECONDS } from "../../../../constant/time";
@@ -38,7 +38,6 @@ import {
 } from "./flows";
 
 type UpdateMode = "single" | "group";
-const withCatalogMessage = (catalogMessage: string, detail: string) => `${catalogMessage} ${detail}`;
 
 export class EventClientUpdateWriteService {
     private readonly persistence = new EventClientUpdatePersistence();

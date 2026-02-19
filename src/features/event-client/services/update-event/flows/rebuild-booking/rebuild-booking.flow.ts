@@ -1,6 +1,6 @@
 import moment from "moment";
 import { CONSOLE_COLOR } from "../../../../../../constant/console-color";
-import { ErrorCatalogByDomain } from "../../../../../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../../../../models/error-codes";
 import {
     MaxServicesPerBookingPolicy,
     ServiceWindowAvailabilityPolicy,
@@ -9,7 +9,6 @@ import {
 import type { EventClientAvailabilityService } from "../../../availability";
 import type { AddFromWebDeps } from "../../../create-event/event-client-write.types";
 import type { EventClientUpdatePersistence } from "../../../persistence";
-const withCatalogMessage = (catalogMessage: string, detail: string) => `${catalogMessage} ${detail}`;
 
 type RunRebuildBookingFlowParams = {
     attendees: any[];

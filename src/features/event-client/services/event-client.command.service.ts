@@ -2,7 +2,7 @@ import { CONSOLE_COLOR } from "../../../constant/console-color";
 import { pickHttpStatus } from "../../../constant/errors/codes";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
-import { ErrorCatalogByDomain } from "../../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../models/error-codes";
 import { ActionKey } from "../../../models/notification/util/action-to-senctions";
 import { createNotificationByClient } from "../../../models/notification/util/trigger/for-action";
 import { BusinessHourService } from "../../../services/@database/all-business-services/business-hours/business-hours.service";
@@ -10,8 +10,6 @@ import { TemporaryBusinessHourService } from "../../../services/@database/all-bu
 import { WorkerBusinessHourService } from "../../../services/@database/all-business-services/worker-business-hours/worker-business-hours.service";
 import { EventClientWriteService } from "./create-event/event-client-write.service";
 import { EventClientUpdateWriteService } from "./update-event/event-client-update-write.service";
-
-const withCatalogMessage = (catalogMessage: string, detail: string) => `${catalogMessage} ${detail}`;
 
 export class EventClientCommandService {
 

@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { CONSOLE_COLOR } from "../../../../constant/console-color";
 import { TIME_SECONDS } from "../../../../constant/time";
 import CustomError from "../../../../models/custom-error/CustomError";
-import { ErrorCatalogByDomain } from "../../../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../../models/error-codes";
 import { computeSlotConfig, getUsersWhoCanPerformService_SPECIAL, getEventsOverlappingRange_SPECIAL, groupEventsByUser_SPECIAL, subtractBusyFromShift_SPECIAL, mergeTouchingWindows_SPECIAL, assignSequentially_SPECIAL } from "../../../../services/@database/event/availability-special.service";
 import { _getServicesSnapshotById } from "../../../../services/@database/event/util/getInfoServices";
 import { RedisStrategyFactory } from "../../../../services/@redis/cache/strategies/redisStrategyFactory";
@@ -13,8 +13,6 @@ import { IRedisRoundRobinStrategy } from "../../../../services/@redis/cache/stra
 import { InputRequiredPolicy, InputFormatPolicy, BookingInPastPolicy, EligibleProfessionalsPolicy, ServiceById, AssignmentSegment, getAssignmentMode, AssignmentMode, AssignmentModeStrategy, SingleGroupAssignmentStrategy, SingleIndividualAssignmentStrategy, MultiIndividualAssignmentStrategy, AssignmentStrategyInput } from "../../domain";
 import { BookingPersistence } from "../persistence";
 import { AddFromWebInput, AddFromWebDeps, StartContextResult, AvailabilityContext, MomentRange, ResolveAssignmentResult } from "./event-client-write.types";
-
-const withCatalogMessage = (catalogMessage: string, detail: string) => `${catalogMessage} ${detail}`;
 
 
 export class EventClientWriteService {
