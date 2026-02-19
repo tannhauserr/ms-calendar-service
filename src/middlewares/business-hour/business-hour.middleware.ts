@@ -174,6 +174,7 @@ import { BusinessHourService } from "../../features/businessHour/services/busine
 import { TemporaryBusinessHourService } from "../../features/temporary-business-hour/services/temporary-business-hour.service";
 import { WorkerBusinessHourService } from "../../features/worker-business-hour/services/worker-business-hour.service";
 import { Response } from "../../models/messages/response";
+import { resolveMiddlewareError } from "../../models/error-codes";
 
 export class BusinessHourMiddleware {
     static workerBusinessHourService = new WorkerBusinessHourService();
@@ -256,9 +257,10 @@ export class BusinessHourMiddleware {
         } catch (err) {
             console.error("convertToISOTime_FirstPart error:", err);
             // No rompas el flujo: devuelve error claro
+            const error = resolveMiddlewareError("BUSINESS_HOUR_INVALID_TIME_FORMAT", "Formato de hora inválido. Usa 'HH:mm'.");
             return res
                 .status(200)
-                .json(Response.build("Formato de hora inválido. Usa 'HH:mm'.", 400, false));
+                .json(Response.build(error.message, 400, false, null, error.code));
         }
     };
     /**
@@ -306,9 +308,10 @@ export class BusinessHourMiddleware {
             next();
         } catch (err) {
             console.error("handleDeleteClosedRecords_SecondPart error:", err);
+            const error = resolveMiddlewareError("BUSINESS_HOUR_DELETE_CLOSED_ERROR", "Error al borrar registros cerrados.");
             return res
                 .status(200)
-                .json(Response.build("Error al borrar registros cerrados.", 400, false));
+                .json(Response.build(error.message, 400, false, null, error.code));
         }
     };
     /**
@@ -362,18 +365,20 @@ export class BusinessHourMiddleware {
                 }
 
                 if (isOverlapping) {
+                    const error = resolveMiddlewareError("BUSINESS_HOUR_OVERLAPPING_SLOT", "El horario se superpone con otro horario existente");
                     return res
                         .status(200)
-                        .json(Response.build("El horario se superpone con otro horario existente", 400, false));
+                        .json(Response.build(error.message, 400, false, null, error.code));
                 }
             }
 
             next();
         } catch (err) {
             console.error("preventOverlapping_ThirdPart error:", err);
+            const error = resolveMiddlewareError("BUSINESS_HOUR_OVERLAPPING_VALIDATION_ERROR", "Error al verificar solapamiento de horarios.");
             return res
                 .status(200)
-                .json(Response.build("Error al verificar solapamiento de horarios.", 400, false));
+                .json(Response.build(error.message, 400, false, null, error.code));
         }
     };
 }

@@ -1,12 +1,7 @@
 import { createClient, RedisClientType } from 'redis';
 import { CONSOLE_COLOR } from '../../../constant/console-color';
+import { env } from '../../../config/env';
 // import { handleCacheDelete } from './cache-event-handles';
-
-
-const NODE_ENV = process.env.NODE_ENV || 'development';
-require('dotenv').config({
-    path: `.env.${NODE_ENV}`
-});
 
 
 export class RedisCacheService {
@@ -17,20 +12,20 @@ export class RedisCacheService {
     private constructor() {
         this.redisClient = createClient({
             socket: {
-                host: process.env.REDIS_HOST,
-                port: parseInt(process.env.REDIS_PORT || '6379', 10),
+                host: env.REDIS_HOST,
+                port: env.REDIS_PORT,
             },
-            password: process.env.REDIS_PASSWORD,
-            database: parseInt(process.env.REDIS_DB || '0', 10),
+            password: env.REDIS_PASSWORD,
+            database: env.REDIS_DB,
         });
 
         this.subscriberClient = createClient({
             socket: {
-                host: process.env.REDIS_HOST,
-                port: parseInt(process.env.REDIS_PORT || '6379', 10),
+                host: env.REDIS_HOST,
+                port: env.REDIS_PORT,
             },
-            password: process.env.REDIS_PASSWORD,
-            database: parseInt(process.env.REDIS_DB || '0', 10),
+            password: env.REDIS_PASSWORD,
+            database: env.REDIS_DB,
         });
 
 

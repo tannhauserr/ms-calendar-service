@@ -33,7 +33,7 @@ export class RedisSubscriberService {
         // this.subscribe(SubscriberKeys.removeUserFromCalendarChannel, (message) => {
         //     /**
         //      * TODO: En el mensaje recibo un objeto en string, tengo que parsearlo usando JSON.parse
-        //      * En el objeto me viene el id del usuario (DB) y el email (de google).
+        //      * En el objeto me viene el id del usuario (DB) y el email externo.
         //      * Con el email de Google puedo quitarle los permisos del calendario
         //      */
         //     console.log(`${CONSOLE_COLOR.FgBlue}Mensaje recibido en el canal "${SubscriberKeys.removeUserFromCalendarChannel}": ${message}${CONSOLE_COLOR.Reset}`);

@@ -1,7 +1,4 @@
-
 PROJECT_ID=central-eon-385614
-
-GOOGLE_CREDENTIALS=google_credentials/dialogflowcx/central-eon-385614-a0f75ca9b1c4.json
 
 AGENT_ID=e0ec721d-8854-4309-bf43-81c7597d9af9
 LOCATION=europe-west1
@@ -10,4 +7,3 @@ LANGUAGE_CODE=es
 ENV_NAME_DIALOGFLOW=
 URL_BACK_SYMFONY=https://idilics.minekode.es/api/public
 PORT=3000
-

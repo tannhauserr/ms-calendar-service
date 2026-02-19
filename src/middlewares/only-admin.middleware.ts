@@ -2,9 +2,21 @@ import { NextFunction } from "express";
 import { JWTService } from "../services/jwt/jwt.service";
 import { RedisStrategyFactory } from '../services/@redis/cache/strategies/redisStrategyFactory';
 import { UserCompanyRoleStrategy } from "../services/@redis/cache/strategies/userCompanyRole/userCompanyRoleStrategy";
-import { TIME_SECONDS } from "../constant/time";
+import { Response } from "../models/messages/response";
+import { MiddlewareErrorKey, resolveMiddlewareError } from "../models/error-codes";
 
 export class OnlyAdminMiddleware {
+    private static sendError(
+        res: any,
+        status: number,
+        key: MiddlewareErrorKey,
+        overrideMessage?: string
+    ) {
+        const error = resolveMiddlewareError(key, overrideMessage);
+        return res.status(status).json(
+            Response.build(error.message, status, false, null, error.code)
+        );
+    }
 
 
 
@@ -43,8 +55,12 @@ export class OnlyAdminMiddleware {
                         return;
                     } else {
                         // LOG: Se podría registrar un log con idUser, role e idCompanySelected que intentó acceder
-                        res.status(400).json({ message: "[AUTH_001] No tienes permisos para realizar esta acción (datos en cache no coinciden)" });
-                        return;
+                        return this.sendError(
+                            res,
+                            400,
+                            "AUTH_CACHE_ROLE_MISMATCH",
+                            "No tienes permisos para realizar esta acción (datos en cache no coinciden)"
+                        );
                     }
 
                 } else if (cachedUserRole.isReal) {
@@ -73,7 +89,12 @@ export class OnlyAdminMiddleware {
             next();
         } catch (err) {
             console.error("[accessAuthorized] Error:", err);
-            res.status(500).json({ message: "Hubo un error al procesar el token o verificar el rol" });
+            return this.sendError(
+                res,
+                500,
+                "AUTH_ACCESS_AUTHORIZED_FAILURE",
+                "Hubo un error al procesar el token o verificar el rol"
+            );
         }
     };
 
@@ -97,15 +118,19 @@ export class OnlyAdminMiddleware {
             const decode = await JWTService.instance.verify(token);
             if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
                 if (decode.role !== 'ROLE_OWNER' && decode.role !== 'ROLE_ADMIN') {
-                    res.status(400).json({ message: "[AUTH_003] No tienes permisos para realizar esta acción" });
-                    return;
+                    return this.sendError(
+                        res,
+                        400,
+                        "AUTH_ADMIN_REQUIRED",
+                        "No tienes permisos para realizar esta acción"
+                    );
                 }
             }
             next();
         }
         catch (err) {
             console.error(err);
-            res.status(500).json({ message: "Hubo un error al enviar el token" });
+            return this.sendError(res, 500, "AUTH_TOKEN_VALIDATION_FAILED", "Hubo un error al enviar el token");
         }
     };
 
@@ -116,15 +141,19 @@ export class OnlyAdminMiddleware {
             if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
 
                 if (decode.role !== 'ROLE_OWNER' && decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
-                    res.status(400).json({ message: "[AUTH_004] No tienes permisos para realizar esta acción" });
-                    return;
+                    return this.sendError(
+                        res,
+                        400,
+                        "AUTH_ADMIN_OR_MANAGER_REQUIRED",
+                        "No tienes permisos para realizar esta acción"
+                    );
                 }
             }
             next();
         }
         catch (err) {
             console.error(err);
-            res.status(500).json({ message: "Hubo un error al enviar el token" });
+            return this.sendError(res, 500, "AUTH_TOKEN_VALIDATION_FAILED", "Hubo un error al enviar el token");
         }
     };
 
@@ -148,12 +177,20 @@ export class OnlyAdminMiddleware {
 
                 if ((decode.role !== 'ROLE_OWNER' && decode.role !== 'ROLE_ADMIN') && object?.myId !== decode.idUser) {
                     // LOG: Mandar petición log de que no tiene permisos para realizar esta acción
-                    res.status(400).json({ message: "[AUTH_005] No tienes permisos para realizar esta acción" });
-                    return;
+                    return this.sendError(
+                        res,
+                        400,
+                        "AUTH_MANAGER_OR_OWNER_OR_SELF_REQUIRED",
+                        "No tienes permisos para realizar esta acción"
+                    );
                 } else if (decode.role !== 'ROLE_OWNER' && decode.role !== 'ROLE_ADMIN' && decode.role !== 'ROLE_MANAGER') {
                     // LOG: Mandar petición log de que no tiene permisos para realizar esta acción
-                    res.status(400).json({ message: "[AUTH_006] No tienes permisos para realizar esta acción" });
-                    return;
+                    return this.sendError(
+                        res,
+                        400,
+                        "AUTH_MANAGER_OR_OWNER_REQUIRED",
+                        "No tienes permisos para realizar esta acción"
+                    );
                 }
             }
 
@@ -164,7 +201,7 @@ export class OnlyAdminMiddleware {
         catch (err) {
             console.log("Error en el middleware");
             console.error(err);
-            res.status(500).json({ message: "Hubo un error al enviar el token" });
+            return this.sendError(res, 500, "AUTH_TOKEN_VALIDATION_FAILED", "Hubo un error al enviar el token");
         }
     }
 
@@ -186,15 +223,19 @@ export class OnlyAdminMiddleware {
 
             if (decode.role !== 'ROLE_DEVELOPER' && decode.role !== "ROLE_SUPPORT") {
                 if (decode.role !== 'ROLE_OWNER' && decode.role !== 'ROLE_ADMIN' && object?.myId !== decode.idUser) {
-                    res.status(400).json({ message: "[AUTH_007] No tienes permisos para realizar esta acción" });
-                    return;
+                    return this.sendError(
+                        res,
+                        400,
+                        "AUTH_ADMIN_OR_SELF_REQUIRED",
+                        "No tienes permisos para realizar esta acción"
+                    );
                 }
             }
             next();
         }
         catch (err) {
             console.error(err);
-            res.status(500).json({ message: "Hubo un error al enviar el token" });
+            return this.sendError(res, 500, "AUTH_TOKEN_VALIDATION_FAILED", "Hubo un error al enviar el token");
         }
     }
 
@@ -213,24 +254,33 @@ export class OnlyAdminMiddleware {
             
                 // Si no está dentro de los roles permitidos, 403
                 if (!permittedRoles.includes(decode.role)) {
-                    return res.status(403).json({
-                        message: "[AUTH_008] No tienes permisos para esta acción"
-                    });
+                    return this.sendError(
+                        res,
+                        403,
+                        "AUTH_ROLE_NOT_ALLOWED",
+                        "No tienes permisos para esta acción"
+                    );
                 }
 
                 // Si este middleware requiere que el usuario sea dueño de su recurso...
                 if (mustMatchUser) {
                     // Verificar que exista myId
                     if (!req.body?.myId) {
-                        return res.status(400).json({
-                            message: "El campo 'myId' es obligatorio"
-                        });
+                        return this.sendError(
+                            res,
+                            400,
+                            "AUTH_MY_ID_REQUIRED",
+                            "El campo 'myId' es obligatorio"
+                        );
                     }
                     // Comparar
                     if (req.body.myId !== decode.idUser) {
-                        return res.status(403).json({
-                            message: "[AUTH_009] No puedes operar sobre un ID que no sea el tuyo"
-                        });
+                        return this.sendError(
+                            res,
+                            403,
+                            "AUTH_MY_ID_MISMATCH",
+                            "No puedes operar sobre un ID que no sea el tuyo"
+                        );
                     }
                 }
 
@@ -238,9 +288,12 @@ export class OnlyAdminMiddleware {
                 next();
             } catch (err) {
                 console.error(err);
-                return res.status(500).json({
-                    message: "Hubo un error al validar el token"
-                });
+                return this.sendError(
+                    res,
+                    500,
+                    "AUTH_TOKEN_VALIDATION_FAILED",
+                    "Hubo un error al validar el token"
+                );
             }
         };
     };

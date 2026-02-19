@@ -1,4 +1,5 @@
 import moment from "moment";
+import { ErrorCatalogByDomain } from "../../models/error-codes";
 
 export type DateISO = string;
 
@@ -8,6 +9,8 @@ export type HoursRangeInput = {
     end?: DateISO;
 };
 
+const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
+
 /** Normalizes a date range input to a start/end pair in YYYY-MM-DD format. */
 export function normalizeRange(
     range?: HoursRangeInput,
@@ -15,7 +18,12 @@ export function normalizeRange(
 ): { start: DateISO; end: DateISO } {
     if (!range) {
         if (!autoDefaultIfMissing) {
-            throw new Error("Range is required");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.controller.validation.VALIDATION_REQUIRED_FIELD.message,
+                    "Range is required"
+                )
+            );
         }
 
         return {
@@ -27,7 +35,12 @@ export function normalizeRange(
     if (range.date) {
         const date = moment(range.date, "YYYY-MM-DD", true);
         if (!date.isValid()) {
-            throw new Error("Invalid date format. Expected YYYY-MM-DD");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.controller.validation.VALIDATION_INVALID_PAYLOAD.message,
+                    "Invalid date format. Expected YYYY-MM-DD"
+                )
+            );
         }
 
         const iso = date.format("YYYY-MM-DD");
@@ -35,13 +48,23 @@ export function normalizeRange(
     }
 
     if (!range.start || !range.end) {
-        throw new Error("Both start and end are required");
+        throw new Error(
+            withCatalogMessage(
+                ErrorCatalogByDomain.controller.validation.VALIDATION_REQUIRED_FIELD.message,
+                "Both start and end are required"
+            )
+        );
     }
 
     const start = moment(range.start, "YYYY-MM-DD", true);
     const end = moment(range.end, "YYYY-MM-DD", true);
     if (!start.isValid() || !end.isValid() || end.isBefore(start, "day")) {
-        throw new Error("Invalid range");
+        throw new Error(
+            withCatalogMessage(
+                ErrorCatalogByDomain.controller.validation.VALIDATION_INVALID_PAYLOAD.message,
+                "Invalid range"
+            )
+        );
     }
 
     return {
