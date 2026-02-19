@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../../../../lib/prisma";
+import { ErrorCatalogByDomain } from "../../../../models/error-codes";
 
 type UpdateEventInput = {
     id: string;
@@ -66,6 +67,7 @@ type UpdateContext = {
     originalGroupEventsBefore: MinimalEvent[];
     affectedGroupIds: Set<string>;
 };
+const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 export class UpdateEventByIdUseCase {
     /**
@@ -93,11 +95,21 @@ export class UpdateEventByIdUseCase {
         const isMany = !!payload?.isMany;
 
         if (!eventInput?.id) {
-            throw new Error("event.id es obligatorio");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.controller.validation.VALIDATION_REQUIRED_FIELD.message,
+                    "event.id es obligatorio"
+                )
+            );
         }
 
         if (isMany && (eventInput.startDate === undefined || eventInput.endDate === undefined)) {
-            throw new Error("Para isMany=true debes enviar event.startDate y event.endDate");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.controller.validation.VALIDATION_REQUIRED_FIELD.message,
+                    "Para isMany=true debes enviar event.startDate y event.endDate"
+                )
+            );
         }
 
         return {
@@ -123,7 +135,12 @@ export class UpdateEventByIdUseCase {
         });
 
         if (!targetEvent || targetEvent.deletedDate) {
-            throw new Error("Evento no encontrado");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.controller.resource.RESOURCE_NOT_FOUND.message,
+                    "Evento no encontrado"
+                )
+            );
         }
 
         const originalGroup = await tx.groupEvents.findUnique({
@@ -141,7 +158,12 @@ export class UpdateEventByIdUseCase {
         });
 
         if (!originalGroup) {
-            throw new Error("Booking original no encontrado");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.controller.resource.RESOURCE_NOT_FOUND.message,
+                    "Booking original no encontrado"
+                )
+            );
         }
 
         const originalGroupEventsBefore = await tx.event.findMany({
@@ -202,7 +224,12 @@ export class UpdateEventByIdUseCase {
         const movedEndDate = eventUpdateData.endDate as Date;
 
         if (movedStartDate.getTime() >= movedEndDate.getTime()) {
-            throw new Error("event.startDate debe ser menor que event.endDate");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.controller.validation.VALIDATION_INVALID_PAYLOAD.message,
+                    "event.startDate debe ser menor que event.endDate"
+                )
+            );
         }
 
         const movedEventGroup = await this._cloneGroupWithParticipants(
@@ -341,7 +368,12 @@ export class UpdateEventByIdUseCase {
     private _toDateOrThrow(value: string | Date, fieldName: string): Date {
         const date = value instanceof Date ? value : new Date(value);
         if (Number.isNaN(date.getTime())) {
-            throw new Error(`${fieldName} es inválido`);
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.controller.validation.VALIDATION_INVALID_PAYLOAD.message,
+                    `${fieldName} es inválido`
+                )
+            );
         }
         return date;
     }
