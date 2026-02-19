@@ -1,5 +1,6 @@
 import { CONSOLE_COLOR } from "../../constant/console-color";
 import { pickHttpStatus } from "../../constant/errors/codes";
+import { buildControllerErrorResponse } from "../../models/error-codes";
 import { Response } from "../../models/messages/response";
 import { ActionKey } from "../../models/notification/util/action-to-senctions";
 import { createNotificationByClient } from "../../models/notification/util/trigger/for-action";
@@ -267,7 +268,13 @@ export class ClientEventController {
             );
             return res
                 .status(500)
-                .json({ message: err?.message ?? "Unexpected error" });
+                .json(
+                    buildControllerErrorResponse(
+                        "INTERNAL_SERVER_ERROR",
+                        500,
+                        err?.message ?? "Unexpected error"
+                    )
+                );
         }
     };
 
@@ -390,7 +397,8 @@ export class ClientEventController {
                         ok: false,
                         code,
                         message: err?.message ?? "Unexpected error",
-                    }
+                    },
+                    code
                 )
             );
         }
@@ -415,10 +423,13 @@ export class ClientEventController {
             const idClientWorkspace = ctx?.customer?.idClientWorkspace;
 
             if (!idWorkspace || !idClientWorkspace) {
-                return res.status(400).json({
-                    ok: false,
-                    message: "No se pudo resolver idWorkspace o idClientWorkspace"
-                });
+                return res.status(400).json(
+                    buildControllerErrorResponse(
+                        "VALIDATION_REQUIRED_FIELD",
+                        400,
+                        "No se pudo resolver idWorkspace o idClientWorkspace"
+                    )
+                );
             }
 
             const result = await this.eventClientService.getEvents(
@@ -435,7 +446,7 @@ export class ClientEventController {
                 .status(200)
                 .json({ message: "Eventos encontrados", ok: true, item: result });
         } catch (err: any) {
-            return res.status(500).json({ message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -504,10 +515,13 @@ export class ClientEventController {
             const idClientWorkspace: string | undefined = ctx?.customer?.idClientWorkspace;
 
             if (!bookingIdFromFront || !idWorkspace || !idClientWorkspace) {
-                return res.status(400).json({
-                    ok: false,
-                    message: "No se pudo resolver bookingId, idWorkspace o idClientWorkspace",
-                });
+                return res.status(400).json(
+                    buildControllerErrorResponse(
+                        "VALIDATION_REQUIRED_FIELD",
+                        400,
+                        "No se pudo resolver bookingId, idWorkspace o idClientWorkspace"
+                    )
+                );
             }
 
             const token = (req as any).token;
@@ -535,7 +549,7 @@ export class ClientEventController {
             if (!booking) {
                 return res
                     .status(404)
-                    .json(Response.build("Cita no encontrada", 404, false));
+                    .json(buildControllerErrorResponse("RESOURCE_NOT_FOUND", 404, "Cita no encontrada"));
             }
 
             return res
@@ -543,7 +557,7 @@ export class ClientEventController {
                 .json(Response.build("Cita encontrada", 200, true, booking));
         } catch (err: any) {
             // Si ya tienes middleware de errores podrías hacer: return next(err);
-            return res.status(500).json({ ok: false, message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -559,7 +573,7 @@ export class ClientEventController {
             const result = await this.eventClientService.cancelEventFromWeb(idEvent, idClientWorkspaceCtx, idWorkspace);
             res.status(200).json(Response.build("Evento cancelado", 200, true, result));
         } catch (err: any) {
-            return res.status(500).json({ ok: false, message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -575,7 +589,7 @@ export class ClientEventController {
             const result = await this.eventClientService.confirmEventFromWeb(idEvent, idClientWorkspaceCtx, idWorkspace);
             res.status(200).json(Response.build("Evento confirmado", 200, true, result));
         } catch (err: any) {
-            return res.status(500).json({ ok: false, message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 

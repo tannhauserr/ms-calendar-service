@@ -1,47 +1,13 @@
 export const KEY_PROJECT = process.env.KEY_PROJECT;
 
 export interface ActionPayloads {
-    userConnectedToGoogle: { idUser: string; googleAccessToken: string };
-    userDisconnectedFromGoogle: { idUser: string };
-    addUserToCalendar: { idUser: string; emailGoogle: string, idCalendarGoogle?: string };
-    removeUserFromCalendar: { idUser: string; emailGoogle: string, idCalendarGoogle?: string };
-    createEventGoogle: {
-        idRowEventDB: string;
-        idUserPlatformFk: string;
-        idGoogleCalendar: string;
-        title: string;
-        startDate: string;
-        endDate: string;
-        description?: string;
-        eventColor: string;
+    healthCheck: {
+        timestamp: number;
     };
-    updateEventGoogle: {
-        idRowEventDB: string;
-        idUserPlatformFk: string;
-        idGoogleCalendar: string;
-        idGoogleEvent: string;
-        title: string;
-        startDate: string;
-        endDate: string;
-        description?: string;
-        eventColor: string;
-    };
-    deleteEventGoogle: {
-        idUserPlatformFk: string;
-        idGoogleCalendar: string;
-        idGoogleEvent: string;
-    };
-
 }
 
 export const SubscriberActions = {
-    userConnectedToGoogle: `${KEY_PROJECT}:booking:action:userConnectedToGoogle`,
-    userDisconnectedFromGoogle: `${KEY_PROJECT}:booking:action:userDisconnectedFromGoogle`,
-    addUserToCalendar: `${KEY_PROJECT}:booking:action:addUserToCalendar`,
-    removeUserFromCalendar: `${KEY_PROJECT}:booking:action:removeUserFromCalendar`,
-    createEventGoogle: `${KEY_PROJECT}:booking:action:createEventGoogle`,
-    updateEventGoogle: `${KEY_PROJECT}:booking:action:updateEventGoogle`,
-    deleteEventGoogle: `${KEY_PROJECT}:booking:action:deleteEventGoogle`,
+    healthCheck: `${KEY_PROJECT}:booking:action:healthCheck`,
 } as const;
 
 

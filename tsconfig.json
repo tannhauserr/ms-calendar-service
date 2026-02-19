@@ -15,8 +15,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "types": [
-      "node",
-      "jest"
+      "node"
     ],
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -27,9 +26,7 @@
   "include": [
     "src/**/*"
   ],
-  "exclude": [
-    "webpack.config.js",
-    "build",
+  "exclude": [    "build",
     "node_modules"
   ]
 }

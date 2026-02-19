@@ -55,7 +55,6 @@ router.post('/events/delete',
         OnlyAdminMiddleware.accessAuthorized,
 
     ], controller.deleteEvent);
-// router.post('/events/delete-google-total', JWTService.authCookieOrBearer, controller.deleteGoogleTotal);
 
 router.post('/events/change-status',
     [

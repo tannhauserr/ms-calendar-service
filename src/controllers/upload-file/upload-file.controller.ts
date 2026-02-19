@@ -1,4 +1,5 @@
 import { Response } from "../../models/messages/response";
+import { buildControllerErrorResponse } from "../../models/error-codes";
 import { JWTService } from "../../services/jwt/jwt.service";
 
 
@@ -39,8 +40,8 @@ export class UploadFileController {
             res.status(200).json(Response.build("Archivo subido satisfactoriamente", 200, true, files));
 
 
-        } catch (err) {
-            res.status(200).json(Response.build(err as any, 404, false));
+        } catch (err: any) {
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
