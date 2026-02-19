@@ -1,4 +1,5 @@
 import { CONSOLE_COLOR } from "../../../constant/console-color";
+import { buildControllerErrorResponse, resolveControllerError } from "../../../models/error-codes";
 import { Response } from "../../../models/messages/response";
 import { WaitListService } from "../../../services/@database/all-business-services/wait-list/wait-list.service";
 import { JWTService } from "../../../services/jwt/jwt.service";
@@ -21,10 +22,10 @@ export class WaitListController {
         error?: unknown
     ) {
         const ERROR_CODES_BY_WHERE: Record<string, string> = {
-            "WaitList.CreateLimit": "210",
+            "WaitList.CreateLimit": resolveControllerError("BUSINESS_RULE_NOT_ALLOWED").code,
         };
 
-        const code = ERROR_CODES_BY_WHERE[where] ?? "299";
+        const code = ERROR_CODES_BY_WHERE[where] ?? resolveControllerError("INTERNAL_SERVER_ERROR").code;
 
         if (error) {
             console.error(
@@ -63,7 +64,7 @@ export class WaitListController {
             const result = await this.waitListService.getWaitLists(pagination);
             res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -92,7 +93,7 @@ export class WaitListController {
             const result = await this.waitListService.addWaitList(body);
             res.status(200).json(Response.build("Registro creado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -105,7 +106,7 @@ export class WaitListController {
             const result = await this.waitListService.getWaitListById(id);
             res.status(200).json(Response.build("Registro encontrado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -118,7 +119,7 @@ export class WaitListController {
             const result = await this.waitListService.getWaitListByWorkspace(idWorkspace);
             res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -133,7 +134,13 @@ export class WaitListController {
             const idWorkspace = Array.isArray(rawIdWorkspace) ? rawIdWorkspace[0] : rawIdWorkspace;
 
             if (!idClient || !idWorkspace) {
-                return res.status(400).json({ ok: false, message: "idClient and idWorkspace are required" });
+                return res.status(400).json(
+                    buildControllerErrorResponse(
+                        "VALIDATION_REQUIRED_FIELD",
+                        400,
+                        "idClient and idWorkspace are required"
+                    )
+                );
             }
 
             const count = await this.waitListService.getPendingCountByClientAndWorkspace(
@@ -143,7 +150,7 @@ export class WaitListController {
 
             res.status(200).json(Response.build("Registros encontrados", 200, true, { count }));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -160,7 +167,7 @@ export class WaitListController {
             const result = await this.waitListService.updateWaitList(body);
             res.status(200).json(Response.build("Registro actualizado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -173,7 +180,7 @@ export class WaitListController {
             const result = await this.waitListService.deleteWaitList(idList);
             res.status(200).json(Response.build("Registro eliminado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 }

@@ -1,6 +1,7 @@
 import { Event } from "@prisma/client";
 import { CONSOLE_COLOR } from "../../constant/console-color";
 import { TIME_SECONDS } from "../../constant/time";
+import { buildControllerErrorResponse } from "../../models/error-codes";
 import { Response } from "../../models/messages/response";
 import { BusinessHourService } from "../../services/@database/all-business-services/business-hours/business-hours.service";
 import { TemporaryBusinessHourService } from "../../services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service";
@@ -123,7 +124,7 @@ export class PublicEventController {
                 .status(200)
                 .json(Response.build("Días disponibles", 200, true, result?.days || []));
         } catch (err: any) {
-            return res.status(500).json({ message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -135,7 +136,9 @@ export class PublicEventController {
             // console.log("mira que es payload en times get", payload);
             // Validación básica
             if (!payload?.idCompany || !payload?.idWorkspace) {
-                return res.status(400).json({ message: "Faltan idCompany, idWorkspace" });
+                return res
+                    .status(400)
+                    .json(buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "Faltan idCompany, idWorkspace"));
             }
 
             if (!payload?.idBookingPage) {
@@ -143,13 +146,19 @@ export class PublicEventController {
             }
 
             if (!payload?.date || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) {
-                return res.status(400).json({ message: "date debe ser YYYY-MM-DD" });
+                return res
+                    .status(400)
+                    .json(buildControllerErrorResponse("VALIDATION_INVALID_PAYLOAD", 400, "date debe ser YYYY-MM-DD"));
             }
             if (!payload?.timezone) {
-                return res.status(400).json({ message: "Falta timezone" });
+                return res
+                    .status(400)
+                    .json(buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "Falta timezone"));
             }
             if (!Array.isArray(payload?.attendees) || payload.attendees.length === 0) {
-                return res.status(400).json({ message: "attendees vacío" });
+                return res
+                    .status(400)
+                    .json(buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "attendees vacío"));
             }
 
 
@@ -184,7 +193,13 @@ export class PublicEventController {
                 // console.log("que ????")
                 // si la estructura viene como { workspace: {...} } desde RPC, ya la cubrimos arriba
                 // si no hay timezone, devolvemos 400 para evitar cálculos erróneos
-                return res.status(400).json({ message: "No se pudo resolver el timezone del workspace" });
+                return res.status(400).json(
+                    buildControllerErrorResponse(
+                        "VALIDATION_REQUIRED_FIELD",
+                        400,
+                        "No se pudo resolver el timezone del workspace"
+                    )
+                );
             }
 
             // console.log("mira que es timeZoneWorkspace", timeZoneWorkspace);
@@ -222,7 +237,9 @@ export class PublicEventController {
                 .status(200)
                 .json(Response.build("Horarios disponibles", 200, true, result || { timeSlots: [], dayStatus: "no" }));
         } catch (err: any) {
-            return res.status(500).json({ message: err?.message ?? "Unexpected error" });
+            return res.status(500).json(
+                buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message ?? "Unexpected error")
+            );
         }
     }
 
@@ -247,21 +264,27 @@ export class PublicEventController {
                 req.body?.idEvent;
 
             if (!idEvent) {
-                return res.status(400).json({ ok: false, message: "idEvent (string) is required" });
+                return res.status(400).json(
+                    buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "idEvent (string) is required")
+                );
             }
 
             // 1) Event
             const event: any = await this.eventService.getEventById(idEvent);
 
             if (!event) {
-                return res.status(404).json({ ok: false, message: "Event not found" });
+                return res
+                    .status(404)
+                    .json(buildControllerErrorResponse("RESOURCE_NOT_FOUND", 404, "Event not found"));
             }
 
             // 2) Workspace (para organizer/location)
             const workspaces = await getWorkspacesByIds([event.idWorkspaceFk]);
             const workspace = workspaces?.[0];
             if (!workspace) {
-                return res.status(404).json({ ok: false, message: "Workspace not found" });
+                return res
+                    .status(404)
+                    .json(buildControllerErrorResponse("RESOURCE_NOT_FOUND", 404, "Workspace not found"));
             }
 
             // 3) (Opcional) Service (solo para título fallback)
@@ -314,7 +337,9 @@ export class PublicEventController {
             return res.status(200).send(icsString);
         } catch (err: any) {
             console.error(err);
-            return res.status(500).json({ ok: false, message: err?.message || "Internal error" });
+            return res.status(500).json(
+                buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message || "Internal error")
+            );
         }
     }
 
@@ -328,14 +353,18 @@ export class PublicEventController {
                 req.body?.idGroup;
 
             if (!idGroup) {
-                return res.status(400).json({ ok: false, message: "idGroup (string) is required" });
+                return res.status(400).json(
+                    buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "idGroup (string) is required")
+                );
             }
 
             // 1) Events del grupo
             const events: any[] = await this.eventService.getEventByIdGroup(idGroup);
 
             if (!events || events.length === 0) {
-                return res.status(404).json({ ok: false, message: "No events found for this group" });
+                return res.status(404).json(
+                    buildControllerErrorResponse("RESOURCE_NOT_FOUND", 404, "No events found for this group")
+                );
             }
 
             // Usar el primer evento como referencia para workspace
@@ -345,7 +374,9 @@ export class PublicEventController {
             const workspaces = await getWorkspacesByIds([firstEvent.idWorkspaceFk]);
             const workspace = workspaces?.[0];
             if (!workspace) {
-                return res.status(404).json({ ok: false, message: "Workspace not found" });
+                return res
+                    .status(404)
+                    .json(buildControllerErrorResponse("RESOURCE_NOT_FOUND", 404, "Workspace not found"));
             }
 
             // 3) Obtener todos los servicios únicos del grupo
@@ -443,7 +474,9 @@ export class PublicEventController {
             return res.status(200).send(icsString);
         } catch (err: any) {
             console.error(err);
-            return res.status(500).json({ ok: false, message: err?.message || "Internal error" });
+            return res.status(500).json(
+                buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message || "Internal error")
+            );
         }
     }
 
