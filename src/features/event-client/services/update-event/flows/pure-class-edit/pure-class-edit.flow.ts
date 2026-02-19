@@ -1,10 +1,12 @@
 import type { Event, Prisma } from "@prisma/client";
 import moment from "moment";
+import { ErrorCatalogByDomain } from "../../../../../../models/error-codes";
 import { getUsersWhoCanPerformService_SPECIAL } from "../../../../../../services/@database/event/availability-special.service";
 import { EligibleProfessionalsPolicy, StaffAssignablePolicy } from "../../../../domain";
 import type { EventClientUpdatePersistence } from "../../../persistence";
 
 type EventSourceType = "PLATFORM" | "WEB" | "WIDGET" | "GOOGLE" | "BOT";
+const withCatalogMessage = (catalogMessage: string, detail: string) => `${catalogMessage} ${detail}`;
 
 type RunPureClassEditFlowParams = {
     idCompany: string;
@@ -84,7 +86,14 @@ export const runPureClassEditFlow = async (params: RunPureClassEditFlowParams) =
 
     const svcReq = attendees[0];
     const svcSnap = serviceById[svcReq.serviceId];
-    if (!svcSnap) throw new Error("Servicio no disponible en snapshot");
+    if (!svcSnap) {
+        throw new Error(
+            withCatalogMessage(
+                ErrorCatalogByDomain.booking.common.BOOKING_ERR_GENERIC.message,
+                "Servicio no disponible en snapshot"
+            )
+        );
+    }
 
     const dur = svcReq.durationMin ?? (svcSnap.duration ?? 0);
     const endWS = startWS.clone().add(dur, "minutes");

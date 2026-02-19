@@ -1,6 +1,7 @@
 import { Event, Prisma } from "@prisma/client";
 import prisma from "../../../../lib/prisma";
 import CustomError from "../../../../models/custom-error/CustomError";
+import { ErrorCatalogByDomain } from "../../../../models/error-codes";
 import moment from "moment";
 import { CONSOLE_COLOR } from "../../../../constant/console-color";
 import { TIME_SECONDS } from "../../../../constant/time";
@@ -37,6 +38,7 @@ import {
 } from "./flows";
 
 type UpdateMode = "single" | "group";
+const withCatalogMessage = (catalogMessage: string, detail: string) => `${catalogMessage} ${detail}`;
 
 export class EventClientUpdateWriteService {
     private readonly persistence = new EventClientUpdatePersistence();
@@ -202,7 +204,12 @@ export class EventClientUpdateWriteService {
                 });
 
                 if (same) return { event: ev!, action: "already-in" };
-                throw new Error("Ese horario ya está ocupado.");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.availability.BOOKING_ERR_OVERLAP_CONFLICT.message,
+                        "Ese horario ya está ocupado."
+                    )
+                );
             }
 
             const [count, already] = await Promise.all([
@@ -225,7 +232,14 @@ export class EventClientUpdateWriteService {
             });
 
             if (already) return { event: ev!, action: "already-in" };
-            if (count >= capacity) throw new Error("No quedan plazas disponibles en ese grupo.");
+            if (count >= capacity) {
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.common.BOOKING_ERR_GENERIC.message,
+                        "No quedan plazas disponibles en ese grupo."
+                    )
+                );
+            }
 
             await tx.eventParticipant.create({
                 data: {
@@ -255,7 +269,12 @@ export class EventClientUpdateWriteService {
             select: { id: true },
         });
         if (!AvailabilityRecheckPolicy.isAvailable(!OverlappingAssignmentPolicy.hasConflict(overlappingOther))) {
-            throw new Error("Ese profesional ya tiene otro evento en ese horario.");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.booking.availability.BOOKING_ERR_OVERLAP_CONFLICT.message,
+                    "Ese profesional ya tiene otro evento en ese horario."
+                )
+            );
         }
 
         let group = params.idGroup
@@ -501,22 +520,58 @@ export class EventClientUpdateWriteService {
                 CONSOLE_COLOR.Reset
             );
 
-            if (!idEvent) throw new Error("Falta idEvent");
+            if (!idEvent) {
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.validation.BOOKING_ERR_VALIDATION_INPUT.message,
+                        "Falta idEvent"
+                    )
+                );
+            }
             if (!InputRequiredPolicy.hasRequiredContext({ idCompany, idWorkspace, timeZoneWorkspace, timeZoneClient })) {
-                throw new Error("Faltan idCompany/idWorkspace/timeZoneWorkspace/timeZoneClient");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.validation.BOOKING_ERR_VALIDATION_INPUT.message,
+                        "Faltan idCompany/idWorkspace/timeZoneWorkspace/timeZoneClient"
+                    )
+                );
             }
             if (!InputFormatPolicy.isStartLocalISO(startLocalISO)) {
-                throw new Error("startLocalISO debe ser YYYY-MM-DDTHH:mm:ss");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.validation.BOOKING_ERR_VALIDATION_INPUT.message,
+                        "startLocalISO debe ser YYYY-MM-DDTHH:mm:ss"
+                    )
+                );
             }
-            if (!InputRequiredPolicy.hasAttendees(attendees)) throw new Error("attendees vacio");
+            if (!InputRequiredPolicy.hasAttendees(attendees)) {
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.validation.BOOKING_ERR_VALIDATION_INPUT.message,
+                        "attendees vacio"
+                    )
+                );
+            }
             if (!InputRequiredPolicy.hasCustomerIdentifiers(customer)) {
-                throw new Error("Falta customer.id/customer.idClientWorkspace");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.validation.BOOKING_ERR_VALIDATION_INPUT.message,
+                        "Falta customer.id/customer.idClientWorkspace"
+                    )
+                );
             }
 
             const startClient = moment.tz(startLocalISO, "YYYY-MM-DDTHH:mm:ss", timeZoneClient);
             const CANCELLED_STATES = ["CANCELLED_BY_CLIENT", "CANCELLED_BY_CLIENT_REMOVED", "CANCELLED"];
 
-            if (!startClient.isValid()) throw new Error("startLocalISO invalido");
+            if (!startClient.isValid()) {
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.validation.BOOKING_ERR_VALIDATION_INPUT.message,
+                        "startLocalISO invalido"
+                    )
+                );
+            }
 
             const startWS = startClient.clone().tz(timeZoneWorkspace);
             const dateWS = startWS.format("YYYY-MM-DD");
@@ -560,16 +615,35 @@ export class EventClientUpdateWriteService {
                 },
             });
             const original = this._withGroupFields(originalRaw as any);
-            if (!OriginalEventExistsPolicy.exists(original)) throw new Error("Evento original no encontrado");
+            if (!OriginalEventExistsPolicy.exists(original)) {
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.common.BOOKING_ERR_GENERIC.message,
+                        "Evento original no encontrado"
+                    )
+                );
+            }
             if (!EventWorkspacePolicy.belongsToWorkspace(original.idWorkspaceFk, idWorkspace)) {
-                throw new Error("El evento original no pertenece a este workspace");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.authorization.BOOKING_ERR_NOT_OWNER.message,
+                        "El evento original no pertenece a este workspace"
+                    )
+                );
             }
 
             const isOwner = EventOwnershipPolicy.isOwner(original.eventParticipant, {
                 id: customer.id,
                 idClientWorkspace: customer.idClientWorkspace!,
             });
-            if (!isOwner) throw new Error("Este cliente no esta asociado al evento original");
+            if (!isOwner) {
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.authorization.BOOKING_ERR_NOT_OWNER.message,
+                        "Este cliente no esta asociado al evento original"
+                    )
+                );
+            }
 
             const bookingId = original.idGroup ?? original.id;
             const groupId = original.idGroup ?? original.id;

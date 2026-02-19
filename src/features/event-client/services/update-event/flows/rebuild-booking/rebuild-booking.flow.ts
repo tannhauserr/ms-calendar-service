@@ -1,5 +1,6 @@
 import moment from "moment";
 import { CONSOLE_COLOR } from "../../../../../../constant/console-color";
+import { ErrorCatalogByDomain } from "../../../../../../models/error-codes";
 import {
     MaxServicesPerBookingPolicy,
     ServiceWindowAvailabilityPolicy,
@@ -8,6 +9,7 @@ import {
 import type { EventClientAvailabilityService } from "../../../availability";
 import type { AddFromWebDeps } from "../../../create-event/event-client-write.types";
 import type { EventClientUpdatePersistence } from "../../../persistence";
+const withCatalogMessage = (catalogMessage: string, detail: string) => `${catalogMessage} ${detail}`;
 
 type RunRebuildBookingFlowParams = {
     attendees: any[];
@@ -84,7 +86,12 @@ export const runRebuildBookingFlow = async (params: RunRebuildBookingFlowParams)
     } = params;
 
     if (!MaxServicesPerBookingPolicy.isWithinLimit(attendees.length, maxPerBooking)) {
-        throw new Error(`Maximo ${maxPerBooking} servicios por reserva`);
+        throw new Error(
+            withCatalogMessage(
+                ErrorCatalogByDomain.booking.validation.BOOKING_ERR_MAX_SERVICES.message,
+                `Maximo ${maxPerBooking} servicios por reserva`
+            )
+        );
     }
 
     const ignoredBusyEventIds = new Set([...originalIds, ...explicitDeletes]);
@@ -132,7 +139,14 @@ export const runRebuildBookingFlow = async (params: RunRebuildBookingFlowParams)
 
     for (const attendee of attendees) {
         const snapshot = (serviceById as any)[attendee.serviceId];
-        if (!snapshot) throw new Error("Servicio no disponible");
+        if (!snapshot) {
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.booking.common.BOOKING_ERR_GENERIC.message,
+                    "Servicio no disponible"
+                )
+            );
+        }
 
         const duration = attendee.durationMin ?? (snapshot.duration ?? 0);
         const segStart = cursor.clone().seconds(0).milliseconds(0);

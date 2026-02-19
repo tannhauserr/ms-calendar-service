@@ -2,6 +2,7 @@ import { CONSOLE_COLOR } from "../../../constant/console-color";
 import { pickHttpStatus } from "../../../constant/errors/codes";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
+import { ErrorCatalogByDomain } from "../../../models/error-codes";
 import { ActionKey } from "../../../models/notification/util/action-to-senctions";
 import { createNotificationByClient } from "../../../models/notification/util/trigger/for-action";
 import { BusinessHourService } from "../../../services/@database/all-business-services/business-hours/business-hours.service";
@@ -10,6 +11,7 @@ import { WorkerBusinessHourService } from "../../../services/@database/all-busin
 import { EventClientWriteService } from "./create-event/event-client-write.service";
 import { EventClientUpdateWriteService } from "./update-event/event-client-update-write.service";
 
+const withCatalogMessage = (catalogMessage: string, detail: string) => `${catalogMessage} ${detail}`;
 
 export class EventClientCommandService {
 
@@ -218,7 +220,12 @@ export class EventClientCommandService {
             });
 
             if (!event) {
-                throw new Error("Evento no encontrado o no pertenece al cliente");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.common.BOOKING_ERR_GENERIC.message,
+                        "Evento no encontrado o no pertenece al cliente"
+                    )
+                );
             }
 
             const groupStatus = event.groupEvents?.eventStatusType;
@@ -239,7 +246,12 @@ export class EventClientCommandService {
             );
 
             if (!clientParticipant) {
-                throw new Error("Participante no encontrado en el evento");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.common.BOOKING_ERR_GENERIC.message,
+                        "Participante no encontrado en el evento"
+                    )
+                );
             }
 
             if (clientParticipant.eventStatusType === "CANCELLED_BY_CLIENT") {
@@ -338,7 +350,12 @@ export class EventClientCommandService {
             });
 
             if (!event) {
-                throw new Error("Evento no encontrado o no pertenece al cliente");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.common.BOOKING_ERR_GENERIC.message,
+                        "Evento no encontrado o no pertenece al cliente"
+                    )
+                );
             }
 
             const groupStatus = event.groupEvents?.eventStatusType;
@@ -355,7 +372,12 @@ export class EventClientCommandService {
             );
 
             if (!clientParticipant) {
-                throw new Error("Participante no encontrado en el evento");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.common.BOOKING_ERR_GENERIC.message,
+                        "Participante no encontrado en el evento"
+                    )
+                );
             }
 
             if (clientParticipant.eventStatusType !== "ACCEPTED") {
