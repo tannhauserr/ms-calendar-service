@@ -1,16 +1,5 @@
 
 export const TokenKeys = {
-    // OAUTH
-    googleAccessToken: (userId: string) => `user:${userId}:googleAccessToken`,
-    googleRefreshToken: (userId: string) => `user:${userId}:googleRefreshToken`,
-
-    // CHANNEL Google Calendar
-    channelConfigCalendar: () => `channelConfigCalendar`,
-    handleOutgoingEvent: (eventId: string) => `handleOutgoingEvent:${eventId}`,
-
-    // Event UserColor
-    userColor: (userId: string) => `userColor:${userId}`,
-
     // ChangeChatHandler    
     changeChatHandler: (chatId: string) => `changeChatHandler:${chatId}`,
 

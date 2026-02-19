@@ -49,7 +49,7 @@ type AddFromWebInput = {
         email?: string;
         phone?: string;
     };
-    eventSourceType: 'PLATFORM' | 'WEB' | 'WIDGET' | 'GOOGLE' | 'BOT';
+    eventSourceType: 'PLATFORM' | 'WEB' | 'WIDGET' | 'BOT';
 
 };
 
@@ -975,7 +975,7 @@ export class ClientEventService {
             isCommentRead?: boolean;
             customer: { id: string; idClientWorkspace: string };
             autoConfirmClientBookings: boolean;
-            eventSourceType: 'PLATFORM' | 'WEB' | 'WIDGET' | 'GOOGLE' | 'BOT';
+            eventSourceType: 'PLATFORM' | 'WEB' | 'WIDGET' | 'BOT';
         }
     ): Promise<{ event: Event; action: "created" | "joined" | "already-in" }> {
         const { idWorkspace, idCompany, seg, svc, timeZoneWorkspace, note, isCommentRead, customer, autoConfirmClientBookings, eventSourceType: EventSourceTypeFromParams } = params;
@@ -2690,7 +2690,7 @@ export class ClientEventService {
         cache: any;
         customer: { id: string; idClientWorkspace: string };
         note?: string | null;
-        eventSourceType: 'PLATFORM' | 'WEB' | 'WIDGET' | 'GOOGLE' | 'BOT';
+        eventSourceType: 'PLATFORM' | 'WEB' | 'WIDGET' | 'BOT';
     }) {
         const {
             idCompany,

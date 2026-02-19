@@ -8,11 +8,7 @@ import { NodeCacheService } from '../@cache/node-cache.service';
 import moment from 'moment';
 import { CONSOLE_COLOR } from '../../constant/console-color';
 import CustomError from '../../models/custom-error/CustomError';
-
-const NODE_ENV = process.env.NODE_ENV || 'development';
-require('dotenv').config({
-    path: `.env.${NODE_ENV}`
-});
+import { env } from '../../config/env';
 
 export class JWTService {
 
@@ -34,7 +30,7 @@ export class JWTService {
             // await config.init();
             // this._privateKey = config.getPrivateKey();
             // Caso especial de este backend. Se coge la clave privada de las variables de entorno
-            this._privateKey = process.env.JWT_PRIVATE_KEY;
+            this._privateKey = env.JWT_PRIVATE_KEY;
 
         }
         return this._privateKey;

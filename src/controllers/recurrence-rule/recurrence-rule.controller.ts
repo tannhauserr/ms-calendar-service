@@ -1,4 +1,5 @@
 import { Response } from "../../models/messages/response";
+import { buildControllerErrorResponse } from "../../models/error-codes";
 import { RecurrenceRuleService, RecurrenceRuleWithClients } from "../../services/@database/recurrence-rule/recurrence-rule.service";
 import { JWTService } from "../../services/jwt/jwt.service";
 
@@ -23,7 +24,7 @@ export class RecurrenceRuleController {
                 .status(200)
                 .json(Response.build("Regla de recurrencia creada", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -95,10 +96,10 @@ export class RecurrenceRuleController {
             // Recurrencia deshabilitada temporalmente en este MS.
             return res
                 .status(410)
-                .json(Response.build("Recurrencia deshabilitada", 410, false, { rows: [] }));
+                .json(buildControllerErrorResponse("FEATURE_DISABLED", 410, "Recurrencia deshabilitada", { rows: [] }));
 
         } catch (err: any) {
-            return res.status(500).json({ message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -113,7 +114,7 @@ export class RecurrenceRuleController {
                 .status(200)
                 .json(Response.build("Regla encontrada", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -129,7 +130,7 @@ export class RecurrenceRuleController {
                 .status(200)
                 .json(Response.build("Regla de recurrencia actualizada", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -144,7 +145,7 @@ export class RecurrenceRuleController {
                 .status(200)
                 .json(Response.build("Regla de recurrencia eliminada", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -168,7 +169,7 @@ export class RecurrenceRuleController {
                     )
                 );
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 

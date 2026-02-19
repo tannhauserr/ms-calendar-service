@@ -1,5 +1,6 @@
 import moment from "moment";
 import { Response } from "../../models/messages/response";
+import { resolveMiddlewareError } from "../../models/error-codes";
 import prisma from "../../lib/prisma";
 
 
@@ -11,9 +12,20 @@ export class WorkerAbsenceMiddleware {
             const { idUserFk, startDate, endDate } = req.body;
 
             // Validamos los parámetros necesarios
-            if (!idUserFk) return res.status(400).json(Response.build("El idUserFk es obligatorio", 400, false));
-            if (!startDate) return res.status(400).json(Response.build("La startDate es obligatoria", 400, false));
-            if (!endDate) return res.status(400).json(Response.build("La endDate es obligatoria", 400, false));
+            if (!idUserFk) {
+                const err = resolveMiddlewareError("WORKER_ABSENCE_ID_USER_REQUIRED", "El idUserFk es obligatorio");
+                return res.status(400).json(Response.build(err.message, 400, false, null, err.code));
+            }
+
+            if (!startDate) {
+                const err = resolveMiddlewareError("WORKER_ABSENCE_START_DATE_REQUIRED", "La startDate es obligatoria");
+                return res.status(400).json(Response.build(err.message, 400, false, null, err.code));
+            }
+
+            if (!endDate) {
+                const err = resolveMiddlewareError("WORKER_ABSENCE_END_DATE_REQUIRED", "La endDate es obligatoria");
+                return res.status(400).json(Response.build(err.message, 400, false, null, err.code));
+            }
 
             // Convertimos las fechas a objetos Date para asegurarnos de que estén en el formato correcto
             const start = moment(startDate).startOf("day").toDate();
@@ -37,7 +49,8 @@ export class WorkerAbsenceMiddleware {
             next();
         } catch (error: any) {
             console.error("Error en cleanExceptionDate:", error);
-            return res.status(500).json(Response.build("Error interno del servidor", 500, false));
+            const err = resolveMiddlewareError("WORKER_ABSENCE_INTERNAL_ERROR", "Error interno del servidor");
+            return res.status(500).json(Response.build(err.message, 500, false, null, err.code));
         }
     }
 

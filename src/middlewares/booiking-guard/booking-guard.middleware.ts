@@ -12,7 +12,6 @@
 // import { TIME_SECONDS } from "../../constant/time";
 // import { getWorkspacesByIds } from "../../services/@service-token-client/api-ms/auth.ms";
 // import { createClientWorkspaceByClientAndWorkspace, getClientWorkspacesByClientIds, getClientWorkspacesByIds } from "../../services/@service-token-client/api-ms/client.ms";
-// import { config } from "googleapis/build/src/apis/config";
 // import { ClientBrief, ClientWorkspaceBrief } from "../../services/@redis/cache/interfaces/models/client-brief";
 // import { Response as ResponseBuild } from "../../models/messages/response";
 
@@ -882,6 +881,7 @@ import { RedisStrategyFactory } from "../../services/@redis/cache/strategies/red
 
 import { TIME_SECONDS } from "../../constant/time";
 import { Response as ResponseBuild } from "../../models/messages/response";
+import { MiddlewareErrorKey, resolveMiddlewareError } from "../../models/error-codes";
 import {
     ClientWorkspaceBrief,
 } from "../../services/@redis/cache/interfaces/models/client-brief";
@@ -891,7 +891,6 @@ import {
     createClientWorkspaceByClientAndWorkspace,
     getClientWorkspacesByClientIds,
 } from "../../services/@service-token-client/api-ms/client.ms";
-import { config } from "googleapis/build/src/apis/config";
 
 // Ajusta rutas de import a tu proyecto:
 
@@ -973,26 +972,27 @@ export class BookingGuardsMiddleware {
         where: string,
         error?: unknown
     ) {
-        // Mapeo de códigos por origen del error
-        const ERROR_CODES_BY_WHERE: Record<string, string> = {
-            "BookingGuards.BaseValidation": "100",
-            "BookingGuards.ResolveWorkspace": "110",
-            "BookingGuards.ResolveBookingPage": "120",
-            "BookingGuards.ResolveClientWorkspace": "130",
-            "BookingGuards.EnforceTimeRules": "140",
-            "BookingGuards.EnforceUserLimits": "150",
-            "BookingGuards.FeatureFlagsAndIdempotency": "160",
-            "BookingGuards.BaseContextSimple": "170",
+        const ERROR_KEYS_BY_WHERE: Record<string, MiddlewareErrorKey> = {
+            "BookingGuards.BaseValidation": "BOOKING_GUARDS_BASE_VALIDATION",
+            "BookingGuards.ResolveWorkspace": "BOOKING_GUARDS_RESOLVE_WORKSPACE",
+            "BookingGuards.ResolveBookingPage": "BOOKING_GUARDS_RESOLVE_BOOKING_PAGE",
+            "BookingGuards.ResolveClientWorkspace": "BOOKING_GUARDS_RESOLVE_CLIENT_WORKSPACE",
+            "BookingGuards.EnforceTimeRules": "BOOKING_GUARDS_ENFORCE_TIME_RULES",
+            "BookingGuards.EnforceUserLimits": "BOOKING_GUARDS_ENFORCE_USER_LIMITS",
+            "BookingGuards.FeatureFlagsAndIdempotency": "BOOKING_GUARDS_FEATURE_FLAGS",
+            "BookingGuards.BaseContextSimple": "BOOKING_GUARDS_BASE_CONTEXT",
         };
 
-        // Código numérico (como string) asociado al `where`
-        const code = ERROR_CODES_BY_WHERE[where] ?? "199";
+        const errorDefinition = resolveMiddlewareError(
+            ERROR_KEYS_BY_WHERE[where] ?? "BOOKING_GUARDS_UNKNOWN",
+            message
+        );
 
         if (error) {
             console.error(
                 CONSOLE_COLOR.BgRed,
                 `[${where}]`,
-                `code=${code}`,
+                `code=${errorDefinition.code}`,
                 message,
                 error instanceof Error ? error.message : error,
                 CONSOLE_COLOR.Reset
@@ -1000,7 +1000,7 @@ export class BookingGuardsMiddleware {
         } else {
             console.warn(
                 CONSOLE_COLOR.BgYellow,
-                `[${where}] code=${code} ${message}`,
+                `[${where}] code=${errorDefinition.code} ${message}`,
                 CONSOLE_COLOR.Reset
             );
         }
@@ -1009,11 +1009,11 @@ export class BookingGuardsMiddleware {
             .status(status)
             .json(
                 ResponseBuild.build(
-                    message,
+                    errorDefinition.message,
                     status,
                     false, // ok
                     null, // item (en error lo dejamos null)
-                    code // code numérico (string)
+                    errorDefinition.code
                 )
             );
     }
