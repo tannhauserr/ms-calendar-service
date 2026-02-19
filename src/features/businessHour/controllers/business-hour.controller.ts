@@ -1,4 +1,5 @@
 import { Response } from "../../../models/messages/response";
+import { buildControllerErrorResponse } from "../../../models/error-codes";
 import { BusinessHourService } from "../services/business-hour.service";
 import { BusinessHoursStrategy } from "../../../services/@redis/cache/strategies/businessHours/businessHours.strategy";
 import { JWTService } from "../../../services/jwt/jwt.service";
@@ -42,7 +43,7 @@ export class BusinessHourController {
 
             res.status(200).json(Response.build("Registro creado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -58,7 +59,7 @@ export class BusinessHourController {
             const result = await this.businessHourBusinessHour.getBusinessHours(idWorkspace);
             res.status(200).json({ message: "Registros encontrados", ok: true, item: result });
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -72,7 +73,7 @@ export class BusinessHourController {
             const result = await this.businessHourBusinessHour.getBusinessHourById(id);
             res.status(200).json(Response.build("Registro encontrado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -86,7 +87,7 @@ export class BusinessHourController {
             const result = await this.businessHourBusinessHour.getBusinessHourByWeekDay(weekDayType);
             res.status(200).json(Response.build("Registro encontrado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -108,7 +109,7 @@ export class BusinessHourController {
 
             res.status(200).json(Response.build("Registro actualizado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -123,7 +124,7 @@ export class BusinessHourController {
             const result = await this.businessHourBusinessHour.deleteBusinessHour(normalizedIdList);
             res.status(200).json(Response.build("Registro eliminado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -143,7 +144,7 @@ export class BusinessHourController {
             const result = await this.businessHourBusinessHour.getBusinessHoursFromRedis(idCompany, idWorkspace);
             res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -158,7 +159,7 @@ export class BusinessHourController {
             const result = await this.businessHourBusinessHour.getBusinessHoursFromRedis(idCompany, idWorkspace);
             res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -174,7 +175,7 @@ export class BusinessHourController {
             );
             res.status(200).json(Response.build("Horario de workspace generado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 }

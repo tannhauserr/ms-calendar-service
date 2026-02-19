@@ -1,9 +1,12 @@
 import { Prisma, WorkerAbsence } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
+import { ErrorCatalogByDomain } from "../../../models/error-codes";
 import moment from "moment";
 import { Pagination } from "../../../models/pagination";
 import { getGeneric } from "../../../utils/get-genetic/getGenetic";
+
+const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 export class WorkerAbsenceService {
     constructor() { }
@@ -70,7 +73,12 @@ export class WorkerAbsenceService {
             const result = await prisma.$transaction(async (tx) => {
                 // Buscar el calendario usando idCompanyFk e idWorkspaceFk
                 if (!item.idWorkspaceFk) {
-                    throw new Error("El idWorkspaceFk es requerido para obtener el calendario");
+                    throw new Error(
+                        withCatalogMessage(
+                            ErrorCatalogByDomain.controller.validation.VALIDATION_REQUIRED_FIELD.message,
+                            "El idWorkspaceFk es requerido para obtener el calendario"
+                        )
+                    );
                 }
 
 
@@ -232,7 +240,12 @@ export class WorkerAbsenceService {
 
                     if (!foundAbsence) {
                         // No se encontró ausencia con ese idEventFk, no hacer nada
-                        throw new Error("No se encontró ausencia asociada al evento especificado");
+                        throw new Error(
+                            withCatalogMessage(
+                                ErrorCatalogByDomain.controller.resource.RESOURCE_NOT_FOUND.message,
+                                "No se encontró ausencia asociada al evento especificado"
+                            )
+                        );
                     }
 
                     absenceId = foundAbsence.id;
@@ -245,12 +258,22 @@ export class WorkerAbsenceService {
                     });
 
                     if (!currentAbsence?.idEventFk) {
-                        throw new Error("No se encontró el evento asociado a la ausencia");
+                        throw new Error(
+                            withCatalogMessage(
+                                ErrorCatalogByDomain.controller.resource.RESOURCE_NOT_FOUND.message,
+                                "No se encontró el evento asociado a la ausencia"
+                            )
+                        );
                     }
 
                     eventId = currentAbsence.idEventFk;
                 } else {
-                    throw new Error("Debe proporcionar id o idEventFk para actualizar la ausencia");
+                    throw new Error(
+                        withCatalogMessage(
+                            ErrorCatalogByDomain.controller.validation.VALIDATION_REQUIRED_FIELD.message,
+                            "Debe proporcionar id o idEventFk para actualizar la ausencia"
+                        )
+                    );
                 }
 
                 // 1️⃣ Actualizar PRIMERO el evento asociado a la ausencia

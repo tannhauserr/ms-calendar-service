@@ -1,4 +1,5 @@
 import { Response } from "../../../models/messages/response";
+import { buildControllerErrorResponse } from "../../../models/error-codes";
 import { Pagination } from "../../../models/pagination";
 import { WorkerAbsenceService } from "../services/worker-absence.service";
 import { JWTService } from "../../../services/jwt/jwt.service";
@@ -29,7 +30,7 @@ export class WorkerAbsenceController {
             const result = await this.workerAbsenceService.getWorkerAbsences(pagination);
             res.status(200).json(Response.build("Ausencias encontradas", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -44,7 +45,7 @@ export class WorkerAbsenceController {
             const result = await this.workerAbsenceService.addWorkerAbsence(rest as any);
             res.status(200).json(Response.build("Ausencia registrada", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -70,7 +71,7 @@ export class WorkerAbsenceController {
             const result = await this.workerAbsenceService.getWorkerAbsenceById(id);
             res.status(200).json(Response.build("Ausencia encontrada", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -84,7 +85,7 @@ export class WorkerAbsenceController {
             const result = await this.workerAbsenceService.getWorkerAbsencesByWorkspace(idWorkspace);
             res.status(200).json(Response.build("Ausencias encontradas", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -97,7 +98,7 @@ export class WorkerAbsenceController {
             const result = await this.workerAbsenceService.getWorkerAbsencesByUser(idUser);
             res.status(200).json(Response.build("Ausencias encontradas", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -110,7 +111,7 @@ export class WorkerAbsenceController {
             const result = await this.workerAbsenceService.updateWorkerAbsence(body as any);
             res.status(200).json(Response.build("Ausencia actualizada", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -124,7 +125,7 @@ export class WorkerAbsenceController {
             const result = await this.workerAbsenceService.deleteWorkerAbsence(normalizedIdList);
             res.status(200).json(Response.build("Ausencia eliminada", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
