@@ -1,4 +1,5 @@
 import { Response } from "../../../models/messages/response";
+import { buildControllerErrorResponse } from "../../../models/error-codes";
 import { Pagination } from "../../../models/pagination";
 import { TemporaryBusinessHourService } from "../services/temporary-business-hour.service";
 import { TemporaryHoursStrategy } from "../../../services/@redis/cache/strategies/temporaryHours/temporaryHours.strategy";
@@ -47,7 +48,7 @@ export class TemporaryBusinessHourController {
 
             res.status(200).json(Response.build("Registro creado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -88,7 +89,7 @@ export class TemporaryBusinessHourController {
             const result = await this.workBusinessHourService.getTemporaryBusinessHours2(pagination);
             res.status(200).json({ message: "Registros encontrados", ok: true, item: result });
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -102,7 +103,7 @@ export class TemporaryBusinessHourController {
             const result = await this.workBusinessHourService.getTemporaryBusinessHourById(id);
             res.status(200).json(Response.build("Registro encontrado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -116,7 +117,7 @@ export class TemporaryBusinessHourController {
             const result = await this.workBusinessHourService.getTemporaryBusinessHourByDate(date as any);
             res.status(200).json(Response.build("Registro encontrado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -133,7 +134,7 @@ export class TemporaryBusinessHourController {
             );
             res.status(200).json(Response.build("Registro encontrado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -152,7 +153,7 @@ export class TemporaryBusinessHourController {
             );
             res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -178,7 +179,7 @@ export class TemporaryBusinessHourController {
 
             res.status(200).json(Response.build("Registro actualizado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -196,7 +197,7 @@ export class TemporaryBusinessHourController {
             );
             res.status(200).json(Response.build("Registro eliminado", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -223,7 +224,7 @@ export class TemporaryBusinessHourController {
             }
             res.status(200).json({ message: "Registros encontrados", ok: true, item: result && result?.rows ? result.rows : [] });
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 
@@ -241,7 +242,7 @@ export class TemporaryBusinessHourController {
 
             res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
-            res.status(500).json({ message: err.message });
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
 

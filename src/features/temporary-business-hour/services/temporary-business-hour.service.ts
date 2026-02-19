@@ -1,6 +1,7 @@
 import { Event, EventPurposeType, Prisma, TemporaryBusinessHour } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
+import { ErrorCatalogByDomain } from "../../../models/error-codes";
 import { Pagination } from "../../../models/pagination";
 import { getGeneric } from "../../../utils/get-genetic/getGenetic";
 import moment from "moment";
@@ -8,6 +9,8 @@ import { TemporaryHoursMapType } from "../../../models/interfaces/temporary-busi
 import { TemporaryHoursStrategy } from "../../../services/@redis/cache/strategies/temporaryHours/temporaryHours.strategy";
 import { TIME_SECONDS } from "../../../constant/time";
 import { HoursRangeInput, normalizeRange, isWithin, listDaysInclusive } from "../interfaces";
+
+const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 export class TemporaryBusinessHourService {
     /** Creates a service instance. */
@@ -86,7 +89,12 @@ export class TemporaryBusinessHourService {
         tx: Prisma.TransactionClient
     ): Promise<Event> {
         if (!record.idCompanyFk || !record.idWorkspaceFk) {
-            throw new Error("idCompanyFk e idWorkspaceFk son obligatorios para crear el evento");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.controller.validation.VALIDATION_REQUIRED_FIELD.message,
+                    "idCompanyFk e idWorkspaceFk son obligatorios para crear el evento"
+                )
+            );
         }
         const { startDate, endDate, allDay } = this.buildTemporaryBlockEventRange(record);
         const title = record?.title ?? "Bloqueo temporal";
@@ -365,7 +373,12 @@ export class TemporaryBusinessHourService {
                 const incomingEventId = item.idEventFk ? String(item.idEventFk) : undefined;
 
                 if (!incomingEventId) {
-                    throw new Error("Debe proporcionar idEventFk para actualizar el registro");
+                    throw new Error(
+                        withCatalogMessage(
+                            ErrorCatalogByDomain.controller.validation.VALIDATION_REQUIRED_FIELD.message,
+                            "Debe proporcionar idEventFk para actualizar el registro"
+                        )
+                    );
                 }
 
                 const currentRecord = await tx.temporaryBusinessHour.findFirst({
@@ -373,7 +386,12 @@ export class TemporaryBusinessHourService {
                 });
 
                 if (!currentRecord) {
-                    throw new Error("No se encontró el registro a actualizar");
+                    throw new Error(
+                        withCatalogMessage(
+                            ErrorCatalogByDomain.controller.resource.RESOURCE_NOT_FOUND.message,
+                            "No se encontró el registro a actualizar"
+                        )
+                    );
                 }
 
                 const effectiveRecord = {

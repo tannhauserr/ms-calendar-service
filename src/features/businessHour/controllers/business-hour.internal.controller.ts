@@ -1,4 +1,5 @@
 import { Response } from "../../../models/messages/response";
+import { buildControllerErrorResponse } from "../../../models/error-codes";
 import { BusinessHourInternalService } from "../services/business-hour.internal.service";
 import { BusinessHoursRedisDto, InternalGenerateWorkspaceBusinessHoursDto } from "../dto";
 
@@ -12,7 +13,9 @@ export class BusinessHourInternalController {
             const result = await this.service.getBusinessHoursFromRedis(idCompany, idWorkspace);
             return res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
-            return res.status(500).json({ message: err.message });
+            return res
+                .status(500)
+                .json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -28,7 +31,9 @@ export class BusinessHourInternalController {
             );
             return res.status(200).json(Response.build("Horario de workspace generado", 200, true, result));
         } catch (err: any) {
-            return res.status(500).json({ message: err.message });
+            return res
+                .status(500)
+                .json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 }
