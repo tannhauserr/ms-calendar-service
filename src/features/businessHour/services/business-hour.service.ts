@@ -1,10 +1,13 @@
 import { Prisma, BusinessHour, WeekDayType } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
+import { ErrorCatalogByDomain } from "../../../models/error-codes";
 import { BusinessHoursType } from "../../../models/interfaces";
 import { BusinessHoursStrategy } from "../../../services/@redis/cache/strategies/businessHours/businessHours.strategy";
 import moment from "moment";
 import { TIME_SECONDS } from "../../../constant/time";
+
+const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 export class BusinessHourService {
     /** Creates a service instance. */
@@ -31,7 +34,12 @@ export class BusinessHourService {
         const allowedWeekDays = new Set(Object.values(WeekDayType));
         const normalized = businessHours.map((item) => {
             if (!item?.weekDayType || !allowedWeekDays.has(item.weekDayType)) {
-                throw new Error(`weekDayType inválido: ${item?.weekDayType}`);
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.controller.validation.VALIDATION_INVALID_PAYLOAD.message,
+                        `weekDayType inválido: ${item?.weekDayType}`
+                    )
+                );
             }
 
             const isClosed = !!item.closed;
@@ -48,14 +56,24 @@ export class BusinessHourService {
             const rawEnd = item.endTime ?? null;
 
             if (!rawStart || !rawEnd) {
-                throw new Error(`startTime y endTime son obligatorios para ${item.weekDayType}`);
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.controller.validation.VALIDATION_REQUIRED_FIELD.message,
+                        `startTime y endTime son obligatorios para ${item.weekDayType}`
+                    )
+                );
             }
 
             const startTime = this.toHHmm(rawStart);
             const endTime = this.toHHmm(rawEnd);
 
             if (startTime >= endTime) {
-                throw new Error(`Rango inválido para ${item.weekDayType}: startTime debe ser menor que endTime`);
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.controller.validation.VALIDATION_INVALID_PAYLOAD.message,
+                        `Rango inválido para ${item.weekDayType}: startTime debe ser menor que endTime`
+                    )
+                );
             }
 
             return {
@@ -74,7 +92,12 @@ export class BusinessHourService {
                 (x) => x.weekDayType === weekDayType && !x.closed
             );
             if (hasOpenOnSameDay) {
-                throw new Error(`No se puede mezclar closed=true con franjas horarias en ${weekDayType}`);
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.controller.business.BUSINESS_RULE_NOT_ALLOWED.message,
+                        `No se puede mezclar closed=true con franjas horarias en ${weekDayType}`
+                    )
+                );
             }
         }
 
@@ -259,7 +282,14 @@ export class BusinessHourService {
     /** Converts a time value to HH:mm format. */
     toHHmm = (v: string): string => {
         const m = String(v).trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
-        if (!m) throw new Error(`Hora inválida: ${v}`);
+        if (!m) {
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.middleware.businessHour.BUSINESS_HOUR_INVALID_TIME_FORMAT.message,
+                    `Hora inválida: ${v}`
+                )
+            );
+        }
         return `${m[1].padStart(2, '0')}:${m[2]}`;
     };
 
@@ -344,7 +374,12 @@ export class BusinessHourService {
         try {
             
             if (!idCompany || !idWorkspace) {
-                throw new Error('idCompany e idWorkspace son obligatorios');
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.controller.validation.VALIDATION_REQUIRED_FIELD.message,
+                        "idCompany e idWorkspace son obligatorios"
+                    )
+                );
             }
 
             const result = await prisma.$transaction(async (tx) => {

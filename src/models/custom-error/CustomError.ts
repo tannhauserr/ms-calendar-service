@@ -55,29 +55,54 @@ class CustomError extends Error {
     originalError: Error;
     errorFile?: string;
     errorLine?: number;
+    messageStoredType: MessageStoredType;
 
-    constructor(serviceName: string, originalError: Error, messageStoredType: MessageStoredType = "verbose") {
-        super(`Error in service ${serviceName}: ${originalError.message}`);
+    constructor(serviceName: string, originalError: Error, messageStoredType?: MessageStoredType) {
+        const normalizedError = CustomError.normalizeError(originalError);
+        super(`Error in service ${serviceName}: ${normalizedError.message}`);
         this.name = "CustomError";
         this.serviceName = serviceName;
-        this.originalError = originalError;
+        this.originalError = normalizedError;
+        this.messageStoredType = CustomError.resolveMessageStoredType(normalizedError, messageStoredType);
 
-        const { errorFile, errorLine } = this.extractErrorLocation(originalError);
+        const sourceError = normalizedError instanceof CustomError ? normalizedError.originalError : normalizedError;
+        const { errorFile, errorLine } = this.extractErrorLocation(sourceError);
         this.errorFile = errorFile;
         this.errorLine = errorLine;
 
-        if (messageStoredType === "simple") this.logErrorToFileSimple();
-        else if (messageStoredType === "verbose") this.logErrorToFileVerbose();
+        if (this.messageStoredType === "simple") this.logErrorToFileSimple();
+        else if (this.messageStoredType === "verbose") this.logErrorToFileVerbose();
 
-        console.log(`${CONSOLE_COLOR.BgYellow}[CustomError]${CONSOLE_COLOR.Reset} ${serviceName} - ${originalError.message}`);
-        if (this.errorFile && this.errorLine) {
-            console.log(`    at ${this.errorFile}:${this.errorLine}`);
+        if (this.messageStoredType !== "none") {
+            console.log(`${CONSOLE_COLOR.BgYellow}[CustomError]${CONSOLE_COLOR.Reset} ${serviceName} - ${normalizedError.message}`);
+            if (this.errorFile && this.errorLine) {
+                console.log(`    at ${this.errorFile}:${this.errorLine}`);
+            }
         }
 
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, CustomError);
         }
     }
+
+    private static normalizeError = (error: unknown): Error => {
+        if (error instanceof Error) return error;
+        if (typeof error === "string") return new Error(error);
+        try {
+            return new Error(JSON.stringify(error));
+        } catch {
+            return new Error("Unknown error");
+        }
+    };
+
+    private static resolveMessageStoredType = (
+        originalError: Error,
+        messageStoredType?: MessageStoredType
+    ): MessageStoredType => {
+        if (messageStoredType) return messageStoredType;
+        if (originalError instanceof CustomError) return "none";
+        return "verbose";
+    };
 
     public logErrorToFileVerbose = () => {
         verboseLogger.error(
