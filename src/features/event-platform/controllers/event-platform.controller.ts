@@ -1,5 +1,6 @@
 import { EventStatusType } from "@prisma/client";
 import { CONSOLE_COLOR } from "../../../constant/console-color";
+import { buildControllerErrorResponse } from "../../../models/error-codes";
 import { Response } from "../../../models/messages/response";
 import { SidebarBackendBookingPayload } from "../../../services/@database/event/dto/SidebarBackendBookingPayload";
 import { JWTService } from "../../../services/jwt/jwt.service";
@@ -35,25 +36,43 @@ export class EventPlatformController {
             await this.jwtService.verify(token);
 
             if (!payload.type) {
-                return res.status(400).json({ ok: false, message: "El campo 'type' es requerido" });
+                return res
+                    .status(400)
+                    .json(buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "El campo 'type' es requerido"));
             }
             if (payload.type !== "event") {
-                return res.status(400).json({ ok: false, message: `Tipo '${payload.type}' no soportado en esta versión` });
+                return res.status(400).json(
+                    buildControllerErrorResponse(
+                        "VALIDATION_INVALID_PAYLOAD",
+                        400,
+                        `Tipo '${payload.type}' no soportado en esta versión`
+                    )
+                );
             }
             if (!payload.idCompany) {
-                return res.status(400).json({ ok: false, message: "El campo 'idCompany' es requerido" });
+                return res
+                    .status(400)
+                    .json(buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "El campo 'idCompany' es requerido"));
             }
             if (!payload.idWorkspace) {
-                return res.status(400).json({ ok: false, message: "El campo 'idWorkspace' es requerido" });
+                return res.status(400).json(
+                    buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "El campo 'idWorkspace' es requerido")
+                );
             }
             if (!payload.startDate) {
-                return res.status(400).json({ ok: false, message: "El campo 'startDate' es requerido" });
+                return res
+                    .status(400)
+                    .json(buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "El campo 'startDate' es requerido"));
             }
             if (!Array.isArray(payload.services)) {
-                return res.status(400).json({ ok: false, message: "El campo 'services' debe ser un array" });
+                return res.status(400).json(
+                    buildControllerErrorResponse("VALIDATION_INVALID_PAYLOAD", 400, "El campo 'services' debe ser un array")
+                );
             }
             if (!Array.isArray(payload.clients)) {
-                return res.status(400).json({ ok: false, message: "El campo 'clients' debe ser un array" });
+                return res.status(400).json(
+                    buildControllerErrorResponse("VALIDATION_INVALID_PAYLOAD", 400, "El campo 'clients' debe ser un array")
+                );
             }
 
             const result = await this.commands.upsertEventByPlatform(payload);
@@ -63,7 +82,15 @@ export class EventPlatformController {
                 `${CONSOLE_COLOR.BgRed}[EventController.upsertEventByPlatform]${CONSOLE_COLOR.Reset}`,
                 err?.message
             );
-            return res.status(500).json({ ok: false, message: err?.message ?? "Error interno del servidor" });
+            return res
+                .status(500)
+                .json(
+                    buildControllerErrorResponse(
+                        "INTERNAL_SERVER_ERROR",
+                        500,
+                        err?.message ?? "Error interno del servidor"
+                    )
+                );
         }
     };
 
@@ -76,7 +103,7 @@ export class EventPlatformController {
             const result = await this.commands.markCommentAsRead(idEvent, idWorkspace);
             return res.status(200).json(Response.build("Comentario marcado como leído", 200, true, result));
         } catch (err: any) {
-            return res.status(500).json({ message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -89,7 +116,7 @@ export class EventPlatformController {
             const result = await this.queries.getEvents(pagination as any);
             return res.status(200).json({ message: "Eventos encontrados", ok: true, item: result });
         } catch (err: any) {
-            return res.status(500).json({ message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -99,13 +126,19 @@ export class EventPlatformController {
             const { idCompany, idWorkspace } = req.params as GetEventExtraDataParamsDto;
 
             if (!Array.isArray(idList) || idList.length === 0) {
-                return res.status(400).json({ message: "Faltan ids de evento" });
+                return res
+                    .status(400)
+                    .json(buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "Faltan ids de evento"));
             }
             if (!idWorkspace) {
-                return res.status(400).json({ message: "Falta el id del establecimiento" });
+                return res.status(400).json(
+                    buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "Falta el id del establecimiento")
+                );
             }
             if (!idCompany) {
-                return res.status(400).json({ message: "Falta el id de la compañía" });
+                return res
+                    .status(400)
+                    .json(buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "Falta el id de la compañía"));
             }
 
             const token = req.token;
@@ -114,7 +147,7 @@ export class EventPlatformController {
             const result = await this.queries.getEventExtraData(idList, idCompany, idWorkspace);
             return res.status(200).json(Response.build("Datos extra de eventos encontrados", 200, true, result));
         } catch (err: any) {
-            return res.status(500).json({ message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -132,7 +165,7 @@ export class EventPlatformController {
 
             return res.status(200).json({ message: "Eventos encontrados", ok: true, item: result });
         } catch (err: any) {
-            return res.status(500).json({ message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -144,12 +177,14 @@ export class EventPlatformController {
 
             const result = await this.queries.getEventById(id);
             if (!result) {
-                return res.status(404).json(Response.build("Evento no encontrado", 404, false));
+                return res
+                    .status(404)
+                    .json(buildControllerErrorResponse("RESOURCE_NOT_FOUND", 404, "Evento no encontrado"));
             }
 
             return res.status(200).json(Response.build("Evento encontrado", 200, true, result));
         } catch (err: any) {
-            return res.status(500).json({ message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -163,7 +198,7 @@ export class EventPlatformController {
             return res.status(200).json(Response.build("Evento eliminado exitosamente", 200, true, result));
         } catch (err: any) {
             console.error("Error al eliminar el evento:", err);
-            return res.status(500).json({ message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -177,12 +212,18 @@ export class EventPlatformController {
             if (!events) {
                 return res
                     .status(400)
-                    .json(Response.build("Transición no permitida o sin cambios", 400, false, null));
+                    .json(
+                        buildControllerErrorResponse(
+                            "BUSINESS_RULE_NOT_ALLOWED",
+                            400,
+                            "Transición no permitida o sin cambios"
+                        )
+                    );
             }
 
             return res.status(200).json(Response.build("Estado del evento actualizado", 200, true, events));
         } catch (err: any) {
-            return res.status(500).json({ message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -195,13 +236,17 @@ export class EventPlatformController {
             const eventId = req.params?.id ?? payload?.event?.id;
 
             if (!eventId || typeof eventId !== "string") {
-                return res.status(400).json(Response.build("Falta id de evento en path", 400, false));
+                return res
+                    .status(400)
+                    .json(buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "Falta id de evento en path"));
             }
 
             const result = await this.commands.updateById(eventId, payload);
             return res.status(200).json(Response.build("Evento actualizado", 200, true, result));
         } catch (err: any) {
-            return res.status(500).json({ message: err?.message ?? "Error interno" });
+            return res
+                .status(500)
+                .json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message ?? "Error interno"));
         }
     };
 
@@ -221,7 +266,7 @@ export class EventPlatformController {
 
             return res.status(200).json(Response.build("Estado del evento actualizado", 200, true, result));
         } catch (err: any) {
-            return res.status(500).json({ message: err.message });
+            return res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     };
 
@@ -229,16 +274,22 @@ export class EventPlatformController {
         try {
             const { id, idWorkspace } = req.body as InternalGetEventDataByIdBodyDto;
             if (!id) {
-                return res.status(400).json({ ok: false, message: "id (string) is required" });
+                return res
+                    .status(400)
+                    .json(buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "id (string) is required"));
             }
             if (!idWorkspace) {
-                return res.status(400).json({ ok: false, message: "idWorkspace (string) is required" });
+                return res.status(400).json(
+                    buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "idWorkspace (string) is required")
+                );
             }
 
             const { item, count } = await this.queries.internalGetEventDataById(id, idWorkspace);
             return res.status(200).json({ ok: true, item, count });
         } catch (err: any) {
-            return res.status(500).json({ ok: false, message: err?.message || "Internal error" });
+            return res
+                .status(500)
+                .json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message || "Internal error"));
         }
     };
 
@@ -246,16 +297,22 @@ export class EventPlatformController {
         try {
             const { idGroup, idWorkspace } = req.body as InternalGetGroupDataByIdBodyDto;
             if (!idGroup) {
-                return res.status(400).json({ ok: false, message: "idGroup (string) is required" });
+                return res.status(400).json(
+                    buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "idGroup (string) is required")
+                );
             }
             if (!idWorkspace) {
-                return res.status(400).json({ ok: false, message: "idWorkspace (string) is required" });
+                return res.status(400).json(
+                    buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "idWorkspace (string) is required")
+                );
             }
 
             const { item, count } = await this.queries.internalGetGroupDataById(idGroup, idWorkspace);
             return res.status(200).json({ ok: true, item, count });
         } catch (err: any) {
-            return res.status(500).json({ ok: false, message: err?.message || "Internal error" });
+            return res
+                .status(500)
+                .json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message || "Internal error"));
         }
     };
 }
