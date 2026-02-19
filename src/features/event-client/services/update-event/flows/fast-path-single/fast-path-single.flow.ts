@@ -1,5 +1,6 @@
 import moment from "moment";
 import { CONSOLE_COLOR } from "../../../../../../constant/console-color";
+import { ErrorCatalogByDomain } from "../../../../../../models/error-codes";
 import {
     ServiceWindowAvailabilityPolicy,
     StaffAssignablePolicy,
@@ -7,6 +8,7 @@ import {
 import type { EventClientAvailabilityService } from "../../../availability";
 import type { AddFromWebDeps } from "../../../create-event/event-client-write.types";
 import type { EventClientUpdatePersistence } from "../../../persistence";
+const withCatalogMessage = (catalogMessage: string, detail: string) => `${catalogMessage} ${detail}`;
 
 type RunFastPathSingleFlowParams = {
     attendees: any[];
@@ -80,7 +82,14 @@ export const runFastPathSingleFlow = async (params: RunFastPathSingleFlowParams)
 
     const svcReq = attendees[0];
     const svcSnap = (serviceById as any)[svcReq.serviceId];
-    if (!svcSnap) throw new Error("Servicio no disponible en snapshot");
+    if (!svcSnap) {
+        throw new Error(
+            withCatalogMessage(
+                ErrorCatalogByDomain.booking.common.BOOKING_ERR_GENERIC.message,
+                "Servicio no disponible en snapshot"
+            )
+        );
+    }
 
     const availabilityContext = await availabilityService.buildContext({
         idCompany,
