@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../../../../lib/prisma";
-import { ErrorCatalogByDomain } from "../../../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../../models/error-codes";
 
 type Segment = {
     serviceId: string;
@@ -57,7 +57,6 @@ type MoveSingleParticipantInClassEditInput = {
         action: "created" | "joined" | "already-in";
     }>;
 };
-const withCatalogMessage = (catalogMessage: string, detail: string) => `${catalogMessage} ${detail}`;
 
 /**
  * Persistencia para operaciones de actualización de reservas web.

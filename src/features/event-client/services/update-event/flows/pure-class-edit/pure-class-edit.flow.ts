@@ -1,12 +1,11 @@
 import type { Event, Prisma } from "@prisma/client";
 import moment from "moment";
-import { ErrorCatalogByDomain } from "../../../../../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../../../../models/error-codes";
 import { getUsersWhoCanPerformService_SPECIAL } from "../../../../../../services/@database/event/availability-special.service";
 import { EligibleProfessionalsPolicy, StaffAssignablePolicy } from "../../../../domain";
 import type { EventClientUpdatePersistence } from "../../../persistence";
 
 type EventSourceType = "PLATFORM" | "WEB" | "WIDGET" | "GOOGLE" | "BOT";
-const withCatalogMessage = (catalogMessage: string, detail: string) => `${catalogMessage} ${detail}`;
 
 type RunPureClassEditFlowParams = {
     idCompany: string;
