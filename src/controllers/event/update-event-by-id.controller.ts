@@ -1,4 +1,5 @@
 import { Response } from "../../models/messages/response";
+import { buildControllerErrorResponse } from "../../models/error-codes";
 import { createNotification as createNotificationPlatform } from "../../models/notification/util/trigger/util/for-action-platform";
 import { UpdateEventByIdPayload, UpdateEventByIdService } from "../../services/@database/event/update-event-by-id.service";
 import { JWTService } from "../../services/jwt/jwt.service";
@@ -20,7 +21,9 @@ export class UpdateEventByIdController {
             const { event, isMany = false, sendNotification = false } = req.body as UpdateEventByIdPayload;
 
             if (!event || typeof event !== "object") {
-                return res.status(400).json(Response.build("Falta objeto event", 400, false));
+                return res
+                    .status(400)
+                    .json(buildControllerErrorResponse("VALIDATION_REQUIRED_FIELD", 400, "Falta objeto event"));
             }
 
             const result = await this.updateEventByIdService.updateEventById({
@@ -41,8 +44,9 @@ export class UpdateEventByIdController {
 
             return res.status(200).json(Response.build("Evento actualizado", 200, true, result));
         } catch (err: any) {
-            return res.status(500).json({ message: err?.message ?? "Error interno" });
+            return res
+                .status(500)
+                .json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message ?? "Error interno"));
         }
     };
 }
-

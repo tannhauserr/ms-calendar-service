@@ -84,7 +84,7 @@
 
 
 // // setInterval(async () => {
-// //     let factory = RedisStrategyFactory.getStrategy('googleOAuth');
+// //     let factory = RedisStrategyFactory.getStrategy('oauth');
 // //     console.log(await factory.getAccessToken("02d08b98-6700-47dd-af1b-d9bb8e75b5f8"));
 
 // // }, 1000);
@@ -114,6 +114,8 @@ import cors from "cors";
 import bodyParser from "body-parser";
 
 import { CONSOLE_COLOR } from "./constant/console-color";
+import { env } from "./config/env";
+import { logger } from "./config/logger";
 import { conditionalLimiter } from "./config/rate-limiter";
 import corsOptions from "./config/cors-options";
 import api from "./routes/index.routes";
@@ -128,32 +130,25 @@ import { initializeSubscriptionsRedis } from "./services/@redis/pubsub/initializ
 import { initializeConsumerPubSub_RabbitMQ } from "./services/@rabbitmq/pubsub/initializePubSubConsumer";
 
 import {
-  CalendarChannelRefreshCronService,
   CheckCacheCronService,
   WaitListCronService,
 } from "./services/@cron";
 
 import prisma from "./lib/prisma";
 
-// ─────────────────────────────────────────────────────────────────
-// ENV
-// ─────────────────────────────────────────────────────────────────
-const NODE_ENV = process.env.NODE_ENV || "development";
-require("dotenv").config({ path: `.env.${NODE_ENV}` });
-
-const port = Number(process.env.PORT || 3200);
+const port = env.PORT;
 
 // ─────────────────────────────────────────────────────────────────
 // APP
 // ─────────────────────────────────────────────────────────────────
 const app = express();
 
-console.log("🌐 CORS WHITELIST:", process.env.WEB_WHITELIST_CORS);
+logger.info({ whitelist: env.WEB_WHITELIST_CORS }, "CORS whitelist loaded");
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
 
-// Confía en el primer proxy (Google Calendar channel, etc.)
+// Confía en el primer proxy
 app.set("trust proxy", 1);
 
 app.use(conditionalLimiter);
@@ -185,8 +180,6 @@ async function initializeServices() {
     // Crons
     CheckCacheCronService.instance.start();
     WaitListCronService.instance.start();
-    // CalendarChannelRefreshCronService.instance.start();
-
     console.log(`${CONSOLE_COLOR.FgGreen}✅ Servicios inicializados${CONSOLE_COLOR.Reset}`);
   } catch (error) {
     console.error(
@@ -208,8 +201,8 @@ let server: ReturnType<typeof app.listen> | null = null;
 
     server = app.listen(port, () => {
       console.log(`${CONSOLE_COLOR.FgMagenta}🚀 Conectado, puerto ${port}${CONSOLE_COLOR.Reset}`);
-      console.log(`${CONSOLE_COLOR.FgCyan}📝 Entorno: ${NODE_ENV}${CONSOLE_COLOR.Reset}`);
-      console.log(`${CONSOLE_COLOR.FgCyan}🌐 CORS WHITELIST: ${process.env.WEB_WHITELIST_CORS}${CONSOLE_COLOR.Reset}`);
+      console.log(`${CONSOLE_COLOR.FgCyan}📝 Entorno: ${env.NODE_ENV}${CONSOLE_COLOR.Reset}`);
+      console.log(`${CONSOLE_COLOR.FgCyan}🌐 CORS WHITELIST: ${env.WEB_WHITELIST_CORS}${CONSOLE_COLOR.Reset}`);
     });
   } catch (error) {
     console.error(
@@ -235,7 +228,6 @@ async function gracefulShutdown(signal: string) {
 
     // 2) Parar crons
     CheckCacheCronService.instance.stop?.();
-    CalendarChannelRefreshCronService.instance.stop?.();
     WaitListCronService.instance.stop?.();
 
     // 3) Cerrar DB (Prisma)
@@ -259,4 +251,3 @@ process.on("unhandledRejection", (reason) => {
   console.error("❌ Promesa rechazada no capturada:", reason);
   gracefulShutdown("unhandledRejection");
 });
-

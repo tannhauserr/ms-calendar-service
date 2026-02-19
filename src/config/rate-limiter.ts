@@ -1,9 +1,10 @@
 import rateLimit from 'express-rate-limit';
 import { Response } from '../models/messages/response';
 import { Message } from '../models/messages/failure';
+import { env } from './env';
 
 
-const maxMessage = process.env.NODE_ENV === 'production' ? 80 : 10000000;
+const maxMessage = env.NODE_ENV === 'production' ? 80 : 10000000;
 
 export const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -34,5 +35,4 @@ export const conditionalLimiter = (req, res, next) => {
         limiter(req, res, next);
     }
 };
-
 
