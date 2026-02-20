@@ -8,8 +8,10 @@ import { createNotificationByClient } from "../../../models/notification/util/tr
 import { BusinessHourService } from "../../../services/@database/all-business-services/business-hours/business-hours.service";
 import { TemporaryBusinessHourService } from "../../../services/@database/all-business-services/temporary-business-hour/temporary-business-hour.service";
 import { WorkerBusinessHourService } from "../../../services/@database/all-business-services/worker-business-hours/worker-business-hours.service";
+import { NodeCacheService } from "../../../services/@cache/node-cache.service";
 import { EventClientWriteService } from "./create-event/event-client-write.service";
 import { EventClientUpdateWriteService } from "./update-event/event-client-update-write.service";
+import { TIME_SECONDS } from "../../../constant/time";
 
 export class EventClientCommandService {
 
@@ -18,6 +20,17 @@ export class EventClientCommandService {
     private readonly temporaryHoursService = new TemporaryBusinessHourService();
     private readonly eventClientWriteService = new EventClientWriteService();
     private readonly eventClientUpdateWriteService = new EventClientUpdateWriteService();
+    private readonly actionResultCache = NodeCacheService.instance.getNodeCache();
+
+
+    private buildActionCacheKey(
+        action: "cancel" | "confirm",
+        idWorkspace: string,
+        idClientWorkspace: string,
+        idEvent: string
+    ): string {
+        return `event-client:${action}:${idWorkspace}:${idClientWorkspace}:${idEvent}`;
+    }
 
     /**
      * Crea una cita desde web aplicando reglas de negocio y notificaciones.
@@ -37,6 +50,15 @@ export class EventClientCommandService {
         const servicePayload = this._buildServicePayload(ctx, false);
         const result: any = await this.eventClientWriteService
             .addEventFromWeb(servicePayload, deps);
+
+        if (!result?.ok) {
+            return {
+                status: 409,
+                ok: false,
+                message: "No hay disponibilidad para el horario seleccionado",
+                item: result,
+            };
+        }
 
         if (result && result.outcome !== "already-in") {
             const createdRaw = Array.isArray(result.created) ? result.created : [];
@@ -181,6 +203,20 @@ export class EventClientCommandService {
         idWorkspace: string
     ) {
         try {
+            const cacheKey = this.buildActionCacheKey(
+                "cancel",
+                idWorkspace,
+                idClientWorkspace,
+                idEvent
+            );
+            const cached = this.actionResultCache.get(cacheKey);
+            if (cached) {
+                return {
+                    ...(cached as Record<string, unknown>),
+                    cached: true,
+                };
+            }
+
             const event = await prisma.event.findFirst({
                 where: {
                     id: idEvent,
@@ -232,7 +268,18 @@ export class EventClientCommandService {
                 groupStatus === "CANCELLED_BY_CLIENT_REMOVED" ||
                 groupStatus === "CANCELLED_BY_CLIENT"
             ) {
-                return;
+                const result = {
+                    idEvent,
+                    status: "CANCELLED_BY_CLIENT",
+                    cached: false,
+                    changed: false,
+                };
+                this.actionResultCache.set(
+                    cacheKey,
+                    result,
+                    TIME_SECONDS.HOUR * 5
+                );
+                return result;
             }
 
             const maxParticipants = event.serviceMaxParticipantsSnapshot ?? 1;
@@ -253,7 +300,18 @@ export class EventClientCommandService {
             }
 
             if (clientParticipant.eventStatusType === "CANCELLED_BY_CLIENT") {
-                return;
+                const result = {
+                    idEvent,
+                    status: "CANCELLED_BY_CLIENT",
+                    cached: false,
+                    changed: false,
+                };
+                this.actionResultCache.set(
+                    cacheKey,
+                    result,
+                    TIME_SECONDS.HOUR * 5
+                );
+                return result;
             }
 
             if (isSeveralParticipants) {
@@ -297,6 +355,19 @@ export class EventClientCommandService {
                     }),
                 ]);
             }
+
+            const result = {
+                idEvent,
+                status: "CANCELLED_BY_CLIENT",
+                cached: false,
+                changed: true,
+            };
+            this.actionResultCache.set(
+                cacheKey,
+                result,
+                TIME_SECONDS.HOUR * 5
+            );
+            return result;
         } catch (error: any) {
             throw new CustomError("EventClientCommandService.cancelEventFromWeb", error);
         }
@@ -311,6 +382,20 @@ export class EventClientCommandService {
         idWorkspace: string
     ) {
         try {
+            const cacheKey = this.buildActionCacheKey(
+                "confirm",
+                idWorkspace,
+                idClientWorkspace,
+                idEvent
+            );
+            const cached = this.actionResultCache.get(cacheKey);
+            if (cached) {
+                return {
+                    ...(cached as Record<string, unknown>),
+                    cached: true,
+                };
+            }
+
             const event = await prisma.event.findFirst({
                 where: {
                     id: idEvent,
@@ -358,7 +443,20 @@ export class EventClientCommandService {
 
             const groupStatus = event.groupEvents?.eventStatusType;
             if (groupStatus !== "ACCEPTED") {
-                return;
+                const result = {
+                    idEvent,
+                    status: "CONFIRMED",
+                    cached: false,
+                    changed: false,
+                };
+                if (groupStatus === "CONFIRMED") {
+                    this.actionResultCache.set(
+                        cacheKey,
+                        result,
+                        TIME_SECONDS.HOUR * 5
+                    );
+                }
+                return result;
             }
 
             const maxParticipants = event.serviceMaxParticipantsSnapshot ?? 1;
@@ -379,7 +477,20 @@ export class EventClientCommandService {
             }
 
             if (clientParticipant.eventStatusType !== "ACCEPTED") {
-                return;
+                const result = {
+                    idEvent,
+                    status: "CONFIRMED",
+                    cached: false,
+                    changed: false,
+                };
+                if (clientParticipant.eventStatusType === "CONFIRMED") {
+                    this.actionResultCache.set(
+                        cacheKey,
+                        result,
+                        TIME_SECONDS.HOUR * 5
+                    );
+                }
+                return result;
             }
 
             if (isSeveralParticipants) {
@@ -405,6 +516,19 @@ export class EventClientCommandService {
                     }),
                 ]);
             }
+
+            const result = {
+                idEvent,
+                status: "CONFIRMED",
+                cached: false,
+                changed: true,
+            };
+            this.actionResultCache.set(
+                cacheKey,
+                result,
+                TIME_SECONDS.HOUR * 5
+            );
+            return result;
         } catch (error: any) {
             throw new CustomError("EventClientCommandService.confirmEventFromWeb", error);
         }

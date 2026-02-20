@@ -2,7 +2,7 @@
 import { RedisCacheService } from "../../redis.service";
 import { TIME_SECONDS } from "../../../../../constant/time";
 import { Workspace } from "../../interfaces/models/workspace";
-import { IRedisSavedWorkspaceStrategy } from "../../interfaces/interfaces";
+import { IRedisSavedWorkspaceStrategy } from "./savedWorkspace.interfaces";
 
 
 // helpers centralizados para las keys

@@ -1,5 +1,5 @@
 import { GetCategoriesAndServicesResponse } from "../../../../../models/rabbitmq/getCateroiesAndServicesResponse";
-import { IRedisSavedBasicInformationToCreateReservationByIdWorkspaceStrategy } from "../../interfaces/interfaces";
+import { IRedisSavedBasicInformationToCreateReservationByIdWorkspaceStrategy } from "./saved-basic-information-by-workspace.interfaces";
 import { TokenKeys } from "../../keys/token.keys";
 import { RedisCacheService } from "../../redis.service";
 

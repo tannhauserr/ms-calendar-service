@@ -1,28 +1,35 @@
 
 
 import axios from "axios";
-import { attachServiceAuth } from "../service-token-client.service";
 import { RedisStrategyFactory } from "../../@redis/cache/strategies/redisStrategyFactory";
 import { CONSOLE_COLOR } from "../../../constant/console-color";
 import CustomError from "../../../models/custom-error/CustomError";
 import { IRedisBookingPageBriefStrategy, IRedisServiceBriefStrategy } from "../../@redis/cache/interfaces/interfaces";
 import { BookingPageBrief } from "../../@redis/cache/interfaces/models/booking-brief";
 import { ServiceBrief } from "../../@redis/cache/interfaces/models/service-brief";
+import {
+    getMockBookingPagesByIds,
+    getMockCategoriesByWorkspace,
+    getMockServicesByIds,
+    getMockServicesByUserIds,
+    isMockIntegrationsMode,
+} from "../mock/mock-integrations";
 
 // 🔹 receiver dinámico de este archivo
 const TARGET_MS_NAME = process.env.MS_BOOKING_PAGE_NAME || "bookingPage";
 // 🔹 “sub” = este MS (quién llama). Usa tu var real si es otra.
 const THIS_MS_NAME = process.env.MS_NAME || process.env.MS_CALENDAR_NAME || "calendar";
 
-// 🔹 Secret interno para comunicación entre microservicios
-const internalSecret = process.env.INTERNAL_MS_SECRET;
+// 🔹 Token interno para MS-Catalog (bookingPage)
+const internalSecret = process.env.TOKEN_MS_CATALOG;
 // ✅ Cliente propio de este archivo (singleton del módulo)
 const client = axios.create({
     baseURL: `${process.env.URL_BACK_MS_GATEWAY}/${TARGET_MS_NAME}/api/ms`,
     timeout: 5000,
-    headers: internalSecret
-        ? { "x-internal-ms-secret": internalSecret }
-        : {},
+    headers: {
+        "x-internal-ms-allowed": THIS_MS_NAME,
+        ...(internalSecret ? { "x-internal-ms-secret": internalSecret } : {}),
+    },
 });
 
 client.interceptors.request.use((cfg) => {
@@ -41,9 +48,6 @@ client.interceptors.request.use((cfg) => {
 });
 
 
-// Enganchamos el interceptor aquí (aud=receiver, sub=this)
-// attachServiceAuth(client, TARGET_MS_NAME, THIS_MS_NAME);
-
 // // (Opcional) pequeño log para confirmar que va el Authorization
 // client.interceptors.request.use((cfg) => {
 //     const hasAuth = !!cfg.headers?.Authorization;
@@ -56,6 +60,10 @@ client.interceptors.request.use((cfg) => {
  */
 export async function getBookingPageByIds(ids: string[], idWorkspace?: string) {
     try {
+        if (isMockIntegrationsMode()) {
+            return getMockBookingPagesByIds(ids, idWorkspace);
+        }
+
         if (!Array.isArray(ids) || ids.length === 0) {
             console.log(CONSOLE_COLOR.FgYellow, `[getBookingPageByIds] Array de IDs vacío o inválido`, CONSOLE_COLOR.Reset);
             return [];
@@ -99,6 +107,9 @@ export async function getBookingPageByIds(ids: string[], idWorkspace?: string) {
  */
 export async function getServiceByIds(ids: string[], idWorkspace: string) {
     try {
+        if (isMockIntegrationsMode()) {
+            return getMockServicesByIds(ids, idWorkspace);
+        }
 
         console.log("mirando ids", ids, idWorkspace);
 
@@ -171,6 +182,10 @@ export async function getServiceByIds(ids: string[], idWorkspace: string) {
  */
 export async function getServiceByUserIds(userIds: string[], idWorkspace?: string) {
     try {
+        if (isMockIntegrationsMode()) {
+            return getMockServicesByUserIds(userIds, idWorkspace);
+        }
+
         if (!Array.isArray(userIds) || userIds.length === 0) {
             console.log(CONSOLE_COLOR.FgYellow, `[getServiceByUserIds] Array de IDs de usuarios vacío o inválido`, CONSOLE_COLOR.Reset);
             return [];
@@ -234,6 +249,10 @@ export async function getServiceByUserIds(userIds: string[], idWorkspace?: strin
  */
 export async function getCatalogByIdWorkspaceAndIdCompany(idCompany: string, idWorkspace?: string) {
     try {
+        if (isMockIntegrationsMode()) {
+            return getMockCategoriesByWorkspace(idWorkspace, idCompany);
+        }
+
         if (!idCompany || typeof idCompany !== "string" || idCompany.trim() === "") {
             console.log(CONSOLE_COLOR.FgYellow, `[getCatalogByIdWorkspaceAndIdCompany] idCompany inválido`, CONSOLE_COLOR.Reset);
             return [];
@@ -260,4 +279,3 @@ export async function getCatalogByIdWorkspaceAndIdCompany(idCompany: string, idW
         return [];
     }
 }
-

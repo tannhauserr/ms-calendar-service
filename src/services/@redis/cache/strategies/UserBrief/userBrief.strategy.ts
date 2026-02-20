@@ -1,6 +1,6 @@
 // src/services/@cache/strategies/UserBriefStrategy.ts
 
-import { IRedisUserBriefStrategy } from "../../interfaces/interfaces";
+import { IRedisUserBriefStrategy } from "./interfaces";
 import { UserBrief } from "../../interfaces/models/user-brief";
 import { RedisCacheService } from "../../redis.service";
 

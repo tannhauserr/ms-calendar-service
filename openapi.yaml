@@ -1,0 +1,145 @@
+openapi: 3.0.3
+info:
+  title: MS Calendar API
+  version: 1.0.0
+  description: OpenAPI spec split by feature.
+
+servers:
+  - url: http://localhost:3201
+    description: Local development
+  - url: http://localhost:3299/calendar
+    description: Local API gateway (prefix /calendar)
+
+tags:
+  - name: Demo
+    description: Helpers to test protected endpoints quickly in development
+  - name: Event Platform
+    description: Platform-side event management
+  - name: Event Client
+    description: Client-side booking flow (create, edit, list, confirm, cancel)
+  - name: Schedules
+    description: Business/worker hours, temporary exceptions, and worker absences
+
+paths:
+  /api/demo/token:
+    get:
+      tags: [Demo]
+      summary: Generate demo JWT token
+      description: Development-only endpoint. Returns a ready-to-use JWT so evaluators can authorize protected endpoints directly from Swagger UI.
+      parameters:
+        - in: query
+          name: expiresIn
+          required: false
+          schema:
+            type: string
+            example: "2h"
+          description: JWT expiration (example 2h, 30m, 1d).
+      responses:
+        "200":
+          description: Demo token generated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, token, claims, authorizationHeader]
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  token:
+                    type: string
+                  claims:
+                    type: object
+                    required: [idUser, idCompanySelected, role]
+                    properties:
+                      idUser:
+                        type: string
+                        format: uuid
+                      idCompanySelected:
+                        type: string
+                        format: uuid
+                      role:
+                        type: string
+                        example: ROLE_OWNER
+                  authorizationHeader:
+                    type: string
+                    example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        "404":
+          description: Not available outside development environment
+          content:
+            application/json:
+              schema:
+                $ref: "./src/features/event-client/openapi/schemas/index.yaml#/GenericErrorResponse"
+        "500":
+          description: Missing JWT configuration
+          content:
+            application/json:
+              schema:
+                $ref: "./src/features/event-client/openapi/schemas/index.yaml#/GenericErrorResponse"
+
+  /api/events/v2/platform/manage-event:
+    $ref: "./src/features/event-platform/openapi/paths/manage-event.path.yaml"
+
+  /api/events/client-web/appointments:
+    $ref: "./src/features/event-client/openapi/paths/index.yaml#/clientAppointments"
+  /api/events/client-web/appointments/{id}:
+    $ref: "./src/features/event-client/openapi/paths/index.yaml#/clientAppointmentById"
+  /api/events/client-web/available-days:
+    $ref: "./src/features/event-client/openapi/paths/index.yaml#/clientAvailableDays"
+  /api/events/client-web/available-times:
+    $ref: "./src/features/event-client/openapi/paths/index.yaml#/clientAvailableTimes"
+  /api/events/client-add:
+    $ref: "./src/features/event-client/openapi/paths/index.yaml#/clientAdd"
+  /api/events/client-update:
+    $ref: "./src/features/event-client/openapi/paths/index.yaml#/clientUpdate"
+  /api/events/client-cancel:
+    $ref: "./src/features/event-client/openapi/paths/index.yaml#/clientCancel"
+  /api/events/client-confirm:
+    $ref: "./src/features/event-client/openapi/paths/index.yaml#/clientConfirm"
+
+  /api/business-hours/add:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/businessHoursAdd"
+  /api/business-hours/search:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/businessHoursSearch"
+  /api/business-hours/{id}:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/businessHoursUpdate"
+  /api/business-hours:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/businessHoursDelete"
+  /api/business-hours/r-business-hours:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/businessHoursRedis"
+
+  /api/worker-business-hours/add:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/workerBusinessHoursAdd"
+  /api/worker-business-hours/by-worker/{idWorker}/workspace/{idWorkspace}:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/workerBusinessHoursByWorkerAndWorkspace"
+  /api/worker-business-hours/{id}:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/workerBusinessHoursUpdate"
+  /api/worker-business-hours:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/workerBusinessHoursDelete"
+  /api/worker-business-hours/r-worker-business-hours:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/workerBusinessHoursRedis"
+
+  /api/temporary-business-hours/search:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/temporaryBusinessHoursSearch"
+  /api/temporary-business-hours/add:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/temporaryBusinessHoursAdd"
+  /api/temporary-business-hours/{id}:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/temporaryBusinessHoursUpdate"
+  /api/temporary-business-hours:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/temporaryBusinessHoursDelete"
+
+  /api/worker-absences:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/workerAbsencesSearch"
+  /api/worker-absences/add:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/workerAbsencesAdd"
+  /api/worker-absences/update-{id}:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/workerAbsencesUpdate"
+  /api/worker-absences/delete-definitive:
+    $ref: "./src/features/schedules/openapi/paths/index.yaml#/workerAbsencesDelete"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

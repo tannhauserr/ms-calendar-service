@@ -1,0 +1,494 @@
+WeekDayType:
+  type: string
+  enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
+
+EventPurposeType:
+  type: string
+  enum: [APPOINTMENT, VACATION, SICK_LEAVE, PERSONAL_DAY, UNPAID_LEAVE, TEMPORARY_BLOCK, OTHER]
+
+IdParam:
+  type: string
+  format: uuid
+
+GenericSuccessResponse:
+  type: object
+  required: [message, ok]
+  properties:
+    message:
+      type: string
+    ok:
+      type: boolean
+      example: true
+    status:
+      type: integer
+      example: 200
+    item:
+      nullable: true
+      additionalProperties: true
+
+GenericErrorResponse:
+  oneOf:
+    - type: object
+      required: [ok, message]
+      properties:
+        ok:
+          type: boolean
+          example: false
+        message:
+          type: string
+    - type: object
+      required: [message, ok, status]
+      properties:
+        message:
+          type: string
+        ok:
+          type: boolean
+          example: false
+        status:
+          type: integer
+        item:
+          nullable: true
+        code:
+          type: string
+
+BusinessHourAddRequest:
+  type: object
+  additionalProperties: true
+  required: [weekDayType]
+  properties:
+    idCompanyFk:
+      type: string
+      format: uuid
+    idWorkspaceFk:
+      type: string
+      format: uuid
+    idWorkspace:
+      type: string
+      format: uuid
+    weekDayType:
+      $ref: "#/WeekDayType"
+    startTime:
+      type: string
+      example: "09:00"
+    endTime:
+      type: string
+      example: "18:00"
+    closed:
+      type: boolean
+      example: false
+  example:
+    weekDayType: MONDAY
+    startTime: "16:00"
+    endTime: "20:00"
+    closed: false
+    idCompanyFk: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+    idWorkspaceFk: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+
+BusinessHourUpdateRequest:
+  type: object
+  additionalProperties: true
+  properties:
+    id:
+      type: string
+      format: uuid
+    idCompanyFk:
+      type: string
+      format: uuid
+    idWorkspaceFk:
+      type: string
+      format: uuid
+    weekDayType:
+      $ref: "#/WeekDayType"
+    startTime:
+      type: string
+    endTime:
+      type: string
+    closed:
+      type: boolean
+  example:
+    id: "348d852f-13d2-4990-b883-b594273b2c94"
+    weekDayType: MONDAY
+    startTime: "09:00"
+    endTime: "15:00"
+    closed: false
+    idCompanyFk: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+    idWorkspaceFk: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+
+BusinessHoursSearchRequest:
+  type: object
+  additionalProperties: true
+  required: [idWorkspace]
+  properties:
+    idWorkspace:
+      type: string
+      format: uuid
+
+DeleteByIdListRequest:
+  type: object
+  additionalProperties: true
+  required: [idList]
+  properties:
+    idList:
+      oneOf:
+        - type: string
+          format: uuid
+        - type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
+    action:
+      type: boolean
+      description: Optional legacy flag sent by some clients.
+  example:
+    idList:
+      - "348d852f-13d2-4990-b883-b594273b2c94"
+    action: true
+
+BusinessHoursRedisRequest:
+  type: object
+  additionalProperties: true
+  required: [idCompany, idWorkspace]
+  properties:
+    idCompany:
+      type: string
+      format: uuid
+    idWorkspace:
+      type: string
+      format: uuid
+  example:
+    idCompany: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+    idWorkspace: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+
+WorkerBusinessHourAddRequest:
+  type: object
+  additionalProperties: true
+  required: [idUserFk, idCompanyFk, idWorkspaceFk, weekDayType]
+  properties:
+    idUserFk:
+      type: string
+      format: uuid
+    idCompanyFk:
+      type: string
+      format: uuid
+    idWorkspaceFk:
+      type: string
+      format: uuid
+    weekDayType:
+      $ref: "#/WeekDayType"
+    startTime:
+      type: string
+      example: "09:00"
+    endTime:
+      type: string
+      example: "18:00"
+    closed:
+      type: boolean
+      example: false
+  example:
+    idUserFk: "65f1d8f1-9fa5-4382-9286-b5938f5cf44f"
+    weekDayType: FRIDAY
+    startTime: "10:00"
+    endTime: "13:00"
+    closed: false
+    idCompanyFk: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+    idWorkspaceFk: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+
+WorkerBusinessHourUpdateRequest:
+  type: object
+  additionalProperties: true
+  properties:
+    id:
+      type: string
+      format: uuid
+    idUserFk:
+      type: string
+      format: uuid
+    idWorkspaceFk:
+      type: string
+      format: uuid
+    weekDayType:
+      $ref: "#/WeekDayType"
+    startTime:
+      type: string
+    endTime:
+      type: string
+    closed:
+      type: boolean
+
+PaginationSearchRequest:
+  type: object
+  additionalProperties: true
+  properties:
+    pagination:
+      type: object
+      additionalProperties: true
+
+WorkerHoursRedisRequest:
+  type: object
+  additionalProperties: true
+  required: [idUserList, idWorkspace]
+  properties:
+    idUserList:
+      type: array
+      minItems: 1
+      items:
+        type: string
+        format: uuid
+    idWorkspace:
+      type: string
+      format: uuid
+  example:
+    idUserList:
+      - "65f1d8f1-9fa5-4382-9286-b5938f5cf44f"
+    idWorkspace: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+
+TemporaryBusinessHourAddRequest:
+  type: object
+  additionalProperties: true
+  required: [idCompanyFk, idWorkspaceFk, date]
+  properties:
+    idCompanyFk:
+      type: string
+      format: uuid
+    idWorkspaceFk:
+      type: string
+      format: uuid
+    idUserFk:
+      type: string
+      format: uuid
+    title:
+      type: string
+    description:
+      type: string
+    date:
+      type: string
+      format: date-time
+    startTime:
+      type: string
+      example: "10:00"
+    endTime:
+      type: string
+      example: "12:00"
+    closed:
+      type: boolean
+  example:
+    idUserFk: "65f1d8f1-9fa5-4382-9286-b5938f5cf44f"
+    idCompanyFk: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+    idWorkspaceFk: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+    date: "2026-02-19T11:00:00.000Z"
+    closed: false
+    startTime: "00:15"
+    endTime: "08:15"
+
+TemporaryBusinessHourUpdateRequest:
+  type: object
+  additionalProperties: true
+  properties:
+    id:
+      type: string
+      format: uuid
+    idCompanyFk:
+      type: string
+      format: uuid
+    idWorkspaceFk:
+      type: string
+      format: uuid
+    idUserFk:
+      type: string
+      format: uuid
+    date:
+      type: string
+      format: date-time
+    startTime:
+      type: string
+    endTime:
+      type: string
+    closed:
+      type: boolean
+
+TemporaryByDateRequest:
+  type: object
+  additionalProperties: true
+  required: [date]
+  properties:
+    date:
+      type: string
+      format: date
+
+TemporaryByWorkerAndDateRequest:
+  type: object
+  additionalProperties: true
+  required: [idWorker, date]
+  properties:
+    idWorker:
+      type: string
+      format: uuid
+    date:
+      type: string
+      format: date
+
+TemporaryWorkerExceptionRequest:
+  type: object
+  additionalProperties: true
+  required: [idWorker]
+  properties:
+    idWorker:
+      type: string
+      format: uuid
+    minDate:
+      type: string
+      format: date
+    maxDate:
+      type: string
+      format: date
+
+TemporaryDeleteRequest:
+  type: object
+  additionalProperties: true
+  required: [idList, idWorkspace]
+  properties:
+    idList:
+      oneOf:
+        - type: string
+          format: uuid
+        - type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
+    idWorkspace:
+      type: string
+      format: uuid
+
+TemporaryAutocompleteRequest:
+  type: object
+  additionalProperties: true
+  properties:
+    idUser:
+      type: string
+      format: uuid
+
+TemporaryHoursRedisRequest:
+  $ref: "#/WorkerHoursRedisRequest"
+
+WorkerAbsenceListRequest:
+  type: object
+  additionalProperties: true
+  properties:
+    pagination:
+      type: object
+      additionalProperties: true
+  example:
+    pagination:
+      page: 1
+      itemsPerPage: 10
+      filters:
+        idUserFk:
+          value: "65f1d8f1-9fa5-4382-9286-b5938f5cf44f"
+        idWorkspaceFk:
+          value: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+
+WorkerAbsenceAddRequest:
+  type: object
+  additionalProperties: true
+  required: [idUserFk, idCompanyFk, idWorkspaceFk, startDate, endDate]
+  properties:
+    idUserFk:
+      type: string
+      format: uuid
+    idCompanyFk:
+      type: string
+      format: uuid
+    idWorkspaceFk:
+      type: string
+      format: uuid
+    idEventFk:
+      type: string
+      format: uuid
+      description: Optional event id if backend flow uses connect instead of creating event.
+    title:
+      type: string
+    description:
+      type: string
+    startDate:
+      type: string
+      format: date-time
+    endDate:
+      type: string
+      format: date-time
+    eventPurposeType:
+      $ref: "#/EventPurposeType"
+  example:
+    idUserFk: "65f1d8f1-9fa5-4382-9286-b5938f5cf44f"
+    startDate: "2026-02-19T18:24:17.536Z"
+    endDate: "2026-02-19T18:24:17.536Z"
+    eventPurposeType: VACATION
+    description: "asd"
+    idWorkspaceFk: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+    idCompanyFk: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+    title: "Test Title ausencia"
+
+WorkerAbsenceByWorkspaceRequest:
+  type: object
+  additionalProperties: true
+  required: [idWorkspace]
+  properties:
+    idWorkspace:
+      type: string
+      format: uuid
+
+WorkerAbsenceByUserRequest:
+  type: object
+  additionalProperties: true
+  required: [idUser]
+  properties:
+    idUser:
+      type: string
+      format: uuid
+
+WorkerAbsenceUpdateRequest:
+  type: object
+  additionalProperties: true
+  required: [idUserFk, startDate, endDate]
+  properties:
+    id:
+      type: string
+      format: uuid
+    idEventFk:
+      type: string
+      format: uuid
+    idUserFk:
+      type: string
+      format: uuid
+    idCompanyFk:
+      type: string
+      format: uuid
+    idWorkspaceFk:
+      type: string
+      format: uuid
+    startDate:
+      type: string
+      format: date-time
+    endDate:
+      type: string
+      format: date-time
+    title:
+      type: string
+    description:
+      type: string
+    eventPurposeType:
+      $ref: "#/EventPurposeType"
+  example:
+    id: "a22086e4-daef-4487-9a9e-863e04bff35f"
+    idUserFk: "65f1d8f1-9fa5-4382-9286-b5938f5cf44f"
+    startDate: "2026-02-16T23:00:00.000Z"
+    endDate: "2026-02-17T22:59:59.999Z"
+    eventPurposeType: VACATION
+    description: "Descansa este días"
+    idWorkspaceFk: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+    idCompanyFk: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+    title: "Test Title ausencia"
+
+WorkerAbsenceDeleteRequest:
+  $ref: "#/DeleteByIdListRequest"

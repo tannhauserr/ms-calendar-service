@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../../../../lib/prisma";
-import { ErrorCatalogByDomain } from "../../../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../../models/error-codes";
 
 type UpdateEventInput = {
     id: string;
@@ -67,7 +67,6 @@ type UpdateContext = {
     originalGroupEventsBefore: MinimalEvent[];
     affectedGroupIds: Set<string>;
 };
-const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 export class UpdateEventByIdUseCase {
     /**

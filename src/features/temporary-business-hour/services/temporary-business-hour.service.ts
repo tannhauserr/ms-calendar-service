@@ -1,16 +1,14 @@
 import { Event, EventPurposeType, Prisma, TemporaryBusinessHour } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
-import { ErrorCatalogByDomain } from "../../../models/error-codes";
-import { Pagination } from "../../../models/pagination";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../models/error-codes";
+import { Pagination, normalizePaginationInput } from "../../../models/pagination";
 import { getGeneric } from "../../../utils/get-genetic/getGenetic";
 import moment from "moment";
 import { TemporaryHoursMapType } from "../../../models/interfaces/temporary-business-hours-type";
 import { TemporaryHoursStrategy } from "../../../services/@redis/cache/strategies/temporaryHours/temporaryHours.strategy";
 import { TIME_SECONDS } from "../../../constant/time";
 import { HoursRangeInput, normalizeRange, isWithin, listDaysInclusive } from "../interfaces";
-
-const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 export class TemporaryBusinessHourService {
     /** Creates a service instance. */
@@ -225,145 +223,144 @@ export class TemporaryBusinessHourService {
         }
     }
 
-    /** Returns one temporary business-hour exception by id. */
-    async getTemporaryBusinessHourById(id: string): Promise<Partial<TemporaryBusinessHour> | null> {
-        try {
-            return await prisma.temporaryBusinessHour.findUnique({
-                where: { id: id },
-                select: {
-                    id: true,
-                    title: true,
-                    description: true,
-                    date: true,
-                    startTime: true,
-                    endTime: true,
-                    closed: true,
-                    idUserFk: true,
-                    idWorkspaceFk: true,
-                    idCompanyFk: true,
-                    idEventFk: true,
-
-                }
-            });
-        } catch (error: any) {
-            throw new CustomError('TemporaryBusinessHour.getTemporaryBusinessHourById', error);
-        }
-    }
-
-    /** Returns temporary business-hour exceptions for a date. */
-    async getTemporaryBusinessHourByDate(date: Date): Promise<Partial<TemporaryBusinessHour>[]> {
-        try {
-            const startDate = moment(date).startOf('day').toDate();
-            const endDate = moment(date).endOf('day').toDate();
-
-            return await prisma.temporaryBusinessHour.findMany({
-                where: {
-                    date: {
-                        gte: startDate,  // Mayor o igual al inicio del día
-                        lt: endDate      // Menor que el inicio del día siguiente
-                    }
-                },
-                select: {
-                    id: true,
-                    title: true,
-                    description: true,
-                    date: true,
-                    idWorkspaceFk: true,
-                    idCompanyFk: true,
-                    startTime: true,
-                    endTime: true,
-                    closed: true,
-                    idUserFk: true,
-                    createdDate: true,
-                    updatedDate: true,
-                    deletedDate: true,
-                    idEventFk: true,
-                },
-                orderBy: { startTime: 'asc' },
-            });
-        } catch (error: any) {
-            throw new CustomError('TemporaryBusinessHour.getTemporaryBusinessHourById', error);
-        }
-    }
-
-    /** Returns temporary business-hour exceptions for one worker and date. */
-    async getTemporaryBusinessHourByWorkerAndDate(idWorker: string, date: Date): Promise<{
-        id: string;
-        idUserFk: string;
-        date: Date;
-        closed: boolean;
-        startTime: string;
-        endTime: string;
-    }[]> {
-        try {
-            const startDate = moment(date).startOf('day').toDate();
-            const endDate = moment(date).endOf('day').toDate();
-
-            return await prisma.temporaryBusinessHour.findMany({
-                where: {
-                    idUserFk: idWorker,
-                    date: {
-                        gte: startDate,  // Mayor o igual al inicio del día
-                        lt: endDate      // Menor que el inicio del día siguiente
-                    }
-                },
-                select: {
-                    id: true,
-                    date: true,
-                    startTime: true,
-                    endTime: true,
-                    closed: true,
-                    idUserFk: true,
-                },
-                orderBy: { startTime: 'asc' },
-            });
-        } catch (error: any) {
-            throw new CustomError('TemporaryBusinessHour.getTemporaryBusinessHourById', error);
-        }
-    }
-
-
-    
-    /** Returns distinct dates with exceptions for one worker. */
-    async getDistinctDatesWithExceptionsByWorker(idUserFk: string, minDate?: Date, maxDate?: Date): Promise<Date[]> {
-        try {
-            let whereCondition: any = {
-                idUserFk: idUserFk,
-            };
-
-            if (minDate) {
-                const formattedMinDate = moment(minDate).toISOString(); // Aseguramos que es ISO-8601
-                whereCondition.date = {
-                    gte: formattedMinDate,
-                };
-            }
-            if (maxDate) {
-                const formattedMaxDate = moment(maxDate).toISOString(); // Aseguramos que es ISO-8601
-                whereCondition.date = {
-                    ...(whereCondition.date || {}), // Nos aseguramos de no sobreescribir si ya existe gte
-                    lte: formattedMaxDate,
-                };
-            }
-
-            console.log("maxDate", maxDate);
-            console.log("minDate", minDate);
-
-            console.log("whereCondition", whereCondition);
-            const result = await prisma.temporaryBusinessHour.findMany({
-                where: whereCondition,
-                select: {
-                    date: true,
-                },
-                distinct: ['date'], // Solo fechas únicas
-                orderBy: {
-                    date: 'asc',
-                },
-            });
-            return result.map((item) => item.date);
-        } catch (error: any) {
-            throw new CustomError('TemporaryBusinessHour.getDistinctDatesWithExceptionsByWorker', error);
-        }
-    }
+    // Fuera de alcance (scope schedules actual):
+    // /** Returns one temporary business-hour exception by id. */
+    // async getTemporaryBusinessHourById(id: string): Promise<Partial<TemporaryBusinessHour> | null> {
+    //     try {
+    //         return await prisma.temporaryBusinessHour.findUnique({
+    //             where: { id: id },
+    //             select: {
+    //                 id: true,
+    //                 title: true,
+    //                 description: true,
+    //                 date: true,
+    //                 startTime: true,
+    //                 endTime: true,
+    //                 closed: true,
+    //                 idUserFk: true,
+    //                 idWorkspaceFk: true,
+    //                 idCompanyFk: true,
+    //                 idEventFk: true,
+    //
+    //             }
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError('TemporaryBusinessHour.getTemporaryBusinessHourById', error);
+    //     }
+    // }
+    //
+    // /** Returns temporary business-hour exceptions for a date. */
+    // async getTemporaryBusinessHourByDate(date: Date): Promise<Partial<TemporaryBusinessHour>[]> {
+    //     try {
+    //         const startDate = moment(date).startOf('day').toDate();
+    //         const endDate = moment(date).endOf('day').toDate();
+    //
+    //         return await prisma.temporaryBusinessHour.findMany({
+    //             where: {
+    //                 date: {
+    //                     gte: startDate,  // Mayor o igual al inicio del día
+    //                     lt: endDate      // Menor que el inicio del día siguiente
+    //                 }
+    //             },
+    //             select: {
+    //                 id: true,
+    //                 title: true,
+    //                 description: true,
+    //                 date: true,
+    //                 idWorkspaceFk: true,
+    //                 idCompanyFk: true,
+    //                 startTime: true,
+    //                 endTime: true,
+    //                 closed: true,
+    //                 idUserFk: true,
+    //                 createdDate: true,
+    //                 updatedDate: true,
+    //                 deletedDate: true,
+    //                 idEventFk: true,
+    //             },
+    //             orderBy: { startTime: 'asc' },
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError('TemporaryBusinessHour.getTemporaryBusinessHourById', error);
+    //     }
+    // }
+    //
+    // /** Returns temporary business-hour exceptions for one worker and date. */
+    // async getTemporaryBusinessHourByWorkerAndDate(idWorker: string, date: Date): Promise<{
+    //     id: string;
+    //     idUserFk: string;
+    //     date: Date;
+    //     closed: boolean;
+    //     startTime: string;
+    //     endTime: string;
+    // }[]> {
+    //     try {
+    //         const startDate = moment(date).startOf('day').toDate();
+    //         const endDate = moment(date).endOf('day').toDate();
+    //
+    //         return await prisma.temporaryBusinessHour.findMany({
+    //             where: {
+    //                 idUserFk: idWorker,
+    //                 date: {
+    //                     gte: startDate,  // Mayor o igual al inicio del día
+    //                     lt: endDate      // Menor que el inicio del día siguiente
+    //                 }
+    //             },
+    //             select: {
+    //                 id: true,
+    //                 date: true,
+    //                 startTime: true,
+    //                 endTime: true,
+    //                 closed: true,
+    //                 idUserFk: true,
+    //             },
+    //             orderBy: { startTime: 'asc' },
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError('TemporaryBusinessHour.getTemporaryBusinessHourById', error);
+    //     }
+    // }
+    //
+    // /** Returns distinct dates with exceptions for one worker. */
+    // async getDistinctDatesWithExceptionsByWorker(idUserFk: string, minDate?: Date, maxDate?: Date): Promise<Date[]> {
+    //     try {
+    //         let whereCondition: any = {
+    //             idUserFk: idUserFk,
+    //         };
+    //
+    //         if (minDate) {
+    //             const formattedMinDate = moment(minDate).toISOString(); // Aseguramos que es ISO-8601
+    //             whereCondition.date = {
+    //                 gte: formattedMinDate,
+    //             };
+    //         }
+    //         if (maxDate) {
+    //             const formattedMaxDate = moment(maxDate).toISOString(); // Aseguramos que es ISO-8601
+    //             whereCondition.date = {
+    //                 ...(whereCondition.date || {}), // Nos aseguramos de no sobreescribir si ya existe gte
+    //                 lte: formattedMaxDate,
+    //             };
+    //         }
+    //
+    //         console.log("maxDate", maxDate);
+    //         console.log("minDate", minDate);
+    //
+    //         console.log("whereCondition", whereCondition);
+    //         const result = await prisma.temporaryBusinessHour.findMany({
+    //             where: whereCondition,
+    //             select: {
+    //                 date: true,
+    //             },
+    //             distinct: ['date'], // Solo fechas únicas
+    //             orderBy: {
+    //                 date: 'asc',
+    //             },
+    //         });
+    //         return result.map((item) => item.date);
+    //     } catch (error: any) {
+    //         throw new CustomError('TemporaryBusinessHour.getDistinctDatesWithExceptionsByWorker', error);
+    //     }
+    // }
 
 
     /** Updates a temporary business-hour exception and linked event. */
@@ -458,34 +455,37 @@ export class TemporaryBusinessHourService {
         }
     }
 
-    /** Returns temporary business-hour records with generic pagination. */
-    async getTemporaryBusinessHours(pagination: Pagination, isUserTemporaryTemporaryBusinessHours = true) {
-        try {
-            let select: Prisma.TemporaryBusinessHourSelect = {
-                id: true,
-                date: true,
-                startTime: true,
-                endTime: true,
-                closed: true,
-                idUserFk: true,
-                idWorkspaceFk: true,
-            };
-
-            const result = await getGeneric(pagination, "temporaryBusinessHour", select);
-            return result;
-        } catch (error: any) {
-            throw new CustomError('TemporaryBusinessHour.getTemporaryTemporaryBusinessHours', error);
-        }
-    }
+    // Fuera de alcance (scope schedules actual):
+    // /** Returns temporary business-hour records with generic pagination. */
+    // async getTemporaryBusinessHours(pagination: Pagination, isUserTemporaryTemporaryBusinessHours = true) {
+    //     try {
+    //         let select: Prisma.TemporaryBusinessHourSelect = {
+    //             id: true,
+    //             date: true,
+    //             startTime: true,
+    //             endTime: true,
+    //             closed: true,
+    //             idUserFk: true,
+    //             idWorkspaceFk: true,
+    //         };
+    //
+    //         const result = await getGeneric(pagination, "temporaryBusinessHour", select);
+    //         return result;
+    //     } catch (error: any) {
+    //         throw new CustomError('TemporaryBusinessHour.getTemporaryTemporaryBusinessHours', error);
+    //     }
+    // }
 
 
     /** Returns grouped temporary business-hour records with pagination. */
     async getTemporaryBusinessHours2(pagination?: Pagination): Promise<any> {
         try {
-            const pageRaw = Number(pagination?.page ?? 1);
-            const itemsPerPageRaw = Number(pagination?.itemsPerPage ?? 20);
-            const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
-            const itemsPerPage = Number.isFinite(itemsPerPageRaw) && itemsPerPageRaw > 0 ? itemsPerPageRaw : 20;
+            const normalized = normalizePaginationInput(pagination, {
+                context: "default",
+                defaultItemsPerPage: 20,
+            });
+            const page = normalized.page;
+            const itemsPerPage = normalized.itemsPerPage;
             const skip = (page - 1) * itemsPerPage;
             const take = itemsPerPage;
 
@@ -681,95 +681,96 @@ export class TemporaryBusinessHourService {
     }
 
 
-    /** Returns temporary hours from cache and backfills missing dates from database. */
-    getTemporaryHoursFromRedis = async (
-        userIds: string[],
-        idWorkspace: string,
-        range?: HoursRangeInput
-    ): Promise<TemporaryHoursMapType> => {
-        try {
-            const temporaryHoursMap: TemporaryHoursMapType = {};
-            const temporaryHoursStrategy = new TemporaryHoursStrategy();
-
-            const { start, end } = normalizeRange(range, true);
-
-
-            const wantedDays = listDaysInclusive(start, end);
-            const startDate = moment(start, "YYYY-MM-DD").toDate();
-            const endDate = moment(end, "YYYY-MM-DD").toDate();
-
-            for (const userId of userIds) {
-                const cached =
-                    (await temporaryHoursStrategy.getTemporaryHours(idWorkspace, userId)) || {};
-                const covered = new Set(Object.keys(cached));
-                const missingDays = wantedDays.filter((d) => !covered.has(d));
-                const merged: { [date: string]: string[][] | null } = { ...cached };
-
-                if (missingDays.length > 0) {
-                    let records: any[] = [];
-                    const THRESHOLD_IN = 6;
-                    if (missingDays.length <= THRESHOLD_IN) {
-                        records = await prisma.temporaryBusinessHour.findMany({
-                            where: {
-                                idWorkspaceFk: idWorkspace,
-                                idUserFk: userId,
-                                deletedDate: null,
-                                date: { in: missingDays.map((d) => new Date(d)) },
-                            },
-                        });
-                    } else {
-                        records = await prisma.temporaryBusinessHour.findMany({
-                            where: {
-                                idWorkspaceFk: idWorkspace,
-                                idUserFk: userId,
-                                deletedDate: null,
-                                date: { gte: startDate, lte: endDate },
-                            },
-                        });
-                    }
-                    const patch: { [date: string]: string[][] | null } = {};
-                    for (const record of records) {
-                        const dateStr = moment(record.date).format("YYYY-MM-DD");
-                        if (!isWithin(dateStr, start, end)) continue;
-
-                        if (record?.closed) {
-                            patch[dateStr] = null;
-                            continue;
-                        }
-                        if (!record.startTime || !record.endTime) continue;
-
-                        const startTime = record.startTime as unknown as string;
-                        const endTime = record.endTime as unknown as string;
-
-                        if (!patch[dateStr]) patch[dateStr] = [];
-                        (patch[dateStr] as string[][]).push([startTime, endTime]);
-                    }
-                    if (Object.keys(patch).length > 0) {
-                        for (const [k, v] of Object.entries(patch)) {
-                            merged[k] = v;
-                        }
-
-                        await temporaryHoursStrategy.saveTemporaryHours(
-                            idWorkspace,
-                            userId,
-                            merged,
-                            TIME_SECONDS.HOUR
-                        );
-                    }
-                }
-                const filtered: { [date: string]: string[][] | null } = {};
-                for (const d of wantedDays) {
-                    if (d in merged) filtered[d] = merged[d];
-                }
-
-                temporaryHoursMap[userId] = filtered;
-            }
-
-            return temporaryHoursMap;
-        } catch (error: any) {
-            throw new CustomError('TemporaryBusinessHour.getTemporaryHoursFromRedis', error);
-        }
-    };
+    // Fuera de alcance (scope schedules actual):
+    // /** Returns temporary hours from cache and backfills missing dates from database. */
+    // getTemporaryHoursFromRedis = async (
+    //     userIds: string[],
+    //     idWorkspace: string,
+    //     range?: HoursRangeInput
+    // ): Promise<TemporaryHoursMapType> => {
+    //     try {
+    //         const temporaryHoursMap: TemporaryHoursMapType = {};
+    //         const temporaryHoursStrategy = new TemporaryHoursStrategy();
+    //
+    //         const { start, end } = normalizeRange(range, true);
+    //
+    //
+    //         const wantedDays = listDaysInclusive(start, end);
+    //         const startDate = moment(start, "YYYY-MM-DD").toDate();
+    //         const endDate = moment(end, "YYYY-MM-DD").toDate();
+    //
+    //         for (const userId of userIds) {
+    //             const cached =
+    //                 (await temporaryHoursStrategy.getTemporaryHours(idWorkspace, userId)) || {};
+    //             const covered = new Set(Object.keys(cached));
+    //             const missingDays = wantedDays.filter((d) => !covered.has(d));
+    //             const merged: { [date: string]: string[][] | null } = { ...cached };
+    //
+    //             if (missingDays.length > 0) {
+    //                 let records: any[] = [];
+    //                 const THRESHOLD_IN = 6;
+    //                 if (missingDays.length <= THRESHOLD_IN) {
+    //                     records = await prisma.temporaryBusinessHour.findMany({
+    //                         where: {
+    //                             idWorkspaceFk: idWorkspace,
+    //                             idUserFk: userId,
+    //                             deletedDate: null,
+    //                             date: { in: missingDays.map((d) => new Date(d)) },
+    //                         },
+    //                     });
+    //                 } else {
+    //                     records = await prisma.temporaryBusinessHour.findMany({
+    //                         where: {
+    //                             idWorkspaceFk: idWorkspace,
+    //                             idUserFk: userId,
+    //                             deletedDate: null,
+    //                             date: { gte: startDate, lte: endDate },
+    //                         },
+    //                     });
+    //                 }
+    //                 const patch: { [date: string]: string[][] | null } = {};
+    //                 for (const record of records) {
+    //                     const dateStr = moment(record.date).format("YYYY-MM-DD");
+    //                     if (!isWithin(dateStr, start, end)) continue;
+    //
+    //                     if (record?.closed) {
+    //                         patch[dateStr] = null;
+    //                         continue;
+    //                     }
+    //                     if (!record.startTime || !record.endTime) continue;
+    //
+    //                     const startTime = record.startTime as unknown as string;
+    //                     const endTime = record.endTime as unknown as string;
+    //
+    //                     if (!patch[dateStr]) patch[dateStr] = [];
+    //                     (patch[dateStr] as string[][]).push([startTime, endTime]);
+    //                 }
+    //                 if (Object.keys(patch).length > 0) {
+    //                     for (const [k, v] of Object.entries(patch)) {
+    //                         merged[k] = v;
+    //                     }
+    //
+    //                     await temporaryHoursStrategy.saveTemporaryHours(
+    //                         idWorkspace,
+    //                         userId,
+    //                         merged,
+    //                         TIME_SECONDS.HOUR
+    //                     );
+    //                 }
+    //             }
+    //             const filtered: { [date: string]: string[][] | null } = {};
+    //             for (const d of wantedDays) {
+    //                 if (d in merged) filtered[d] = merged[d];
+    //             }
+    //
+    //             temporaryHoursMap[userId] = filtered;
+    //         }
+    //
+    //         return temporaryHoursMap;
+    //     } catch (error: any) {
+    //         throw new CustomError('TemporaryBusinessHour.getTemporaryHoursFromRedis', error);
+    //     }
+    // };
 
 
     /** Returns all temporary rows that belong to deletion scope. */

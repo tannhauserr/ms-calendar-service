@@ -166,16 +166,24 @@ async function initializeServices() {
     // JWT key (si es sync, no pasa nada; si es async, mejor con await)
     await JWTService.instance.getPrivateKey();
 
-    // Redis singletons
-    RedisCacheService.instance;
-    RedisPublisherService.instance;
-    RedisSubscriberService.instance;
+    if (env.ENABLE_REDIS) {
+      // Redis singletons
+      RedisCacheService.instance;
+      RedisPublisherService.instance;
+      RedisSubscriberService.instance;
 
-    // Redis subscriptions
-    initializeSubscriptionsRedis();
+      // Redis subscriptions
+      initializeSubscriptionsRedis();
+    } else {
+      logger.warn("Redis deshabilitado por entorno (ENABLE_REDIS=false)");
+    }
 
-    // RabbitMQ consumers
-    await initializeConsumerPubSub_RabbitMQ();
+    if (env.ENABLE_RABBITMQ) {
+      // RabbitMQ consumers
+      await initializeConsumerPubSub_RabbitMQ();
+    } else {
+      logger.warn("RabbitMQ deshabilitado por entorno (ENABLE_RABBITMQ=false)");
+    }
 
     // Crons
     CheckCacheCronService.instance.start();

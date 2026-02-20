@@ -50,49 +50,46 @@ export class WorkerBusinessHourController {
         }
     }
 
-    /** Returns worker business-hour records. */
-    public get = async (req: any, res: any, next: any) => {
-        try {
-            const { pagination } = req.body as GetWorkerBusinessHoursDto;
-            const token = req.token;
-            await this.jwtService.verify(token);
-
-            const result = await this.workBusinessHourService.getWorkerBusinessHours();
-            res.status(200).json({ message: "Registros encontrados", ok: true, item: result });
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
-
-    /** Returns a worker business-hour record by id. */
-    public getById = async (req: any, res: any, next: any) => {
-        try {
-            const { id } = req.params as WorkerBusinessHourIdParamsDto;
-            const token = req.token;
-            await this.jwtService.verify(token);
-
-            const result = await this.workBusinessHourService.getWorkerBusinessHourById(id);
-            res.status(200).json(Response.build("Registro encontrado", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
-
-    /** Returns worker business-hour records by weekday. */
-    public getByWeekDay = async (req: any, res: any, next: any) => {
-        try {
-            const { weekDayType } = req.params as WorkerBusinessHourWeekDayParamsDto;
-            const token = req.token;
-            await this.jwtService.verify(token);
-
-            const result = await this.workBusinessHourService.getWorkerBusinessHourByWeekDay(weekDayType);
-            res.status(200).json(Response.build("Registro encontrado", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
-
-    /** Returns worker business-hour records by worker and workspace. */
+    // Fuera de alcance (scope schedules actual):
+    // public get = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { pagination } = req.body as GetWorkerBusinessHoursDto;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+    //
+    //         const result = await this.workBusinessHourService.getWorkerBusinessHours();
+    //         res.status(200).json({ message: "Registros encontrados", ok: true, item: result });
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
+    //
+    // public getById = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { id } = req.params as WorkerBusinessHourIdParamsDto;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+    //
+    //         const result = await this.workBusinessHourService.getWorkerBusinessHourById(id);
+    //         res.status(200).json(Response.build("Registro encontrado", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
+    //
+    // public getByWeekDay = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { weekDayType } = req.params as WorkerBusinessHourWeekDayParamsDto;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+    //
+    //         const result = await this.workBusinessHourService.getWorkerBusinessHourByWeekDay(weekDayType);
+    //         res.status(200).json(Response.build("Registro encontrado", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
+    //
     public getByWorkerAndWorkspace = async (req: any, res: any, next: any) => {
         try {
             const { idWorker, idWorkspace } = req.params as WorkerBusinessHourByWorkerAndWorkspaceParamsDto;
@@ -143,7 +140,6 @@ export class WorkerBusinessHourController {
         }
     }
 
-    /** Returns worker business-hour data from cache/database. */
     getWorkerHoursFromRedis = async (req: any, res: any, next: any) => {
         try {
             const { idUserList, idWorkspace } = req.body as WorkerHoursRedisDto;

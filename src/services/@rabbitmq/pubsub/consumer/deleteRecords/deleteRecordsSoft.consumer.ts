@@ -4,6 +4,9 @@ import { RabbitPubSubService } from "../../facade-pubsub/rabbit-pubsub.service";
 import prisma from "../../../../../lib/prisma";
 import { RabbitMQKeys } from "../../../keys/rabbitmq.keys";
 import { RequestDeleteRecords } from "./interfaces";
+import { RedisStrategyFactory } from "../../../../@redis/cache/strategies/redisStrategyFactory";
+import { MessageReliabilityStrategy } from "../../../../@redis/cache/strategies/messageReliability/message-reliability.strategy";
+import { DeadLetterMessageService } from "../../dead-letter/dead-letter-message.service";
 
 export const deleteSOFTRecordsConsumers = {
     deleteSOFTRecordsConsumer,
@@ -41,6 +44,31 @@ function getRetryCount(msg: ConsumeMessage): number {
     return Number.isFinite(c) && c > 0 ? c : 0;
 }
 
+function sanitizeHeaders(headers: unknown): Record<string, unknown> {
+    const source = (headers ?? {}) as Record<string, unknown>;
+    const out: Record<string, unknown> = { ...source };
+    delete out["x-death"];
+    delete out["x-first-death-exchange"];
+    delete out["x-first-death-queue"];
+    delete out["x-first-death-reason"];
+    delete out["x-retry"];
+    return out;
+}
+
+function extractDeadLetterReason(rawMsg: ConsumeMessage): string | null {
+    const headers = (rawMsg.properties.headers ?? {}) as Record<string, unknown>;
+    const firstReason = headers["x-first-death-reason"];
+    if (typeof firstReason === "string" && firstReason.trim().length > 0) return firstReason;
+
+    const deaths = headers["x-death"] as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(deaths) && deaths.length > 0) {
+        const reason = deaths[0]?.reason;
+        if (typeof reason === "string" && reason.trim().length > 0) return reason;
+    }
+
+    return null;
+}
+
 /* -------------------- Config -------------------- */
 const PREFETCH = Math.min(3, Number(process.env.RABBITMQ_PREFETCH_DELETE_RECORDS) || 1);
 const MAX_RETRIES = Number(process.env.DELETE_MAX_RETRIES) || 3;
@@ -63,6 +91,16 @@ const DLQ = RabbitMQKeys.pubSubDeleteCalendarDLQ();
 // Cola de reintentos con TTL (DL de vuelta a la principal)
 const RETRY_QUEUE = `${QUEUE}.retry`;
 const ROUTING_KEY_RETRY = `${ROUTING_KEY}.retry`;
+const ROUTING_KEY_DLQ = DLQ;
+
+const IDEMPOTENCY_SCOPE = "deleteSOFTRecords";
+const IDEMPOTENCY_LOCK_TTL_SECONDS = Number(process.env.RABBITMQ_IDEMPOTENCY_LOCK_TTL_SECONDS || 120);
+const IDEMPOTENCY_PROCESSED_TTL_SECONDS = Number(
+    process.env.RABBITMQ_IDEMPOTENCY_PROCESSED_TTL_SECONDS || 7 * 24 * 60 * 60
+);
+
+const messageReliability = RedisStrategyFactory.getStrategy("messageReliability") as MessageReliabilityStrategy;
+const deadLetterMessageService = DeadLetterMessageService.instance;
 
 /* -------------------- Consumer principal -------------------- */
 async function deleteSOFTRecordsConsumer(): Promise<void> {
@@ -129,23 +167,21 @@ async function deleteSOFTRecordsConsumer(): Promise<void> {
                 return nack(false);
             }
 
-            // 🔪 Guard: split de mensajes gigantes para paralelismo real
-            if (ids.length > MAX_IDS_PER_MSG) {
-                const msgChunks = chunkArray(ids, MAX_IDS_PER_MSG);
-                console.warn(
-                    `[Calendar-MS][Delete] Oversized message: ${ids.length} ids → republishing ${msgChunks.length} msgs`
-                );
-                for (const c of msgChunks) {
-                    const retries = getRetryCount(raw);
+            const messageDigest = messageReliability.buildMessageDigest(raw.content.toString("utf8"));
 
-                    await rabbit.publishToExchange(
-                        EXCHANGE,
-                        ROUTING_KEY,
-                        { table, ids: c, idRelation },
-                        // Aquí mantenemos el header de retries
-                        { persistent: true, headers: { "x-retry": retries } }
-                    );
-                }
+            if (await messageReliability.isMessageProcessed(IDEMPOTENCY_SCOPE, messageDigest)) {
+                console.warn(`[Calendar-MS][Delete] duplicate already processed: table=${table}`);
+                return ack();
+            }
+
+            const lockAcquired = await messageReliability.acquireMessageLock(
+                IDEMPOTENCY_SCOPE,
+                messageDigest,
+                IDEMPOTENCY_LOCK_TTL_SECONDS
+            );
+
+            if (!lockAcquired) {
+                console.warn(`[Calendar-MS][Delete] duplicate in-flight ignored: table=${table}`);
                 return ack();
             }
 
@@ -153,6 +189,29 @@ async function deleteSOFTRecordsConsumer(): Promise<void> {
             console.log(`[Calendar-MS][Delete] → ${table} (${ids.length} ids) retry#${retries}`);
 
             try {
+                // 🔪 Guard: split de mensajes gigantes para paralelismo real
+                if (ids.length > MAX_IDS_PER_MSG) {
+                    const msgChunks = chunkArray(ids, MAX_IDS_PER_MSG);
+                    console.warn(
+                        `[Calendar-MS][Delete] Oversized message: ${ids.length} ids → republishing ${msgChunks.length} msgs`
+                    );
+                    for (const chunk of msgChunks) {
+                        await rabbit.publishToExchange(
+                            EXCHANGE,
+                            ROUTING_KEY,
+                            { table, ids: chunk, idRelation },
+                            { persistent: true, headers: { "x-retry": retries } }
+                        );
+                    }
+
+                    await messageReliability.markMessageProcessed(
+                        IDEMPOTENCY_SCOPE,
+                        messageDigest,
+                        IDEMPOTENCY_PROCESSED_TTL_SECONDS
+                    );
+                    return ack();
+                }
+
                 const now = new Date();
 
                 /* ---- SOFT DELETE por tabla (en chunks/tx) ---- */
@@ -605,11 +664,16 @@ async function deleteSOFTRecordsConsumer(): Promise<void> {
                     console.log(`[Calendar-MS][Delete] Tabla ${table} no procesada (ignorada).`);
                 }
 
+                await messageReliability.markMessageProcessed(
+                    IDEMPOTENCY_SCOPE,
+                    messageDigest,
+                    IDEMPOTENCY_PROCESSED_TTL_SECONDS
+                );
+
                 ack();
             } catch (err) {
                 console.error("[Calendar-MS][Delete] Error procesando:", err);
 
-                const retries = getRetryCount(raw);
                 if (retries >= MAX_RETRIES) {
                     console.error("[Calendar-MS][Delete] 💀 Max retries alcanzado → DLQ");
                     return nack(false); // sin requeue → DLQ
@@ -617,11 +681,12 @@ async function deleteSOFTRecordsConsumer(): Promise<void> {
 
                 // Reintento diferido (TTL)
                 try {
+                    const safeHeaders = sanitizeHeaders(raw.properties.headers);
                     await RabbitPubSubService.instance.publishToExchange(
                         EXCHANGE,
                         ROUTING_KEY_RETRY,
                         raw ? JSON.parse(raw.content.toString()) : { table, ids, idRelation },
-                        { persistent: true, headers: { "x-retry": retries + 1 } }
+                        { persistent: true, headers: { ...safeHeaders, "x-retry": retries + 1 } }
                     );
                     console.warn(`[Calendar-MS][Delete] 🔄 Programado retry #${retries + 1} en ${RETRY_DELAY_MS}ms`);
                     ack();
@@ -629,12 +694,18 @@ async function deleteSOFTRecordsConsumer(): Promise<void> {
                     console.error("[Calendar-MS][Delete] ❗ Error re-publicando a retry; envío a DLQ", pubErr);
                     nack(false);
                 }
+            } finally {
+                try {
+                    await messageReliability.releaseMessageLock(IDEMPOTENCY_SCOPE, messageDigest);
+                } catch (releaseError) {
+                    console.error("[Calendar-MS][Delete] Error releasing idempotency lock", releaseError);
+                }
             }
         }
     );
 }
 
-/* -------------------- Consumer DLQ (observa/ACKea) -------------------- */
+/* -------------------- Consumer DLQ (persistencia + ACK) -------------------- */
 async function deleteSOFTRecordsDLQConsumer(): Promise<void> {
     const rabbit = RabbitPubSubService.instance;
     const channel: Channel = await rabbit.connect();
@@ -653,11 +724,22 @@ async function deleteSOFTRecordsDLQConsumer(): Promise<void> {
     await rabbit.consumeQueue<any>(
         DLQ,
         async (content, raw, ack) => {
-            console.error("[Calendar-MS][Delete][DLQ] Mensaje muerto:", {
-                headers: raw.properties.headers,
-                content,
-            });
-            // Aquí podrías persistir en tabla failed_messages, alertar, etc.
+            try {
+                await deadLetterMessageService.registerMessage({
+                    queueName: DLQ,
+                    exchangeName: EXCHANGE,
+                    routingKey: ROUTING_KEY,
+                    sourceRoutingKey: raw.fields?.routingKey ?? ROUTING_KEY_DLQ,
+                    consumerName: "deleteSOFTRecordsConsumer",
+                    payload: content,
+                    headers: (raw.properties.headers ?? {}) as Record<string, unknown>,
+                    retryCount: getRetryCount(raw),
+                    errorMessage: extractDeadLetterReason(raw),
+                });
+            } catch (persistError) {
+                console.error("[Calendar-MS][Delete][DLQ] Error persistiendo mensaje muerto:", persistError);
+            }
+
             ack();
         }
     );

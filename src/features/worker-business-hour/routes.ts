@@ -32,20 +32,21 @@ router.post(
     controller.add
 );
 
-router.post(
-    "/worker-business-hours/search",
-    JWTService.authCookieOrBearer,
-    validateBody(getWorkerBusinessHoursSchema),
-    controller.get
-);
-
-router.get(
-    "/worker-business-hours/by-weekday/:weekDayType",
-    JWTService.authCookieOrBearer,
-    validateParams(workerBusinessHourWeekDayParamsSchema),
-    controller.getByWeekDay
-);
-
+// Fuera de alcance (scope schedules actual):
+// router.post(
+//     "/worker-business-hours/search",
+//     JWTService.authCookieOrBearer,
+//     validateBody(getWorkerBusinessHoursSchema),
+//     controller.get
+// );
+//
+// router.get(
+//     "/worker-business-hours/by-weekday/:weekDayType",
+//     JWTService.authCookieOrBearer,
+//     validateParams(workerBusinessHourWeekDayParamsSchema),
+//     controller.getByWeekDay
+// );
+//
 router.get(
     "/worker-business-hours/by-worker/:idWorker/workspace/:idWorkspace",
     JWTService.authCookieOrBearer,
@@ -88,12 +89,12 @@ router.post(
     ],
     controller.getWorkerHoursFromRedis
 );
-
-router.get(
-    "/worker-business-hours/:id",
-    JWTService.authCookieOrBearer,
-    validateParams(workerBusinessHourIdParamsSchema),
-    controller.getById
-);
+//
+// router.get(
+//     "/worker-business-hours/:id",
+//     JWTService.authCookieOrBearer,
+//     validateParams(workerBusinessHourIdParamsSchema),
+//     controller.getById
+// );
 
 export default router;

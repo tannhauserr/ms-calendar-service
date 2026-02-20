@@ -37,13 +37,13 @@ router.post(
     validateBody(getBusinessHoursSchema),
     controller.get
 );
-
-router.get(
-    "/business-hours/by-weekday/:weekDayType",
-    JWTService.authCookieOrBearer,
-    validateParams(businessHourWeekDayParamsSchema),
-    controller.getByWeekDay
-);
+//
+// router.get(
+//     "/business-hours/by-weekday/:weekDayType",
+//     JWTService.authCookieOrBearer,
+//     validateParams(businessHourWeekDayParamsSchema),
+//     controller.getByWeekDay
+// );
 
 router.put(
     "/business-hours/:id",
@@ -77,12 +77,12 @@ router.post(
     validateBody(businessHoursRedisSchema),
     controller.getBusinessHoursFromRedis
 );
-
-router.get(
-    "/business-hours/:id",
-    JWTService.authCookieOrBearer,
-    validateParams(businessHourIdParamsSchema),
-    controller.getById
-);
+//
+// router.get(
+//     "/business-hours/:id",
+//     JWTService.authCookieOrBearer,
+//     validateParams(businessHourIdParamsSchema),
+//     controller.getById
+// );
 
 export default router;

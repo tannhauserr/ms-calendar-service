@@ -1,12 +1,11 @@
 import { EventStatusType } from "@prisma/client";
 import prisma from "../../../../lib/prisma";
-import { ErrorCatalogByDomain } from "../../../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../../models/error-codes";
 
 export type ChangeEventStatusResult = {
     events: any[];
     notifyEvents: any[];
 };
-const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 const ALLOWED: Record<EventStatusType, EventStatusType[]> = {
     PENDING: [

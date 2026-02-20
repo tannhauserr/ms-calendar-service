@@ -1,6 +1,6 @@
 // strategies/user-company-role.strategy.ts
 import { TIME_SECONDS } from "../../../../../constant/time";
-import { IRedisUserCompanyRoleStrategy } from "../../interfaces/interfaces";
+import { IRedisUserCompanyRoleStrategy } from "./interfaces";
 import { TokenKeys } from "../../keys/token.keys";
 import { RedisCacheService } from "../../redis.service";
 

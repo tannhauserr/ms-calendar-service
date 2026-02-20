@@ -3,7 +3,7 @@ import { EventPlatformController } from "./controllers/event-platform.controller
 import { OnlyAdminMiddleware } from "../../middlewares/only-admin.middleware";
 import { JWTService } from "../../services/jwt/jwt.service";
 import { RequestIdempotencyMiddleware } from "../../middlewares/request-idempotency.middleware";
-import { validateBody, validateParams } from "../../middlewares/validate-zod.middleware";
+import { validateBody, validateParams, validateQuery } from "../../middlewares/validate-zod.middleware";
 import {
     changeEventStatusBodySchema,
     deleteEventBodySchema,
@@ -13,6 +13,7 @@ import {
     getEventsBodySchema,
     getEventsListBodySchema,
     markCommentAsReadBodySchema,
+    manageEventOptionsQuerySchema,
     updateByIdBodySchema,
     updateByIdParamsSchema,
     upsertEventByPlatformBodySchema,
@@ -114,6 +115,7 @@ router.post(
     [
         JWTService.authCookieOrBearer,
         preventDuplicateClicks,
+        validateQuery(manageEventOptionsQuerySchema),
         validateBody(upsertEventByPlatformBodySchema),
         OnlyAdminMiddleware.allowRoles([
             "ROLE_USER",

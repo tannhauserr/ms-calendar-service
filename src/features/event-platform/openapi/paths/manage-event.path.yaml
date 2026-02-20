@@ -1,0 +1,204 @@
+post:
+  tags:
+    - Event Platform
+  summary: Create or update a booking group from platform sidebar
+  description: >
+    Upserts events for a booking group. Optional query params let you choose worker,
+    start slot (15-minute increments), and event status. `sendNotification` is forced
+    to `false` by backend.
+  security:
+    - bearerAuth: []
+  parameters:
+    - in: query
+      name: worker
+      required: false
+      schema:
+        type: string
+        enum: [David, Grabiella, Scott]
+      description: Assign this worker to all services.
+    - in: query
+      name: startSlot
+      required: false
+      schema:
+        type: string
+        enum:
+          - "08:00"
+          - "08:15"
+          - "08:30"
+          - "08:45"
+          - "09:00"
+          - "09:15"
+          - "09:30"
+          - "09:45"
+          - "10:00"
+          - "10:15"
+          - "10:30"
+          - "10:45"
+          - "11:00"
+          - "11:15"
+          - "11:30"
+          - "11:45"
+          - "12:00"
+          - "12:15"
+          - "12:30"
+          - "12:45"
+          - "13:00"
+          - "13:15"
+          - "13:30"
+          - "13:45"
+          - "14:00"
+          - "14:15"
+          - "14:30"
+          - "14:45"
+          - "15:00"
+          - "15:15"
+          - "15:30"
+          - "15:45"
+          - "16:00"
+          - "16:15"
+          - "16:30"
+          - "16:45"
+          - "17:00"
+          - "17:15"
+          - "17:30"
+          - "17:45"
+          - "18:00"
+          - "18:15"
+          - "18:30"
+          - "18:45"
+          - "19:00"
+          - "19:15"
+          - "19:30"
+          - "19:45"
+          - "20:00"
+      description: Start time in 15-minute slots.
+    - in: query
+      name: date
+      required: false
+      schema:
+        type: string
+        format: date
+        example: "2026-02-20"
+      description: Date used together with `startSlot`.
+    - in: query
+      name: eventStatusType
+      required: false
+      schema:
+        type: string
+        enum:
+          - PENDING
+          - ACCEPTED
+          - CONFIRMED
+          - COMPLETED
+          - CANCELLED
+          - CANCELLED_BY_CLIENT
+          - CANCELLED_BY_CLIENT_REMOVED
+          - PAID
+          - NO_SHOW
+      description: Optional event status.
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: "../schemas/manage-event.request.schema.yaml"
+        examples:
+          createBooking:
+            summary: Create booking
+            value:
+              type: event
+              mode: create
+              idCompany: "2fd3e7b0-10d1-45bf-80d4-00f92ff97a31"
+              idWorkspace: "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+              startDate: "2026-02-20T10:00:00.000Z"
+              endDate: "2026-02-20T11:30:00.000Z"
+              sendNotification: true
+              commentClient: "Cliente prefiere profesional senior"
+              services:
+                - idService: "dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb"
+                  duration: 60
+                  name: "Haircut"
+                  price: 25
+                  discount: 0
+                  idWorker: "2917f4e1-3e9e-4868-a1f0-fc4f26fbf531"
+              clients:
+                - idClient: "a2a81aad-d012-41b8-8c4e-aa5c2e6aa356"
+                  idClientWorkspace: "33f6cd95-1524-4167-b882-f3118ea2ccf6"
+          editBooking:
+            summary: Edit booking
+            value:
+              type: event
+              mode: edit
+              idGroup: "c8494d36-0f56-4247-a83d-72ce5659526c"
+              idCompany: "2fd3e7b0-10d1-45bf-80d4-00f92ff97a31"
+              idWorkspace: "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+              startDate: "2026-02-20T11:00:00.000Z"
+              endDate: "2026-02-20T12:30:00.000Z"
+              sendNotification: false
+              services:
+                - idEvent: "f0ec4583-6d20-4e89-a267-799fd4f10871"
+                  idService: "dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb"
+                  duration: 90
+                  name: "Color"
+                  price: 40
+                  discount: 5
+                  idWorker: "2917f4e1-3e9e-4868-a1f0-fc4f26fbf531"
+              clients:
+                - idClient: "a2a81aad-d012-41b8-8c4e-aa5c2e6aa356"
+                  idClientWorkspace: "33f6cd95-1524-4167-b882-f3118ea2ccf6"
+  responses:
+    "200":
+      description: Booking managed successfully
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/manage-event.success.response.schema.yaml"
+          examples:
+            success:
+              value:
+                message: "Eventos creados exitosamente"
+                ok: true
+                status: 200
+                item:
+                  count: 1
+                  events:
+                    - id: "f0ec4583-6d20-4e89-a267-799fd4f10871"
+                      idGroup: "c8494d36-0f56-4247-a83d-72ce5659526c"
+                      idCompanyFk: "2fd3e7b0-10d1-45bf-80d4-00f92ff97a31"
+                      idWorkspaceFk: "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+    "400":
+      description: Invalid request payload or business validation error
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/generic-error.response.schema.yaml"
+          examples:
+            validationFromMiddleware:
+              value:
+                ok: false
+                message: "type: Invalid literal value, expected \"event\""
+            validationFromController:
+              value:
+                message: "El campo 'services' debe ser un array"
+                ok: false
+                status: 400
+                item: null
+                code: "MSCAL402"
+    "401":
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/generic-error.response.schema.yaml"
+    "403":
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/generic-error.response.schema.yaml"
+    "500":
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/generic-error.response.schema.yaml"

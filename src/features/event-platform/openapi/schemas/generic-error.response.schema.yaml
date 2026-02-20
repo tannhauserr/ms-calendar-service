@@ -1,0 +1,23 @@
+oneOf:
+  - type: object
+    required: [ok, message]
+    properties:
+      ok:
+        type: boolean
+        example: false
+      message:
+        type: string
+  - type: object
+    required: [message, ok, status]
+    properties:
+      message:
+        type: string
+      ok:
+        type: boolean
+        example: false
+      status:
+        type: integer
+      item:
+        nullable: true
+      code:
+        type: string
