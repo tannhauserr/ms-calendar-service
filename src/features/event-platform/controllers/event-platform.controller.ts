@@ -266,9 +266,9 @@ export class EventPlatformController {
 
             const result = await this.commands.changeEventStatusByParticipant(
                 id,
+                action,
                 idClient,
-                idClientWorkspace,
-                action
+                idClientWorkspace
             );
 
             return res.status(200).json(Response.build("Estado del evento actualizado", 200, true, result));

@@ -32,8 +32,8 @@ async function ensureExchange(name: string): Promise<void> {
 function withDefaultsForCreated(payload: StoreNotificationCreatedV1): StoreNotificationCreatedV1 {
     const normalizedStatus = mapStatusToBus((payload.notification as any).status);
     return {
-        v: 1,
         ...payload,
+        v: 1,
         notification: {
             priority: 5,
             ...payload.notification,
@@ -45,8 +45,8 @@ function withDefaultsForCreated(payload: StoreNotificationCreatedV1): StoreNotif
 
 function withDefaultsForDeleted(payload: StoreNotificationDeletedV1): StoreNotificationDeletedV1 {
     return {
-        v: 1,
         ...payload,
+        v: 1,
         trace: payload.trace ?? { correlationId: randomUUID(), producedAt: new Date().toISOString() },
     };
 }
@@ -55,8 +55,8 @@ function withDefaultsForPurgeByBooking(
     payload: StoreNotificationPurgeByBookingV1
 ): StoreNotificationPurgeByBookingV1 {
     return {
-        v: 1,
         ...payload,
+        v: 1,
         trace: payload.trace ?? {
             correlationId: randomUUID(),
             producedAt: new Date().toISOString(),

@@ -1235,7 +1235,7 @@ export class ClientEventService {
             } = input;
             const {
                 timeZoneWorkspace, businessHoursService, workerHoursService,
-                temporaryHoursService, bookingConfig, cache, autoConfirmClientBookings
+                temporaryHoursService, bookingConfig, cache, autoConfirmClientBookings = false
             } = deps;
 
             console.log(CONSOLE_COLOR.FgMagenta, "[addEventFromWeb] input:", input, CONSOLE_COLOR.Reset);
@@ -1840,7 +1840,7 @@ export class ClientEventService {
                 throw new Error("El evento original no pertenece a este workspace");
 
             const isOwner = original.eventParticipant.some(
-                (p) =>
+                (p: { idClientFk?: string | null; idClientWorkspaceFk?: string | null }) =>
                     p.idClientFk === customer.id ||
                     p.idClientWorkspaceFk === customer.idClientWorkspace
             );

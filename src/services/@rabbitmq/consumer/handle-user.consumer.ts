@@ -50,7 +50,7 @@ const processSoftDeleteUserServiceByCompany = async (userId: string, companyId: 
             select: { id: true }, // Solo necesitamos los IDs de los servicios
         });
 
-        const serviceIds = services.map(service => service.id); // Extraemos los IDs de los servicios
+        const serviceIds = services.map((service: { id: string }) => service.id); // Extraemos los IDs de los servicios
 
         if (serviceIds.length > 0) {
             const now = new Date();

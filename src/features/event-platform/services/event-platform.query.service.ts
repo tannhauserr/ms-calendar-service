@@ -239,7 +239,7 @@ export class EventPlatformQueryService {
         return events.map((ev) => ({
             ...ev,
             eventParticipant: ev.eventParticipant.map((p) => {
-                const fullClient = clientMap.get(p.idClientWorkspaceFk) ?? null;
+                const fullClient = p.idClientWorkspaceFk ? clientMap.get(p.idClientWorkspaceFk) ?? null : null;
                 const client = fullClient
                     ? {
                         name: fullClient.name,

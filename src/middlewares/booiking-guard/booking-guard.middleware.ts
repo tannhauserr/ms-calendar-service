@@ -904,12 +904,15 @@ export type AttendeeInput = {
 export type BookingInputNormalized = {
     idCompany: string;
     idWorkspace: string;
-    idBookingPage: string;
+    idBookingPage?: string;
     startLocalISO: string; // "YYYY-MM-DDTHH:mm:ss"
     timeZoneClient: string;
     attendees: AttendeeInput[];
     excludeEventId?: string;
     note?: string;
+    isCommentRead?: boolean;
+    idEvent?: string;
+    deletedEventIds?: string[];
     customer: {
         id: string;
         name?: string;
@@ -934,7 +937,7 @@ export type BookingInputNormalized = {
 export type BookingConfig = any;
 
 export type BookingCtx = {
-    input?: BookingInputNormalized;
+    input: BookingInputNormalized;
 
     workspace?: any;
     bookingPage?: any;
@@ -1324,6 +1327,10 @@ export class BookingGuardsMiddleware {
             try {
                 const ctx = req.booking!.ctx;
                 const { idBookingPage } = ctx.input;
+                if (!idBookingPage) {
+                    ctx.bookingPage = null;
+                    return next();
+                }
 
                 const bookingPageStrategy =
                     RedisStrategyFactory.getStrategy(
@@ -1399,7 +1406,7 @@ export class BookingGuardsMiddleware {
                     [customer?.id],
                     idCompany
                 );
-                let clientWorkspaceBrief: ClientWorkspaceBrief = null;
+                let clientWorkspaceBrief: ClientWorkspaceBrief | null = null;
                 console.log("mira que es list", list);
                 if (!list || list.length === 0) {
                     console.log(
@@ -1984,11 +1991,12 @@ export class BookingGuardsMiddleware {
                 };
 
                 if (!req.booking) {
-                    (req as any).booking = {};
+                    (req as any).booking = { ctx: { input } };
                 }
 
-                req.booking.ctx = {
-                    ...(req.booking.ctx || {}),
+                const booking = req.booking!;
+                booking.ctx = {
+                    ...(booking.ctx || { input }),
                     input,
                 };
 

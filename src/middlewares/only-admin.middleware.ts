@@ -1,20 +1,22 @@
-import { NextFunction } from "express";
+import { NextFunction, Request, Response as ExpressResponse } from "express";
 import { JWTService } from "../services/jwt/jwt.service";
 import { RedisStrategyFactory } from '../services/@redis/cache/strategies/redisStrategyFactory';
 import { UserCompanyRoleStrategy } from "../services/@redis/cache/strategies/userCompanyRole/userCompanyRoleStrategy";
-import { Response } from "../models/messages/response";
+import { Response as ResponseMessage } from "../models/messages/response";
 import { MiddlewareErrorKey, resolveMiddlewareError } from "../models/error-codes";
+
+type AuthRequest = Request & { token?: string };
 
 export class OnlyAdminMiddleware {
     private static sendError(
-        res: any,
+        res: ExpressResponse,
         status: number,
         key: MiddlewareErrorKey,
         overrideMessage?: string
     ) {
         const error = resolveMiddlewareError(key, overrideMessage);
         return res.status(status).json(
-            Response.build(error.message, status, false, null, error.code)
+            ResponseMessage.build(error.message, status, false, null, error.code)
         );
     }
 
@@ -32,7 +34,7 @@ export class OnlyAdminMiddleware {
      * @param res Express Response
      * @param next Función next de Express
      */
-    static accessAuthorized = async (req, res, next: NextFunction) => {
+    static accessAuthorized = async (req: AuthRequest, res: ExpressResponse, next: NextFunction) => {
         try {
             const token = req.token;
             const decode = await JWTService.instance.verify(token);
@@ -112,7 +114,7 @@ export class OnlyAdminMiddleware {
      * @param next 
      * @returns 
      */
-    static accessOnlyAdmin = async (req, res, next) => {
+    static accessOnlyAdmin = async (req: AuthRequest, res: ExpressResponse, next: NextFunction) => {
         try {
             const token = req.token;
             const decode = await JWTService.instance.verify(token);
@@ -134,7 +136,7 @@ export class OnlyAdminMiddleware {
         }
     };
 
-    static accessOnlyAdminOrManager = async (req, res, next) => {
+    static accessOnlyAdminOrManager = async (req: AuthRequest, res: ExpressResponse, next: NextFunction) => {
         try {
             const token = req.token;
             const decode = await JWTService.instance.verify(token);
@@ -157,7 +159,7 @@ export class OnlyAdminMiddleware {
         }
     };
 
-    static accessOnlyAdminOrManagerOrUser = async (req, res, next) => {
+    static accessOnlyAdminOrManagerOrUser = async (req: AuthRequest, res: ExpressResponse, next: NextFunction) => {
         try {
             const token = req.token;
             const decode = await JWTService.instance.verify(token);
@@ -205,7 +207,7 @@ export class OnlyAdminMiddleware {
         }
     }
 
-    static accessOnlyAdminOrUser = async (req, res, next) => {
+    static accessOnlyAdminOrUser = async (req: AuthRequest, res: ExpressResponse, next: NextFunction) => {
         try {
             const token = req.token;
             const decode = await JWTService.instance.verify(token);
@@ -241,7 +243,7 @@ export class OnlyAdminMiddleware {
 
 
     static allowRoles = (permittedRoles: string[], mustMatchUser = false) => {
-        return async (req, res, next) => {
+        return async (req: AuthRequest, res: ExpressResponse, next: NextFunction) => {
             try {
                 const token = req.token;
                 const decode = await JWTService.instance.verify(token);

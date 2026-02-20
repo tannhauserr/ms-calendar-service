@@ -15,7 +15,6 @@ import {
 } from "./availability-special.service";
 import CustomError from "../../../models/custom-error/CustomError";
 import { OnlineBookingConfig } from "../../@redis/cache/interfaces/models/booking-config";
-import { a } from "@react-spring/web";
 import { DayStatus } from "./types";
 import { CONSOLE_COLOR } from "../../../constant/console-color";
 

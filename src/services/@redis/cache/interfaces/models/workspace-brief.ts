@@ -32,9 +32,9 @@ export interface WorkspaceBrief {
     // Opcionales UI/portada
     image?: string | null;
     description?: string | null;
+    config?: any;
     generalConfigJson?: any;
     generalNotificationConfigJson?: any;
     generalMarketingConfigJson?: any;
 
 }
-

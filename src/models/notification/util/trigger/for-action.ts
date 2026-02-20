@@ -282,7 +282,7 @@ export const createNotificationByClient = async (
             updatedAt: updatedAtStaff.toISOString(),
             startAtLocal: startAtLocalStaff.toISOString(),
             endAtLocal: endAtLocalStaff.toISOString(),
-            idService: firstEventWithService?.idServiceFk,
+            idService: firstEventWithService?.idServiceFk ?? undefined,
             idGroup: idGroup,
         };
 
@@ -347,7 +347,7 @@ export const createNotificationByClient = async (
         updatedAt: updatedAt.toISOString(),
         startAtLocal: startAtLocal.toISOString(),
         endAtLocal: endAtLocal.toISOString(),
-        idService: firstEventWithServiceGlobal?.idServiceFk,
+        idService: firstEventWithServiceGlobal?.idServiceFk ?? undefined,
         idGroup: idGroup,
     };
 
@@ -357,6 +357,7 @@ export const createNotificationByClient = async (
 
     const timeZoneStaffForClient =
         primaryStaff?.timeZone ?? workspace?.timeZone ?? "UTC";
+    const fallbackBusinessId = primaryStaffId ?? first.idUserPlatformFk ?? undefined;
 
     for (const client of clientList) {
         const email = (client as any)?.email;
@@ -370,12 +371,14 @@ export const createNotificationByClient = async (
         const timeZoneParticipant =
             client?.client?.timeZone ?? workspace?.timeZone ?? "UTC";
 
-        const bookingForClient = {
+        if (!fallbackBusinessId) {
+            continue;
+        }
+
+        const bookingForClient: BookingSnap = {
             ...bookingBaseForClient,
             client: { id: client.id, email, phoneE164 },
-            business: primaryStaffId
-                ? { id: primaryStaffId }
-                : { id: first.idUserPlatformFk },
+            business: { id: fallbackBusinessId },
         };
 
         try {
@@ -631,6 +634,10 @@ export const _publishForAction = async (params: {
                 //      shouldSendNotification devuelve boolean; NO reprograma.
                 //      Si implementas coalesce/downgrade, hazlo ANTES de este punto.
                 if (eventType) {
+                    if (!msg.notification.scheduledDate) {
+                        filtered++;
+                        continue;
+                    }
                     const shouldSend = shouldSendNotification(
                         eventType,
                         msg.notification.scheduledDate, // debe ser ISO/Date en UTC

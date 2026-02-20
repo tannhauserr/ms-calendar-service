@@ -1,5 +1,6 @@
 
 import jwt from 'jsonwebtoken';
+import type { NextFunction, Request, Response as ExpressResponse } from "express";
 import { Message } from '../../models/messages/failure';
 import { Response } from '../../models/messages/response';
 import { generatePrivateKey } from '../../utils/jwt/generatePrivateKey';
@@ -9,6 +10,8 @@ import moment from 'moment';
 import { CONSOLE_COLOR } from '../../constant/console-color';
 import CustomError from '../../models/custom-error/CustomError';
 import { env } from '../../config/env';
+
+type AuthRequest = Request & { token?: string };
 
 export class JWTService {
 
@@ -40,17 +43,19 @@ export class JWTService {
      * Crea el token con la clave privada 
      * Si esta no existe la clave la crea y la guarda en la base de datos
      * @param user 
-     * @param expiresIn 86400 = 24 horas
-     * @returns 
-     */
-    public async sign(user, expiresIn = 86400) {
+    * @param expiresIn 86400 = 24 horas
+    * @returns 
+    */
+    public async sign(user: Record<string, unknown>, expiresIn = 86400): Promise<string> {
         try {
             const privateKey = await this.getPrivateKey();
 
-            return await new Promise((resolve, reject) => {
+            return await new Promise<string>((resolve, reject) => {
                 jwt.sign(user, privateKey, { expiresIn }, (err, token) => {
                     if (err) {
                         reject(err);
+                    } else if (!token) {
+                        reject(new Error("Token no generado"));
                     } else {
                         resolve(token);
                     }
@@ -86,10 +91,13 @@ export class JWTService {
     /**
   * Verifica un token JWT usando la clave privada actual o una clave privada anterior.
   * @param token El token JWT que se va a verificar.
-  * @returns Un Promise que se resuelve con los datos decodificados del token si la verificación es exitosa.
-  * @throws Lanza un error si no se puede verificar el token con ninguna de las claves privadas.
-  */
-    public async verify(token): Promise<any> {
+   * @returns Un Promise que se resuelve con los datos decodificados del token si la verificación es exitosa.
+   * @throws Lanza un error si no se puede verificar el token con ninguna de las claves privadas.
+   */
+    public async verify(token: string | undefined): Promise<any> {
+        if (!token) {
+            throw new CustomError('JWTService.verify', new Error(Message.Failure.TOKEN_FORBIDDEN));
+        }
         if (!this._privateKey) {
             // Esto que se ve comentado ya estaba comentado antes de coger la variable de entorno
             // await this.getPrivateKey()
@@ -182,7 +190,7 @@ export class JWTService {
      * @param res 
      * @param next 
      */
-    static verifyToken(req, res, next) {
+    static verifyToken(req: AuthRequest, res: ExpressResponse, next: NextFunction) {
         // console.log("verificar token")
         const bearerHeader = req.headers['authorization'];
         if (typeof bearerHeader !== 'undefined') {
@@ -228,7 +236,7 @@ export class JWTService {
      * @param next 
      * @returns 
      */
-    static authCookieOrBearer(req, res, next) {
+    static authCookieOrBearer(req: AuthRequest, res: ExpressResponse, next: NextFunction) {
         // 1) Bearer header
         const auth = req.headers.authorization;
         if (auth?.startsWith("Bearer ")) {

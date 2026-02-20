@@ -220,7 +220,7 @@ export class PublicEventFeatureController {
                     businessHoursService: this.businessHoursService,
                     workerHoursService: this.workerHoursService,
                     temporaryHoursService: this.temporaryHoursService,
-                    bookingConfig: workspace?.config,
+                    bookingConfig: (workspace?.config ?? {}) as any,
                     servicesSnapshot: {
                         getServicesSnapshotById: (params) =>
                             _getServicesSnapshotById(params), // ← tu función tal cual

@@ -87,8 +87,8 @@ export class WorkerBusinessHourService {
         idUserFk: string;
         weekDayType: $Enums.WeekDayType;
         closed: boolean;
-        startTime: String;
-        endTime: String;
+        startTime: string | null;
+        endTime: string | null;
     }[]> {
         try {
             return await prisma.workerBusinessHour.findMany({

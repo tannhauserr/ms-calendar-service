@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit';
+import type { NextFunction, Request, Response as ExpressResponse } from 'express';
 import { Response } from '../models/messages/response';
 import { Message } from '../models/messages/failure';
 import { env } from './env';
@@ -23,7 +24,7 @@ export const limiter = rateLimit({
     },
 });
 
-export const conditionalLimiter = (req, res, next) => {
+export const conditionalLimiter = (req: Request, res: ExpressResponse, next: NextFunction) => {
     // Lista de rutas excluidas
     const whitelist = ['/uploads'];
 
@@ -35,4 +36,3 @@ export const conditionalLimiter = (req, res, next) => {
         limiter(req, res, next);
     }
 };
-
