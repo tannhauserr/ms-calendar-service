@@ -8,8 +8,8 @@ export const dateOrStringSchema = z.union([
 ]);
 
 export const paginationSchema = z.looseObject({
-        page: z.coerce.number().int().positive().optional(),
-        itemsPerPage: z.coerce.number().int().positive().optional(),
+        page: z.coerce.number().int().positive().max(999).optional(),
+        itemsPerPage: z.coerce.number().int().positive().max(1000).optional(),
         orderBy: z.looseObject({
                 field: z.string().trim().min(1),
                 order: z.enum(["asc", "desc"]),

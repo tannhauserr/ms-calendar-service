@@ -6,6 +6,7 @@ import { SavedWorkspaceStrategy } from "./@flow/savedWorkspace.strategy";
 import { BookingPageBriefStrategy } from "./BookingPageBrief/bookingPageBrief.strategy";
 import { BusinessHoursStrategy } from "./businessHours/businessHours.strategy";
 import { ClientWorkspaceBriefStrategy } from "./clientBrief/client-brief.strategy";
+import { MessageReliabilityStrategy } from "./messageReliability/message-reliability.strategy";
 import { RoundRobinStrategy } from "./roundRobin/round-robin.strategy";
 import { ServiceBriefStrategy } from "./ServiceBrief/serviceBrief.strategy";
 import { TemporaryHoursStrategy } from "./temporaryHours/temporaryHours.strategy";
@@ -43,6 +44,8 @@ export class RedisStrategyFactory {
                 return new UserBriefStrategy();
             case 'clientWorkspaceBrief':
                 return new ClientWorkspaceBriefStrategy();
+            case 'messageReliability':
+                return new MessageReliabilityStrategy();
 
 
             // Otros casos para diferentes estrategias...

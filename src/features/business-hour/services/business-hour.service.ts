@@ -1,13 +1,11 @@
 import { Prisma, BusinessHour, WeekDayType } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
-import { ErrorCatalogByDomain } from "../../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../models/error-codes";
 import { BusinessHoursType } from "../../../models/interfaces";
 import { BusinessHoursStrategy } from "../../../services/@redis/cache/strategies/businessHours/businessHours.strategy";
 import moment from "moment";
 import { TIME_SECONDS } from "../../../constant/time";
-
-const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 export class BusinessHourService {
     /** Creates a service instance. */
@@ -119,63 +117,63 @@ export class BusinessHourService {
         }
     }
 
-    /** Returns one business-hour record by id. */
-    async getBusinessHourById(id: string): Promise<BusinessHour | null> {
-        try {
-            return await prisma.businessHour.findUnique({
-                where: { id: id },
-                select: {
-                    id: true,
-                    weekDayType: true,
-                    idCompanyFk: true,
-                    idWorkspaceFk: true,
-                    startTime: true,
-                    endTime: true,
-                    closed: true,
-                    createdDate: true,
-                    updatedDate: true,
-                    deletedDate: true,
-                }
-            });
-        } catch (error: any) {
-            throw new CustomError('BusinessHourBusinessHour.getBusinessHourById', error);
-        }
-    }
-
-    /** Returns business-hour records by weekday. */
-    async getBusinessHourByWeekDay(weekDayType: WeekDayType): Promise<BusinessHour[]> {
-        try {
-            return await prisma.businessHour.findMany({
-                where: { weekDayType: weekDayType },
-                select: {
-                    id: true,
-                    weekDayType: true,
-                    idCompanyFk: true,
-                    idWorkspaceFk: true,
-                    startTime: true,
-                    endTime: true,
-                    closed: true,
-                    createdDate: true,
-                    updatedDate: true,
-                    deletedDate: true,
-                },
-                orderBy: { startTime: 'asc' },
-            });
-        } catch (error: any) {
-            throw new CustomError('BusinessHourBusinessHour.getBusinessHourById', error);
-        }
-    }
+    // Fuera de alcance (scope schedules actual):
+    // /** Returns one business-hour record by id. */
+    // async getBusinessHourById(id: string): Promise<BusinessHour | null> {
+    //     try {
+    //         return await prisma.businessHour.findUnique({
+    //             where: { id: id },
+    //             select: {
+    //                 id: true,
+    //                 weekDayType: true,
+    //                 idCompanyFk: true,
+    //                 idWorkspaceFk: true,
+    //                 startTime: true,
+    //                 endTime: true,
+    //                 closed: true,
+    //                 createdDate: true,
+    //                 updatedDate: true,
+    //                 deletedDate: true,
+    //             }
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError('BusinessHourBusinessHour.getBusinessHourById', error);
+    //     }
+    // }
+    //
+    // /** Returns business-hour records by weekday. */
+    // async getBusinessHourByWeekDay(weekDayType: WeekDayType): Promise<BusinessHour[]> {
+    //     try {
+    //         return await prisma.businessHour.findMany({
+    //             where: { weekDayType: weekDayType },
+    //             select: {
+    //                 id: true,
+    //                 weekDayType: true,
+    //                 idCompanyFk: true,
+    //                 idWorkspaceFk: true,
+    //                 startTime: true,
+    //                 endTime: true,
+    //                 closed: true,
+    //                 createdDate: true,
+    //                 updatedDate: true,
+    //                 deletedDate: true,
+    //             },
+    //             orderBy: { startTime: 'asc' },
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError('BusinessHourBusinessHour.getBusinessHourById', error);
+    //     }
+    // }
 
     /** Updates one business-hour record. */
     async updateBusinessHour(item: BusinessHour): Promise<BusinessHour> {
         try {
-            const id = item.id as string;
-            delete item.id;
+            const { id, ...rest } = item as BusinessHour & { id: string };
 
             return await prisma.businessHour.update({
                 where: { id: id },
                 data: {
-                    ...item,
+                    ...rest,
                     updatedDate: new Date(),
                 },
             });
@@ -217,14 +215,16 @@ export class BusinessHourService {
     /** Returns active business hours for a workspace. */
     async getBusinessHours(idWorkspace: string): Promise<BusinessHour[]> {
         try {
+            if (!idWorkspace) {
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.controller.validation.VALIDATION_REQUIRED_FIELD.message,
+                        "idWorkspace es obligatorio"
+                    )
+                );
+            }
 
-            console.log('idWorkspace', idWorkspace);
-            console.log('idWorkspace', idWorkspace);
-            console.log('idWorkspace', idWorkspace);
-            console.log('idWorkspace', idWorkspace);
-
-
-            let select: Prisma.BusinessHourSelect = {
+            const select: Prisma.BusinessHourSelect = {
                 id: true,
                 weekDayType: true,
                 startTime: true,
@@ -232,21 +232,16 @@ export class BusinessHourService {
                 closed: true,
             };
 
-            const result = await prisma.businessHour.findMany({
-                select: select,
-                orderBy: { startTime: 'asc' },
+            return await prisma.businessHour.findMany({
+                select,
+                orderBy: { startTime: "asc" },
                 where: {
-                    idWorkspaceFk: idWorkspace || 'aa00bc',
+                    idWorkspaceFk: idWorkspace,
                     deletedDate: null,
                 },
             });
-
-
-            console.log('result be', result);
-
-            return result;
         } catch (error: any) {
-            throw new CustomError('BusinessHourBusinessHour.getBusinessHours', error);
+            throw new CustomError("BusinessHourBusinessHour.getBusinessHours", error);
         }
     }
 

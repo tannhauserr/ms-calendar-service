@@ -93,69 +93,69 @@ export class TemporaryBusinessHourController {
         }
     }
 
-    /** Returns one temporary exception by id. */
-    public getById = async (req: any, res: any, next: any) => {
-        try {
-            const { id } = req.params as TemporaryBusinessHourIdParamsDto;
-            const token = req.token;
-            await this.jwtService.verify(token);
-
-            const result = await this.workBusinessHourService.getTemporaryBusinessHourById(id);
-            res.status(200).json(Response.build("Registro encontrado", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
-
-    /** Returns temporary exceptions for one date. */
-    public getByDate = async (req: any, res: any, next: any) => {
-        try {
-            const { date } = req.body as TemporaryBusinessHourByDateDto;
-            const token = req.token;
-            await this.jwtService.verify(token);
-
-            const result = await this.workBusinessHourService.getTemporaryBusinessHourByDate(date as any);
-            res.status(200).json(Response.build("Registro encontrado", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
-
-    /** Returns temporary exceptions for one worker and date. */
-    public getByWorkerAndDate = async (req: any, res: any, next: any) => {
-        try {
-            const { idWorker, date } = req.body as TemporaryBusinessHourByWorkerAndDateDto;
-            const token = req.token;
-            await this.jwtService.verify(token);
-
-            const result = await this.workBusinessHourService.getTemporaryBusinessHourByWorkerAndDate(
-                idWorker,
-                date as any
-            );
-            res.status(200).json(Response.build("Registro encontrado", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
-
-
-    /** Returns dates that contain exceptions for one worker. */
-    public getDistinctDatesWithExceptionsByWorker = async (req: any, res: any, next: any) => {
-        try {
-            const { idWorker, minDate, maxDate } = req.body as TemporaryBusinessHourWorkerExceptionDto;
-            const token = req.token;
-            await this.jwtService.verify(token);
-
-            const result = await this.workBusinessHourService.getDistinctDatesWithExceptionsByWorker(
-                idWorker,
-                minDate as any,
-                maxDate as any
-            );
-            res.status(200).json(Response.build("Registros encontrados", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
+    // Fuera de alcance (scope schedules actual):
+    // /** Returns one temporary exception by id. */
+    // public getById = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { id } = req.params as TemporaryBusinessHourIdParamsDto;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+    //
+    //         const result = await this.workBusinessHourService.getTemporaryBusinessHourById(id);
+    //         res.status(200).json(Response.build("Registro encontrado", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
+    //
+    // /** Returns temporary exceptions for one date. */
+    // public getByDate = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { date } = req.body as TemporaryBusinessHourByDateDto;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+    //
+    //         const result = await this.workBusinessHourService.getTemporaryBusinessHourByDate(date as any);
+    //         res.status(200).json(Response.build("Registro encontrado", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
+    //
+    // /** Returns temporary exceptions for one worker and date. */
+    // public getByWorkerAndDate = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { idWorker, date } = req.body as TemporaryBusinessHourByWorkerAndDateDto;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+    //
+    //         const result = await this.workBusinessHourService.getTemporaryBusinessHourByWorkerAndDate(
+    //             idWorker,
+    //             date as any
+    //         );
+    //         res.status(200).json(Response.build("Registro encontrado", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
+    //
+    // /** Returns dates that contain exceptions for one worker. */
+    // public getDistinctDatesWithExceptionsByWorker = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { idWorker, minDate, maxDate } = req.body as TemporaryBusinessHourWorkerExceptionDto;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+    //
+    //         const result = await this.workBusinessHourService.getDistinctDatesWithExceptionsByWorker(
+    //             idWorker,
+    //             minDate as any,
+    //             maxDate as any
+    //         );
+    //         res.status(200).json(Response.build("Registros encontrados", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
 
 
 
@@ -202,49 +202,49 @@ export class TemporaryBusinessHourController {
     }
 
 
-    /** Returns autocomplete data for temporary exceptions. */
-    public autocomplete = async (req: any, res: any, next: any) => {
-        try {
-            const { idUser } = req.body as TemporaryBusinessHourAutocompleteDto;
-            const token = req.token;
-            await this.jwtService.verify(token);
-
-            let result = undefined;
-            let pagination: Pagination = {
-                page: 1,
-                itemsPerPage: 10000,
-            }
-            if (idUser) {
-                pagination.filters = {
-                    idUserFk: { value: idUser }
-                }
-                result = await this.workBusinessHourService.getTemporaryBusinessHours(pagination, false);
-            } else {
-                result = await this.workBusinessHourService.getTemporaryBusinessHours(pagination, false);
-            }
-            res.status(200).json({ message: "Registros encontrados", ok: true, item: result && result?.rows ? result.rows : [] });
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
-
-
-    /** Returns temporary exceptions from cache/database by users and workspace. */
-    getTemporaryHoursFromRedis = async (req: any, res: any, next: any) => {
-        try {
-            const { idUserList, idWorkspace } = req.body as TemporaryHoursRedisDto;
-            const token = req.token;
-            await this.jwtService.verify(token);
-
-            const result = await this.workBusinessHourService.getTemporaryHoursFromRedis(idUserList, idWorkspace);
-
-            console.log("mira el result de redis", result);
-
-            res.status(200).json(Response.build("Registros encontrados", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
+    // Fuera de alcance (scope schedules actual):
+    // /** Returns autocomplete data for temporary exceptions. */
+    // public autocomplete = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { idUser } = req.body as TemporaryBusinessHourAutocompleteDto;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+    //
+    //         let result = undefined;
+    //         let pagination: Pagination = {
+    //             page: 1,
+    //             itemsPerPage: 10000,
+    //         }
+    //         if (idUser) {
+    //             pagination.filters = {
+    //                 idUserFk: { value: idUser }
+    //             }
+    //             result = await this.workBusinessHourService.getTemporaryBusinessHours(pagination, false);
+    //         } else {
+    //             result = await this.workBusinessHourService.getTemporaryBusinessHours(pagination, false);
+    //         }
+    //         res.status(200).json({ message: "Registros encontrados", ok: true, item: result && result?.rows ? result.rows : [] });
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
+    //
+    // /** Returns temporary exceptions from cache/database by users and workspace. */
+    // getTemporaryHoursFromRedis = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { idUserList, idWorkspace } = req.body as TemporaryHoursRedisDto;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+    //
+    //         const result = await this.workBusinessHourService.getTemporaryHoursFromRedis(idUserList, idWorkspace);
+    //
+    //         console.log("mira el result de redis", result);
+    //
+    //         res.status(200).json(Response.build("Registros encontrados", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
 
 
 }

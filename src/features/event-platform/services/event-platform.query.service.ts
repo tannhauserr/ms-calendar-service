@@ -55,7 +55,7 @@ export class EventPlatformQueryService {
                     },
                 };
 
-                const maxItemsPerPage = 10000;
+                const maxItemsPerPage = 1000;
                 const normalizedPagination = {
                     ...pagination,
                     page: 1,
@@ -66,7 +66,8 @@ export class EventPlatformQueryService {
                     normalizedPagination,
                     "event",
                     select,
-                    false
+                    false,
+                    { maxItemsPerPage }
                 );
 
                 result.rows = result.rows.map((row: any) => this.withGroupFields(row as any));
@@ -120,7 +121,13 @@ export class EventPlatformQueryService {
                 };
             }
 
-            const result = await getGenericSpecialEvent2(normalizedPagination, "event", select, true);
+            const result = await getGenericSpecialEvent2(
+                normalizedPagination,
+                "event",
+                select,
+                true,
+                { maxItemsPerPage }
+            );
             result.rows = result.rows.map((row: any) => this.withGroupFields(row as any));
             return result;
         } catch (error: any) {
@@ -232,7 +239,7 @@ export class EventPlatformQueryService {
         return events.map((ev) => ({
             ...ev,
             eventParticipant: ev.eventParticipant.map((p) => {
-                const fullClient = clientMap.get(p.idClientWorkspaceFk) ?? null;
+                const fullClient = p.idClientWorkspaceFk ? clientMap.get(p.idClientWorkspaceFk) ?? null : null;
                 const client = fullClient
                     ? {
                         name: fullClient.name,
@@ -457,4 +464,5 @@ export class EventPlatformQueryService {
             throw new CustomError("EventPlatformQueryService.internalGetGroupDataById", error);
         }
     }
+
 }

@@ -1,0 +1,42 @@
+type: object
+required:
+  - message
+  - ok
+  - status
+  - item
+properties:
+  message:
+    type: string
+  ok:
+    type: boolean
+    example: true
+  status:
+    type: integer
+    example: 200
+  item:
+    type: object
+    required:
+      - events
+      - count
+    properties:
+      events:
+        type: array
+        items:
+          type: object
+          additionalProperties: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            idGroup:
+              type: string
+              format: uuid
+            idCompanyFk:
+              type: string
+              format: uuid
+            idWorkspaceFk:
+              type: string
+              format: uuid
+      count:
+        type: integer
+        minimum: 0

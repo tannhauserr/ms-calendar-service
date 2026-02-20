@@ -41,7 +41,7 @@ jest.mock("../../../src/middlewares/business-hour/business-hour.middleware", () 
     },
 }));
 
-jest.mock("../../../src/features/businessHour/services/business-hour.service", () => ({
+jest.mock("../../../src/features/business-hour/services/business-hour.service", () => ({
     BusinessHourService: class {
         addBusinessHour = addBusinessHourMock;
         getBusinessHours = getBusinessHoursMock;
@@ -58,7 +58,7 @@ jest.mock("../../../src/services/@redis/cache/strategies/businessHours/businessH
     },
 }));
 
-import router from "../../../src/features/businessHour/routes";
+import router from "../../../src/features/business-hour/routes";
 
 describe("BusinessHour routes integration", () => {
     const app = express();

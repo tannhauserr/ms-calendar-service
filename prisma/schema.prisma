@@ -656,6 +656,32 @@ model WaitList {
   @@map("waitLists")
 }
 
+model DeadLetterMessage {
+  id              String                  @id @default(uuid())
+  queueName       String                  @db.VarChar(120)
+  exchangeName    String                  @db.VarChar(120)
+  routingKey      String                  @db.VarChar(180)
+  sourceRoutingKey String?                @db.VarChar(180)
+  consumerName    String                  @db.VarChar(120)
+  payload         Json                    @db.Json
+  headers         Json?
+  retryCount      Int                     @default(0)
+  errorMessage    String?                 @db.VarChar(512)
+  status          DeadLetterMessageStatus @default(PENDING)
+  replayCount     Int                     @default(0)
+  lastReplayDate  DateTime?               @db.Timestamptz(3)
+  lastReplayByRole String?                @db.VarChar(64)
+  lastReplayError String?                 @db.VarChar(512)
+  createdDate     DateTime                @default(now()) @db.Timestamptz(3)
+  updatedDate     DateTime                @default(now()) @updatedAt @db.Timestamptz(3)
+  deletedDate     DateTime?
+
+  @@index([status, createdDate])
+  @@index([queueName, createdDate])
+  @@index([consumerName, createdDate])
+  @@map("deadLetterMessages")
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // CATEGORÍAS Y SERVICIOS (si el catálogo vive en este MS)
 // ────────────────────────────────────────────────────────────────────────────
@@ -803,6 +829,12 @@ enum RecurrenceStatusType {
   ACTIVE
   PAUSED
   CANCELLED
+}
+
+enum DeadLetterMessageStatus {
+  PENDING
+  REPLAYED
+  REPLAY_FAILED
 }
 
 enum EventLineItemType {

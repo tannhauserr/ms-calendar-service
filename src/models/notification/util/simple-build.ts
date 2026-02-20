@@ -20,7 +20,7 @@ export type BookingSnap = {
     client?: { id: string; email?: string; phoneE164?: string };
     // Datos del organizador/negocio
     business?: { id: string; email?: string; phoneE164?: string };
-    idService: string;
+    idService?: string;
     idGroup?: string;
 };
 

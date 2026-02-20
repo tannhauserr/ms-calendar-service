@@ -69,6 +69,7 @@ export class WorkerAbsenceService {
     async addWorkerAbsence(item: Prisma.WorkerAbsenceCreateInput): Promise<{ absence: WorkerAbsence; event: any }> {
         try {
             const result = await prisma.$transaction(async (tx) => {
+                const absenceTitle = item.title ?? "Ausencia";
                 // Buscar el calendario usando idCompanyFk e idWorkspaceFk
                 if (!item.idWorkspaceFk) {
                     throw new Error("El idWorkspaceFk es requerido para obtener el calendario");
@@ -81,7 +82,7 @@ export class WorkerAbsenceService {
 
                 const createdGroup = await tx.groupEvents.create({
                     data: {
-                        title: item.title,
+                        title: absenceTitle,
                         idCompanyFk: item.idCompanyFk!,
                         idWorkspaceFk: item.idWorkspaceFk!,
                         startDate: startDate,
@@ -93,7 +94,7 @@ export class WorkerAbsenceService {
                 const eventData: Prisma.EventCreateInput = {
                     // Tengo que pasar el idCompanyFk para que lo coja bien en el hook de creación de eventos
                     idCompanyFk: item.idCompanyFk!,
-                    title: item.title,
+                    title: absenceTitle,
                     description: item.description,
                     startDate: startDate,
                     endDate: endDate,
@@ -258,7 +259,7 @@ export class WorkerAbsenceService {
                 const updatedEvent = await tx.event.update({
                     where: { id: eventId },
                     data: {
-                        title: item.title,
+                        title: item.title ?? "Ausencia",
                         description: item.description,
                         startDate: startDate,
                         endDate: endDate,

@@ -1,5 +1,4 @@
 import axios from "axios";
-import { attachServiceAuth } from "../service-token-client.service";
 import { RedisStrategyFactory } from "../../@redis/cache/strategies/redisStrategyFactory";
 import { WorkspaceBrief } from "../../@redis/cache/interfaces/models/workspace-brief";
 import { BookingPageBrief } from "../../@redis/cache/interfaces/models/booking-brief";
@@ -8,21 +7,27 @@ import { CONSOLE_COLOR } from "../../../constant/console-color";
 import { IRedisUserBriefStrategy, IRedisWorkspaceBriefStrategy } from "../../@redis/cache/interfaces/interfaces";
 import { UserBrief } from "../../@redis/cache/interfaces/models/user-brief";
 import { TIME_SECONDS } from "../../../constant/time";
+import {
+    getMockUsersByIds,
+    getMockWorkspacesByIds,
+    isMockIntegrationsMode,
+} from "../mock/mock-integrations";
 
 // 🔹 MS receptor (login/auth)
 const TARGET_MS_NAME = process.env.MS_LOGIN_NAME || "auth";
 // 🔹 Quién llama (este microservicio)
 const THIS_MS_NAME = process.env.MS_NAME || process.env.MS_CALENDAR_NAME || "calendar";
 
-// 🔹 Secret interno para comunicación entre microservicios
-const internalSecret = process.env.INTERNAL_MS_SECRET;
+// 🔹 Token interno para MS-Login/Auth
+const internalSecret = process.env.TOKEN_MS_LOGIN;
 // ✅ Cliente propio de este archivo (singleton del módulo)
 const client = axios.create({
     baseURL: `${process.env.URL_BACK_MS_GATEWAY}/${TARGET_MS_NAME}/api/ms`,
     timeout: 5000,
-    headers: internalSecret
-        ? { "x-internal-ms-secret": internalSecret }
-        : {},
+    headers: {
+        "x-internal-ms-allowed": THIS_MS_NAME,
+        ...(internalSecret ? { "x-internal-ms-secret": internalSecret } : {}),
+    },
 });
 
 client.interceptors.request.use((cfg) => {
@@ -41,14 +46,15 @@ client.interceptors.request.use((cfg) => {
 });
 
 
-// Enganchamos el interceptor aquí (aud=receiver, sub=this)
-// attachServiceAuth(client, TARGET_MS_NAME, THIS_MS_NAME);
-
 /**
  * Obtiene snapshots de Users por IDs con cache-first
  */
 export async function getUsersByIds(ids: string[]) {
     try {
+        if (isMockIntegrationsMode()) {
+            return getMockUsersByIds(ids);
+        }
+
         const strategy = RedisStrategyFactory.getStrategy("userBrief") as IRedisUserBriefStrategy;
         const cached = await Promise.all(ids.map((id) => strategy.getUserById(id)));
 
@@ -80,6 +86,10 @@ export async function getUsersByIds(ids: string[]) {
  */
 export async function getWorkspacesByIds(ids: string[]) {
     try {
+        if (isMockIntegrationsMode()) {
+            return getMockWorkspacesByIds(ids);
+        }
+
         console.log("mira que es ids", ids);
         if (!Array.isArray(ids) || ids.length === 0) {
             console.log(CONSOLE_COLOR.FgYellow, `[getWorkspacesByIds] Array de IDs vacío o inválido`, CONSOLE_COLOR.Reset);
@@ -131,8 +141,6 @@ export async function getWorkspacesByIds(ids: string[]) {
         return [];
     }
 }
-
-
 
 
 

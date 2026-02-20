@@ -4,16 +4,28 @@ import { bootstrapLogger } from "./bootstrap-logger";
 
 const runtimeNodeEnv = process.env.NODE_ENV ?? "development";
 
+const booleanFromEnv = z.preprocess((value) => {
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (["1", "true", "yes", "on"].includes(normalized)) return true;
+        if (["0", "false", "no", "off", ""].includes(normalized)) return false;
+    }
+    return value;
+}, z.boolean());
+
 dotenv.config();
 dotenv.config({ path: `.env.${runtimeNodeEnv}` });
 
 const envSchema = z
     .object({
         NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-        PORT: z.coerce.number().int().positive().default(3200),
+        PORT: z.coerce.number().int().positive().default(3201),
         LOG_LEVEL: z
             .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
             .default("info"),
+        ENABLE_REDIS: booleanFromEnv.default(true),
+        ENABLE_RABBITMQ: booleanFromEnv.default(true),
+        INTEGRATIONS_MODE: z.enum(["http", "mock"]).default("http"),
 
         DATABASE_URL: z.string().min(1),
         WEB_WHITELIST_CORS: z.string().min(1).default("[]"),
@@ -31,7 +43,10 @@ const envSchema = z
         RABBITMQ_PREFETCH: z.coerce.number().int().positive().default(1),
 
         JWT_PRIVATE_KEY: z.string().min(1),
-        INTERNAL_MS_SECRET: z.string().min(1),
+        TOKEN_MS_LOGIN: z.string().min(1),
+        TOKEN_MS_CATALOG: z.string().min(1),
+        TOKEN_CLIENT: z.string().min(1),
+        TOKEN_MS_CALENDAR: z.string().min(1),
 
         URL_BACK_MS_GATEWAY: z.string().min(1),
         URL_BACK_MS_AUTH: z.string().min(1).optional(),

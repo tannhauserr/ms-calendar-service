@@ -5,6 +5,7 @@ import moment from "moment";
 import { CONSOLE_COLOR } from "../../../constant/console-color";
 import { TIME_SECONDS } from "../../../constant/time";
 import { v4 as uuidv4 } from "uuid";
+import { normalizePaginationInput } from "../../../models/pagination";
 
 import {
     assignSequentially_SPECIAL,
@@ -545,15 +546,16 @@ export class ClientEventService {
 
         // Paginación a nivel booking
         const defaultPerPage = scope === "upcoming" ? 25 : 30;
-        const effectiveItemsPerPage =
-            itemsPerPage && itemsPerPage > 0
-                ? Math.min(itemsPerPage, defaultPerPage)
-                : defaultPerPage;
+        const normalized = normalizePaginationInput(
+            { page, itemsPerPage },
+            { context: "default", defaultItemsPerPage: defaultPerPage }
+        );
+        const effectiveItemsPerPage = normalized.itemsPerPage;
 
         const total = allBookings.length;
         const totalPages = Math.max(1, Math.ceil(total / effectiveItemsPerPage));
 
-        let currentPage = page && page > 0 ? page : 1;
+        let currentPage = normalized.page;
         if (scope === "upcoming") {
             // upcoming → siempre página 1
             currentPage = 1;
@@ -1233,7 +1235,7 @@ export class ClientEventService {
             } = input;
             const {
                 timeZoneWorkspace, businessHoursService, workerHoursService,
-                temporaryHoursService, bookingConfig, cache, autoConfirmClientBookings
+                temporaryHoursService, bookingConfig, cache, autoConfirmClientBookings = false
             } = deps;
 
             console.log(CONSOLE_COLOR.FgMagenta, "[addEventFromWeb] input:", input, CONSOLE_COLOR.Reset);
@@ -1838,7 +1840,7 @@ export class ClientEventService {
                 throw new Error("El evento original no pertenece a este workspace");
 
             const isOwner = original.eventParticipant.some(
-                (p) =>
+                (p: { idClientFk?: string | null; idClientWorkspaceFk?: string | null }) =>
                     p.idClientFk === customer.id ||
                     p.idClientWorkspaceFk === customer.idClientWorkspace
             );

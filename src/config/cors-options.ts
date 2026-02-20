@@ -1,5 +1,11 @@
 import { env } from "./env";
 
+type CorsOriginCallback = (error: Error | null, allow?: boolean) => void;
+type CorsOptions = {
+    origin: (origin: string | undefined, callback: CorsOriginCallback) => void;
+    credentials: boolean;
+};
+
 const parseWhitelist = (rawValue: string): string[] => {
     const trimmed = rawValue.trim();
 
@@ -28,7 +34,7 @@ const whitelist = parseWhitelist(env.WEB_WHITELIST_CORS);
  * 
  * "Credentials" es necesario para recibir y enviar tokens
  */
-const corsOptions = {
+const corsOptions: CorsOptions = {
     origin: function (origin, callback) {
         if (!origin || whitelist.includes(origin)) {
             callback(null, true);

@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ms-calendar-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: test_calendar
+      POSTGRES_PASSWORD: test_calendar
+      POSTGRES_DB: ms_calendar
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_calendar -d ms_calendar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: ms-calendar-swagger-ui
+    restart: unless-stopped
+    environment:
+      SWAGGER_JSON: /spec/openapi.bundle.yaml
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./openapi.bundle.yaml:/spec/openapi.bundle.yaml:ro
+
+volumes:
+  postgres_data:

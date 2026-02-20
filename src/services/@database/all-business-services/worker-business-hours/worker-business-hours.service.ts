@@ -80,8 +80,8 @@ export class WorkerBusinessHourService {
         idUserFk: string;
         weekDayType: $Enums.WeekDayType;
         closed: boolean;
-        startTime: String;
-        endTime: String;
+        startTime: string | null;
+        endTime: string | null;
     }[]> {
         try {
             // Obtener el id de la empresa del trabajador

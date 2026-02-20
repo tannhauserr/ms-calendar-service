@@ -1,12 +1,10 @@
 import { Prisma, WorkerAbsence } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
-import { ErrorCatalogByDomain } from "../../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../models/error-codes";
 import moment from "moment";
 import { Pagination } from "../../../models/pagination";
 import { getGeneric } from "../../../utils/get-genetic/getGenetic";
-
-const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 export class WorkerAbsenceService {
     constructor() { }
@@ -27,22 +25,6 @@ export class WorkerAbsenceService {
         };
     }
 
-    /**
-     * Crear una nueva ausencia
-     */
-    // async addWorkerAbsence(item: Prisma.WorkerAbsenceCreateInput): Promise<WorkerAbsence> {
-    //     try {
-    //         return await prisma.workerAbsence.create({
-    //             data: {
-    //                 ...item,
-    //                 createdDate: new Date(),
-    //                 updatedDate: new Date(),
-    //             },
-    //         });
-    //     } catch (error: any) {
-    //         throw new CustomError("WorkerAbsenceService.addWorkerAbsence", error);
-    //     }
-    // }
 
     async getWorkerAbsences(pagination: Pagination): Promise<any> {
 
@@ -68,9 +50,11 @@ export class WorkerAbsenceService {
         }
     }
 
+    // Fuera de alcance (scope schedules actual):
     async addWorkerAbsence(item: Prisma.WorkerAbsenceCreateInput): Promise<{ absence: WorkerAbsence; event: any }> {
         try {
             const result = await prisma.$transaction(async (tx) => {
+                const absenceTitle = item.title ?? "Ausencia";
                 // Buscar el calendario usando idCompanyFk e idWorkspaceFk
                 if (!item.idWorkspaceFk) {
                     throw new Error(
@@ -80,40 +64,40 @@ export class WorkerAbsenceService {
                         )
                     );
                 }
-
-
+    
+    
                 const startDate = moment(item.startDate).startOf("day").toDate();
                 const endDate = moment(item.endDate).endOf("day").toDate();
-
-
+    
+    
                 const createdGroup = await tx.groupEvents.create({
                     data: {
-                        title: item.title,
+                        title: absenceTitle,
                         idCompanyFk: item.idCompanyFk!,
                         idWorkspaceFk: item.idWorkspaceFk!,
                         startDate: startDate,
                         endDate: endDate,
                     }
                 });
-
+    
                 // Crear el evento asociado, usando el id del calendario obtenido
                 const eventData: Prisma.EventCreateInput = {
                     // Tengo que pasar el idCompanyFk para que lo coja bien en el hook de creación de eventos
                     idCompanyFk: item.idCompanyFk!,
-                    title: item.title,
+                    title: absenceTitle,
                     description: item.description,
                     startDate: startDate,
                     endDate: endDate,
                     idUserPlatformFk: item.idUserFk,
-
+    
                     eventPurposeType: item.eventPurposeType,
                     allDay: true,
                     // Otros campos que sean necesarios en tu lógica
                     groupEvents: { connect: { id: createdGroup.id } },
-
+    
                 };
-
-
+    
+    
                 const createdEvent = await tx.event.create({ data: eventData });
                 // TODO: Plantearse el borrar el workerAbsence y coger el listado en la tabla Events.
                 // Crear la ausencia conectando el evento creado
@@ -133,7 +117,7 @@ export class WorkerAbsenceService {
                     event: createdEvent
                 };
             });
-
+    
             return result;
         } catch (error: any) {
             throw new CustomError("WorkerAbsenceService.addWorkerAbsence", error);
@@ -145,62 +129,65 @@ export class WorkerAbsenceService {
     /**
      * Obtener una ausencia por su ID
      */
-    async getWorkerAbsenceById(id: string): Promise<WorkerAbsence | null> {
-        try {
-            return await prisma.workerAbsence.findUnique({
-                where: { id },
-                select: {
-                    id: true,
-                    title: true,
-                    idUserFk: true,
-                    idCompanyFk: true,
-                    idWorkspaceFk: true,
-                    eventPurposeType: true,
-                    startDate: true,
-                    endDate: true,
-                    // type: true,
-                    description: true,
-                    idEventFk: true,
-                    createdDate: true,
-                    updatedDate: true,
-                    deletedDate: true,
-                },
-            });
-        } catch (error: any) {
-            throw new CustomError("WorkerAbsenceService.getWorkerAbsenceById", error);
-        }
-    }
+    // Fuera de alcance (scope schedules actual):
+    // async getWorkerAbsenceById(id: string): Promise<WorkerAbsence | null> {
+    //     try {
+    //         return await prisma.workerAbsence.findUnique({
+    //             where: { id },
+    //             select: {
+    //                 id: true,
+    //                 title: true,
+    //                 idUserFk: true,
+    //                 idCompanyFk: true,
+    //                 idWorkspaceFk: true,
+    //                 eventPurposeType: true,
+    //                 startDate: true,
+    //                 endDate: true,
+    //                 // type: true,
+    //                 description: true,
+    //                 idEventFk: true,
+    //                 createdDate: true,
+    //                 updatedDate: true,
+    //                 deletedDate: true,
+    //             },
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError("WorkerAbsenceService.getWorkerAbsenceById", error);
+    //     }
+    // }
 
     /**
      * Obtener ausencias de un usuario específico
      */
-    async getWorkerAbsencesByUser(idUserFk: string): Promise<WorkerAbsence[]> {
-        try {
-            return await prisma.workerAbsence.findMany({
-                where: { idUserFk, deletedDate: null },
-                orderBy: { startDate: "asc" },
-            });
-        } catch (error: any) {
-            throw new CustomError("WorkerAbsenceService.getWorkerAbsencesByUser", error);
-        }
-    }
+    // Fuera de alcance (scope schedules actual):
+    // async getWorkerAbsencesByUser(idUserFk: string): Promise<WorkerAbsence[]> {
+    //     try {
+    //         return await prisma.workerAbsence.findMany({
+    //             where: { idUserFk, deletedDate: null },
+    //             orderBy: { startDate: "asc" },
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError("WorkerAbsenceService.getWorkerAbsencesByUser", error);
+    //     }
+    // }
 
     /**
      * Obtener ausencias por establecimiento
      */
-    async getWorkerAbsencesByWorkspace(idWorkspaceFk: string): Promise<WorkerAbsence[]> {
-        try {
-            return await prisma.workerAbsence.findMany({
-                where: {
-                    idWorkspaceFk,
-                    deletedDate: null
-                },
-                orderBy: { startDate: "asc" },
-            });
-        } catch (error: any) {
-            throw new CustomError("WorkerAbsenceService.getWorkerAbsencesByWorkspace", error);
-        }
-    }
+    // Fuera de alcance (scope schedules actual):
+    // async getWorkerAbsencesByWorkspace(idWorkspaceFk: string): Promise<WorkerAbsence[]> {
+    //     try {
+    //         return await prisma.workerAbsence.findMany({
+    //             where: {
+    //                 idWorkspaceFk,
+    //                 deletedDate: null
+    //             },
+    //             orderBy: { startDate: "asc" },
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError("WorkerAbsenceService.getWorkerAbsencesByWorkspace", error);
+    //     }
+    // }
 
     /**
      * Actualizar una ausencia existente
@@ -280,7 +267,7 @@ export class WorkerAbsenceService {
                 const updatedEvent = await tx.event.update({
                     where: { id: eventId },
                     data: {
-                        title: item.title,
+                        title: item.title ?? "Ausencia",
                         description: item.description,
                         startDate: startDate,
                         endDate: endDate,

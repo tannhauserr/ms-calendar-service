@@ -1,0 +1,88 @@
+type: object
+additionalProperties: true
+required:
+  - type
+  - idCompany
+  - idWorkspace
+  - startDate
+  - services
+  - clients
+properties:
+  type:
+    type: string
+    enum: [event]
+  mode:
+    type: string
+    enum: [create, edit, view]
+    description: Client/editor mode from platform sidebar.
+  idGroup:
+    type: string
+    format: uuid
+    description: Existing booking group id. Optional when creating.
+  idCompany:
+    type: string
+    format: uuid
+  idWorkspace:
+    type: string
+    format: uuid
+  startDate:
+    type: string
+    format: date-time
+  endDate:
+    type: string
+    format: date-time
+  sendNotification:
+    type: boolean
+    enum: [false]
+    default: false
+  description:
+    type: string
+  eventStatusType:
+    type: string
+    enum:
+      - PENDING
+      - ACCEPTED
+      - CONFIRMED
+      - COMPLETED
+      - CANCELLED
+      - CANCELLED_BY_CLIENT
+      - CANCELLED_BY_CLIENT_REMOVED
+      - PAID
+      - NO_SHOW
+  commentClient:
+    type: string
+  services:
+    type: array
+    items:
+      type: object
+      additionalProperties: true
+      properties:
+        idEvent:
+          type: string
+          format: uuid
+        idService:
+          type: string
+          format: uuid
+        duration:
+          type: integer
+        name:
+          type: string
+        price:
+          type: number
+        discount:
+          type: number
+        idWorker:
+          type: string
+          format: uuid
+  clients:
+    type: array
+    items:
+      type: object
+      additionalProperties: true
+      properties:
+        idClient:
+          type: string
+          format: uuid
+        idClientWorkspace:
+          type: string
+          format: uuid

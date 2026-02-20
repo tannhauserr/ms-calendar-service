@@ -1,28 +1,6 @@
 import { ClientWorkspaceBrief } from "../../interfaces/models/client-brief";
 import { RedisCacheService } from "../../redis.service";
-
-
-/**
- * Estrategia Redis para ClientBrief (cache de clientes por compañía)
- */
-export interface IRedisClientWorkspaceBriefStrategy {
-    setClientWorkspace(cw: ClientWorkspaceBrief, ttlSec?: number): Promise<void>;
-
-    getClientWorkspaceById(idClientWorkspace: string, idCompany?: string): Promise<ClientWorkspaceBrief | null>;
-    getClientWorkspacesByCompany(idCompany: string): Promise<ClientWorkspaceBrief[]>;
-
-    // Índices útiles
-    getClientWorkspacesByClientId(idClient: string, idCompany?: string): Promise<ClientWorkspaceBrief[]>;
-    getClientWorkspaceByEmail(idCompany: string, email: string): Promise<ClientWorkspaceBrief | null>;
-    getClientWorkspaceByPhone(idCompany: string, e164Phone: string): Promise<ClientWorkspaceBrief | null>;
-
-    deleteClientWorkspace(
-        idClientWorkspace: string,
-        idCompany: string,
-        email?: string,
-        phoneE164?: string
-    ): Promise<void>;
-}
+import { IRedisClientWorkspaceBriefStrategy } from "./interfaces";
 
 
 export const REDIS_CW_PREFIX_BRIEF = "clientWS:brief";

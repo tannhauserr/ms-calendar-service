@@ -1,5 +1,4 @@
-import { Prisma } from "@prisma/client";
-import { Pagination } from "../../../models/pagination";
+import { Pagination, normalizePaginationInput } from "../../../models/pagination";
 import prisma from "../../../lib/prisma";
 
 
@@ -15,6 +14,7 @@ async function getGenericSpecial(
     modelName: ModelType,
     includeRelations?: any,
     isValid?: boolean,
+    options?: { maxItemsPerPage?: number; maxPage?: number },
 ) {
     const {
         orderBy,
@@ -23,25 +23,18 @@ async function getGenericSpecial(
         startDate,
         endDate,
     } = pagination;
-    const page = Math.max(1, +pagination.page);
-    const itemsPerPage = Math.max(1, +pagination.itemsPerPage);
+    const { page, itemsPerPage } = normalizePaginationInput(pagination, {
+        context: "default",
+        defaultItemsPerPage: 25,
+        maxItemsPerPage: options?.maxItemsPerPage,
+        maxPage: options?.maxPage,
+    });
 
     const skip = (page - 1) * itemsPerPage;
     const take = +itemsPerPage;
 
 
     console.log(filters)
-
-
-
-    if (page < 1) {
-        throw new Error('The page value must be greater than or equal to 1.');
-    }
-
-    if (itemsPerPage < 1) {
-        throw new Error('The itemsPerPage value must be greater than or equal to 1.');
-    }
-
     // Procesar filtros
     let where: any = {};
     // if (filters) {
@@ -110,7 +103,8 @@ async function getGenericSpecial(
     where = { ...where, deletedDate: null };
 
     try {
-        const items = await prisma[modelName as string].findMany({
+        const prismaClient = prisma as any;
+        const items = await prismaClient[modelName as string].findMany({
             where,
             skip,
             take,
@@ -121,7 +115,7 @@ async function getGenericSpecial(
 
         // console.log(items)
 
-        const totalItems = await prisma[modelName as string].count({ where });
+        const totalItems = await prismaClient[modelName as string].count({ where });
         const totalPages = Math.ceil(totalItems / itemsPerPage);
 
         return {
@@ -221,7 +215,7 @@ function processFilters(filters: Record<string, { value: any; relation?: string,
     return where;
 }
 
-function handleCondition(isEnumField, field, value, where) {
+function handleCondition(isEnumField: boolean | undefined, field: string, value: any, where: any) {
 
     if (Array.isArray(value)) {
         const conditions = value.map(val => {
@@ -250,12 +244,12 @@ function handleCondition(isEnumField, field, value, where) {
 // JSON
 
 function processFiltersJson(filtersJson: any) {
-    let where = { AND: [] };
+    let where: any = { AND: [] };
     let conditionsByPath: { [key: string]: any[] } = {};
 
     // Recolectar condiciones por path
-    Object.entries(filtersJson).forEach(([key, filters]: any) => {
-        filters.forEach(filter => {
+    Object.entries(filtersJson).forEach(([key, filters]: [string, any]) => {
+        (filters as any[]).forEach((filter: any) => {
             const { path, value } = filter;
             let conditionValue = Array.isArray(value) ? value : [value]; // Asegurar que siempre sea un array
 
@@ -267,7 +261,7 @@ function processFiltersJson(filtersJson: any) {
             }
 
             // Añadir la condición al arreglo correspondiente
-            conditionValue.forEach(val => {
+            conditionValue.forEach((val: any) => {
                 conditionsByPath[pathKey].push({
                     [key]: {
                         path: path,
@@ -279,7 +273,7 @@ function processFiltersJson(filtersJson: any) {
     });
 
     // Procesar las condiciones agrupadas por path y combinarlas con OR si es necesario
-    Object.values(conditionsByPath).forEach(conditions => {
+    Object.values(conditionsByPath).forEach((conditions: any[]) => {
         if (conditions.length === 1) {
             // Si solo hay una condición para este path, añadirla directamente
             where.AND.push(conditions[0]);

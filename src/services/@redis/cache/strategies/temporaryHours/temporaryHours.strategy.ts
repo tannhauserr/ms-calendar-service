@@ -3,7 +3,7 @@
 // import {  IRedisTemporaryHoursStrategy } from "../../interfaces/interfaces";
 
 import { HoursRangeInput, HoursMap, normalizeRange, isWithin } from "../../../../@database/all-business-services/interfaces";
-import { IRedisTemporaryHoursStrategy } from "../../interfaces/interfaces";
+import { IRedisTemporaryHoursStrategy } from "./interfaces";
 import { TokenKeys } from "../../keys/token.keys";
 import { RedisCacheService } from "../../redis.service";
 

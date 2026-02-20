@@ -196,7 +196,7 @@ export class EventV2Service {
   */
 
 
-    markCommentAsRead = async (eventId: string, idWorkspace) => {
+    markCommentAsRead = async (eventId: string, idWorkspace: string) => {
         try {
             if (!eventId) {
                 throw new Error("El id del evento es requerido");
@@ -563,7 +563,7 @@ export class EventV2Service {
 
                 };
 
-                const maxItemsPerPage = 10000;
+                const maxItemsPerPage = 1000;
                 const itemsPerPage = maxItemsPerPage;
 
                 const paginationAux = {
@@ -576,7 +576,13 @@ export class EventV2Service {
 
                 // const result = await getGenericSpecial(pagination, "event", select, notCancelled);
                 // const result = await getGeneric(pagination, "event", select);
-                const result = await getGenericSpecialEvent2(pagination, "event", select, isValidCancelledStatus);
+                const result = await getGenericSpecialEvent2(
+                    pagination,
+                    "event",
+                    select,
+                    isValidCancelledStatus,
+                    { maxItemsPerPage }
+                );
                 result.rows = result.rows.map((row: any) => this._withGroupFields(row as any));
 
                 return result;
@@ -643,7 +649,13 @@ export class EventV2Service {
                         order: 'desc' as 'asc' | 'desc',
                     }
                 }
-                const result = await getGenericSpecialEvent2(pagination, "event", select);
+                const result = await getGenericSpecialEvent2(
+                    pagination,
+                    "event",
+                    select,
+                    undefined,
+                    { maxItemsPerPage }
+                );
                 result.rows = result.rows.map((row: any) => this._withGroupFields(row as any));
 
                 console.log("mira que es result", result)
@@ -765,12 +777,12 @@ export class EventV2Service {
     }
 
 
-    async getEventWithoutWorkerById_Counter(idWorkspace): Promise<any> {
+    async getEventWithoutWorkerById_Counter(idWorkspace: string): Promise<any> {
 
 
     }
 
-    async getEventWithoutWorkerById_List(idWorkspace, pagination: Pagination): Promise<any> {
+    async getEventWithoutWorkerById_List(idWorkspace: string, pagination: Pagination): Promise<any> {
 
 
     }

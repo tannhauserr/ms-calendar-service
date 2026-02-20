@@ -6,10 +6,16 @@ import { env } from '../../../config/env';
 
 export class RedisCacheService {
     private static _instance: RedisCacheService;
-    private redisClient: RedisClientType;
-    private subscriberClient: RedisClientType;
+    private redisClient: RedisClientType | null = null;
+    private subscriberClient: RedisClientType | null = null;
+    private readonly enabled: boolean;
 
     private constructor() {
+        this.enabled = env.ENABLE_REDIS;
+        if (!this.enabled) {
+            return;
+        }
+
         this.redisClient = createClient({
             socket: {
                 host: env.REDIS_HOST,
@@ -29,24 +35,24 @@ export class RedisCacheService {
         });
 
 
-        this.redisClient.on('error', (err) => {
+        this.redisClient!.on('error', (err) => {
             console.error(`${CONSOLE_COLOR.FgRed}Redis Client Error: ${err}${CONSOLE_COLOR.Reset}`);
         });
 
-        this.redisClient.on('ready', () => {
+        this.redisClient!.on('ready', () => {
             console.log(`${CONSOLE_COLOR.FgGreen}Redis client connected and ready${CONSOLE_COLOR.Reset}`);
         });
 
-        this.subscriberClient.on('error', (err) => {
+        this.subscriberClient!.on('error', (err) => {
             console.error(`${CONSOLE_COLOR.FgRed}Redis Subscriber Client Error: ${err}${CONSOLE_COLOR.Reset}`);
         });
 
-        this.subscriberClient.on('ready', () => {
+        this.subscriberClient!.on('ready', () => {
             console.log(`${CONSOLE_COLOR.FgGreen}Redis subscriber client connected and ready${CONSOLE_COLOR.Reset}`);
         });
 
-        this.redisClient.connect().catch((err) => console.error(`${CONSOLE_COLOR.FgRed}Redis Connection Error: ${err}${CONSOLE_COLOR.Reset}`));
-        this.subscriberClient.connect().catch((err) => console.error(`${CONSOLE_COLOR.FgRed}Redis Subscriber Connection Error: ${err}${CONSOLE_COLOR.Reset}`));
+        this.redisClient!.connect().catch((err) => console.error(`${CONSOLE_COLOR.FgRed}Redis Connection Error: ${err}${CONSOLE_COLOR.Reset}`));
+        this.subscriberClient!.connect().catch((err) => console.error(`${CONSOLE_COLOR.FgRed}Redis Subscriber Connection Error: ${err}${CONSOLE_COLOR.Reset}`));
 
         // Suscribirse a los eventos de eliminación y expiración
         // this.subscriberClient.subscribe('__keyevent@0__:del', (message) => {
@@ -66,6 +72,7 @@ export class RedisCacheService {
     }
 
     public async set(key: string, value: string, ttl?: number): Promise<void> {
+        if (!this.enabled || !this.redisClient) return;
         if (ttl) {
             await this.redisClient.set(key, value, {
                 EX: ttl,
@@ -76,6 +83,7 @@ export class RedisCacheService {
     }
 
     public async setIfNotExists(key: string, value: string, ttl: number): Promise<boolean> {
+        if (!this.enabled || !this.redisClient) return true;
         const result = await this.redisClient.set(key, value, {
             EX: ttl,
             NX: true,
@@ -85,14 +93,17 @@ export class RedisCacheService {
     }
 
     public async get(key: string): Promise<string | null> {
+        if (!this.enabled || !this.redisClient) return null;
         return this.redisClient.get(key);
     }
 
     public async delete(key: string): Promise<number> {
+        if (!this.enabled || !this.redisClient) return 0;
         return this.redisClient.del(key);
     }
 
     public async clear(): Promise<void> {
+        if (!this.enabled || !this.redisClient) return;
         await this.redisClient.flushAll();
     }
 
@@ -102,6 +113,15 @@ export class RedisCacheService {
      * Retorna un wrapper que soporta operaciones condicionales
      */
     public pipeline() {
+        if (!this.enabled || !this.redisClient) {
+            const noopWrapper = {
+                set: (_key: string, _value: string, _ttl?: number, _condition: boolean = true) => noopWrapper,
+                del: (_key: string, _condition: boolean = true) => noopWrapper,
+                exec: async () => [] as any[],
+            };
+            return noopWrapper;
+        }
+
         const pipeline = this.redisClient.multi();
 
         const wrapper = {
@@ -132,6 +152,7 @@ export class RedisCacheService {
      * @param operations Array de operaciones {key, value, ttl?}
      */
     public async batchSet(operations: Array<{ key: string, value: string, ttl?: number }>): Promise<void> {
+        if (!this.enabled || !this.redisClient) return;
         if (operations.length === 0) return;
 
         const pipeline = this.redisClient.multi();
@@ -152,6 +173,7 @@ export class RedisCacheService {
      * @param keys Array de keys a eliminar
      */
     public async batchDelete(keys: string[]): Promise<void> {
+        if (!this.enabled || !this.redisClient) return;
         if (keys.length === 0) return;
 
         const pipeline = this.redisClient.multi();
@@ -166,6 +188,7 @@ export class RedisCacheService {
      * @param pattern 
      */
     async deleteByPattern(pattern: string): Promise<void> {
+        if (!this.enabled || !this.redisClient) return;
         let cursor = 0; // número
 
         do {

@@ -1,0 +1,899 @@
+businessHoursAdd:
+  post:
+    tags: [Schedules]
+    summary: Create business hours
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/BusinessHourAddRequest"
+          examples:
+            mondaySlot:
+              summary: Real payload - business hour add
+              value:
+                weekDayType: MONDAY
+                startTime: "16:00"
+                endTime: "20:00"
+                closed: false
+                idCompanyFk: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+                idWorkspaceFk: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+    responses:
+      "200":
+        description: Business hour created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+businessHoursSearch:
+  post:
+    tags: [Schedules]
+    summary: Search business hours by workspace
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/BusinessHoursSearchRequest"
+          examples:
+            byWorkspace:
+              value:
+                idWorkspace: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+    responses:
+      "200":
+        description: Business hours found
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+businessHoursUpdate:
+  put:
+    tags: [Schedules]
+    summary: Update business hour by id
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          $ref: "../schemas/index.yaml#/IdParam"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/BusinessHourUpdateRequest"
+          examples:
+            mondaySlotUpdate:
+              summary: Real payload - business hour update
+              value:
+                id: "348d852f-13d2-4990-b883-b594273b2c94"
+                weekDayType: MONDAY
+                startTime: "09:00"
+                endTime: "15:00"
+                closed: false
+                idCompanyFk: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+                idWorkspaceFk: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+    responses:
+      "200":
+        description: Business hour updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+businessHoursDelete:
+  delete:
+    tags: [Schedules]
+    summary: Delete one or multiple business hours
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/DeleteByIdListRequest"
+          examples:
+            deleteOneOrClose:
+              summary: Real payload - delete business hour
+              value:
+                idList:
+                  - "348d852f-13d2-4990-b883-b594273b2c94"
+                action: true
+    responses:
+      "200":
+        description: Business hour(s) deleted
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+businessHoursRedis:
+  post:
+    tags: [Schedules]
+    summary: Get business hours map from cache/database
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/BusinessHoursRedisRequest"
+          examples:
+            workspaceCacheLookup:
+              value:
+                idCompany: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+                idWorkspace: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+    responses:
+      "200":
+        description: Business hours map returned
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+workerBusinessHoursAdd:
+  post:
+    tags: [Schedules]
+    summary: Create worker business hours
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/WorkerBusinessHourAddRequest"
+          examples:
+            fridayWorkerSlot:
+              value:
+                idUserFk: "65f1d8f1-9fa5-4382-9286-b5938f5cf44f"
+                weekDayType: FRIDAY
+                startTime: "10:00"
+                endTime: "13:00"
+                closed: false
+                idCompanyFk: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+                idWorkspaceFk: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+    responses:
+      "200":
+        description: Worker business hour created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+workerBusinessHoursByWorkerAndWorkspace:
+  get:
+    tags: [Schedules]
+    summary: Get worker business hours by worker and workspace
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: idWorker
+        required: true
+        schema:
+          $ref: "../schemas/index.yaml#/IdParam"
+      - in: path
+        name: idWorkspace
+        required: true
+        schema:
+          $ref: "../schemas/index.yaml#/IdParam"
+    responses:
+      "200":
+        description: Worker business hours found
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+workerBusinessHoursUpdate:
+  put:
+    tags: [Schedules]
+    summary: Update worker business hour by id
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          $ref: "../schemas/index.yaml#/IdParam"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/WorkerBusinessHourUpdateRequest"
+    responses:
+      "200":
+        description: Worker business hour updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+workerBusinessHoursDelete:
+  delete:
+    tags: [Schedules]
+    summary: Delete one or multiple worker business hours
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/DeleteByIdListRequest"
+          examples:
+            deleteWorkerHour:
+              value:
+                idList:
+                  - "348d852f-13d2-4990-b883-b594273b2c94"
+                action: true
+    responses:
+      "200":
+        description: Worker business hour(s) deleted
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+workerBusinessHoursRedis:
+  post:
+    tags: [Schedules]
+    summary: Get worker hours map from cache/database
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/WorkerHoursRedisRequest"
+          examples:
+            workerHoursLookup:
+              value:
+                idUserList:
+                  - "65f1d8f1-9fa5-4382-9286-b5938f5cf44f"
+                idWorkspace: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+    responses:
+      "200":
+        description: Worker hours map returned
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+temporaryBusinessHoursSearch:
+  post:
+    tags: [Schedules]
+    summary: Search temporary business hour exceptions
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/PaginationSearchRequest"
+    responses:
+      "200":
+        description: Temporary business hours found
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+temporaryBusinessHoursAdd:
+  post:
+    tags: [Schedules]
+    summary: Create temporary business hour exception
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/TemporaryBusinessHourAddRequest"
+          examples:
+            createTemporaryWorkerBlock:
+              value:
+                idUserFk: "65f1d8f1-9fa5-4382-9286-b5938f5cf44f"
+                idCompanyFk: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+                idWorkspaceFk: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+                date: "2026-02-19T11:00:00.000Z"
+                closed: false
+                startTime: "00:15"
+                endTime: "08:15"
+    responses:
+      "200":
+        description: Temporary business hour created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+temporaryBusinessHoursUpdate:
+  put:
+    tags: [Schedules]
+    summary: Update temporary business hour by id
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          $ref: "../schemas/index.yaml#/IdParam"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/TemporaryBusinessHourUpdateRequest"
+    responses:
+      "200":
+        description: Temporary business hour updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+temporaryBusinessHoursDelete:
+  delete:
+    tags: [Schedules]
+    summary: Delete temporary business hours
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/TemporaryDeleteRequest"
+    responses:
+      "200":
+        description: Temporary business hour(s) deleted
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+workerAbsencesSearch:
+  post:
+    tags: [Schedules]
+    summary: Search worker absences
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/WorkerAbsenceListRequest"
+          examples:
+            byWorkerAndWorkspace:
+              value:
+                pagination:
+                  page: 1
+                  itemsPerPage: 10
+                  filters:
+                    idUserFk:
+                      value: "65f1d8f1-9fa5-4382-9286-b5938f5cf44f"
+                    idWorkspaceFk:
+                      value: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+    responses:
+      "200":
+        description: Worker absences found
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+workerAbsencesAdd:
+  post:
+    tags: [Schedules]
+    summary: Create worker absence
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/WorkerAbsenceAddRequest"
+          examples:
+            createVacationAbsence:
+              value:
+                idUserFk: "65f1d8f1-9fa5-4382-9286-b5938f5cf44f"
+                startDate: "2026-02-19T18:24:17.536Z"
+                endDate: "2026-02-19T18:24:17.536Z"
+                eventPurposeType: VACATION
+                description: "asd"
+                idWorkspaceFk: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+                idCompanyFk: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+                title: "Test Title ausencia"
+    responses:
+      "200":
+        description: Worker absence created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+workerAbsencesUpdate:
+  post:
+    tags: [Schedules]
+    summary: Update worker absence by id
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          $ref: "../schemas/index.yaml#/IdParam"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/WorkerAbsenceUpdateRequest"
+          examples:
+            updateVacationAbsence:
+              value:
+                id: "a22086e4-daef-4487-9a9e-863e04bff35f"
+                idUserFk: "65f1d8f1-9fa5-4382-9286-b5938f5cf44f"
+                startDate: "2026-02-16T23:00:00.000Z"
+                endDate: "2026-02-17T22:59:59.999Z"
+                eventPurposeType: VACATION
+                description: "Descansa este días"
+                idWorkspaceFk: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+                idCompanyFk: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+                title: "Test Title ausencia"
+    responses:
+      "200":
+        description: Worker absence updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+workerAbsencesDelete:
+  post:
+    tags: [Schedules]
+    summary: Delete worker absences definitively
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/WorkerAbsenceDeleteRequest"
+    responses:
+      "200":
+        description: Worker absence(s) deleted
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"

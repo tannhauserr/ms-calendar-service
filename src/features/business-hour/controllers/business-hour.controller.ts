@@ -47,7 +47,6 @@ export class BusinessHourController {
         }
     }
 
-    /** Returns business hours for a workspace. */
     public get = async (req: any, res: any, next: any) => {
         try {
             const query = req.query as Partial<GetBusinessHoursQueryDto>;
@@ -56,40 +55,38 @@ export class BusinessHourController {
             const token = req.token;
             await this.jwtBusinessHour.verify(token);
 
-            const result = await this.businessHourBusinessHour.getBusinessHours(idWorkspace);
+            const result = await this.businessHourBusinessHour.getBusinessHours(idWorkspace as string);
             res.status(200).json({ message: "Registros encontrados", ok: true, item: result });
         } catch (err: any) {
             res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
-
-    /** Returns a business-hour record by id. */
-    public getById = async (req: any, res: any, next: any) => {
-        try {
-            const { id } = req.params as BusinessHourIdParamsDto;
-            const token = req.token;
-            await this.jwtBusinessHour.verify(token);
-
-            const result = await this.businessHourBusinessHour.getBusinessHourById(id);
-            res.status(200).json(Response.build("Registro encontrado", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
-
-    /** Returns business-hour records by weekday. */
-    public getByWeekDay = async (req: any, res: any, next: any) => {
-        try {
-            const { weekDayType } = req.params as BusinessHourWeekDayParamsDto;
-            const token = req.token;
-            await this.jwtBusinessHour.verify(token);
-
-            const result = await this.businessHourBusinessHour.getBusinessHourByWeekDay(weekDayType);
-            res.status(200).json(Response.build("Registro encontrado", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
+    //
+    // public getById = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { id } = req.params as BusinessHourIdParamsDto;
+    //         const token = req.token;
+    //         await this.jwtBusinessHour.verify(token);
+    //
+    //         const result = await this.businessHourBusinessHour.getBusinessHourById(id);
+    //         res.status(200).json(Response.build("Registro encontrado", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
+    //
+    // public getByWeekDay = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { weekDayType } = req.params as BusinessHourWeekDayParamsDto;
+    //         const token = req.token;
+    //         await this.jwtBusinessHour.verify(token);
+    //
+    //         const result = await this.businessHourBusinessHour.getBusinessHourByWeekDay(weekDayType);
+    //         res.status(200).json(Response.build("Registro encontrado", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
 
     /** Updates a business-hour record. */
     public update = async (req: any, res: any, next: any) => {
@@ -128,7 +125,6 @@ export class BusinessHourController {
         }
     }
 
-    /** Returns cached business hours for a workspace. */
     public getBusinessHoursFromRedis = async (req: any, res: any, next: any) => {
         try {
             const query = req.query as Partial<BusinessHoursRedisQueryDto>;
@@ -136,46 +132,44 @@ export class BusinessHourController {
             const idCompany = query?.idCompany ?? body?.idCompany;
             const idWorkspace = query?.idWorkspace ?? body?.idWorkspace;
 
-            console.log("llego aqui para algo?", idCompany, idWorkspace);
-
             const token = req.token;
             await this.jwtBusinessHour.verify(token);
 
-            const result = await this.businessHourBusinessHour.getBusinessHoursFromRedis(idCompany, idWorkspace);
-            res.status(200).json(Response.build("Registros encontrados", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
-
-
-    /** Returns cached business hours for internal microservice calls. */
-    public getBusinessHoursFromRedis_internalMS = async (req: any, res: any, next: any) => {
-        try {
-            const { idCompany, idWorkspace } = req.body as BusinessHoursRedisDto;
-
-            console.log("llego aqui para algo?", idCompany, idWorkspace);
-
-            const result = await this.businessHourBusinessHour.getBusinessHoursFromRedis(idCompany, idWorkspace);
-            res.status(200).json(Response.build("Registros encontrados", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
-
-    /** Generates a default business-hours schedule for a workspace. */
-    public internalGenerateWorkspaceBusinessHours = async (req: any, res: any, next: any) => {
-        try {
-            const { idCompany, idWorkspace, businessHours } = req.body;
-
-            const result = await this.businessHourBusinessHour.internalGenerateWorkspaceBusinessHours(
-                idCompany,
-                idWorkspace,
-                businessHours
+            const result = await this.businessHourBusinessHour.getBusinessHoursFromRedis(
+                idCompany as string,
+                idWorkspace as string
             );
-            res.status(200).json(Response.build("Horario de workspace generado", 200, true, result));
+            res.status(200).json(Response.build("Registros encontrados", 200, true, result));
         } catch (err: any) {
             res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
         }
     }
+    //
+    // public getBusinessHoursFromRedis_internalMS = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { idCompany, idWorkspace } = req.body as BusinessHoursRedisDto;
+    //
+    //         console.log("llego aqui para algo?", idCompany, idWorkspace);
+    //
+    //         const result = await this.businessHourBusinessHour.getBusinessHoursFromRedis(idCompany, idWorkspace);
+    //         res.status(200).json(Response.build("Registros encontrados", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
+    //
+    // public internalGenerateWorkspaceBusinessHours = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { idCompany, idWorkspace, businessHours } = req.body;
+    //
+    //         const result = await this.businessHourBusinessHour.internalGenerateWorkspaceBusinessHours(
+    //             idCompany,
+    //             idWorkspace,
+    //             businessHours
+    //         );
+    //         res.status(200).json(Response.build("Horario de workspace generado", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
 }

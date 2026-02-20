@@ -138,7 +138,7 @@ export const runPureClassEditFlow = async (params: RunPureClassEditFlowParams) =
 
     const seg = {
         serviceId: svcReq.serviceId,
-        userId: chosen,
+        userId: chosen as string,
         start: startWS.clone().seconds(0).milliseconds(0),
         end: endWS.clone().seconds(0).milliseconds(0),
     };

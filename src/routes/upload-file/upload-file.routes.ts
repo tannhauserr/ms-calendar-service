@@ -1,20 +1,16 @@
 import { Router } from 'express';
+import type { Request } from "express";
 import { UploadFileController } from '../../controllers/upload-file/upload-file.controller';
-
-
-
-const uploadFileController = new UploadFileController();
-const router = Router();
-
-var multer = require('multer');
-var path = require('path')
+import multer from "multer";
 import fs from 'fs'
 
 // const upload = multer({ dest: "uploads/" });
 
+const uploadFileController = new UploadFileController();
+const router = Router();
 
-var storage = multer.diskStorage({
-    destination: function (req, file, cb) {
+const storage = multer.diskStorage({
+    destination: function (req: Request, _file: any, cb: (error: Error | null, destination: string) => void) {
         console.log("que es directories", req.body)
         console.log("que es directories", req.body)
         console.log("que es directories", req.body)
@@ -30,7 +26,7 @@ var storage = multer.diskStorage({
             cb(null, 'uploads/')
         }
     },
-    filename: function (req, file, cb) {
+    filename: function (_req: Request, file: any, cb: (error: Error | null, filename: string) => void) {
         // cb(null, Date.now() + path.extname(file.originalname))
         cb(null, file.originalname)
 

@@ -1,5 +1,5 @@
 import moment from "moment";
-import { ErrorCatalogByDomain } from "../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../models/error-codes";
 
 export type DateISO = string;
 
@@ -8,8 +8,6 @@ export type HoursRangeInput = {
     start?: DateISO;
     end?: DateISO;
 };
-
-const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 /** Normalizes a date range input to a start/end pair in YYYY-MM-DD format. */
 export function normalizeRange(

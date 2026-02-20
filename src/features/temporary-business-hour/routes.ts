@@ -37,33 +37,34 @@ router.post(
     controller.get
 );
 
-router.post(
-    "/temporary-business-hours/by-date",
-    JWTService.authCookieOrBearer,
-    validateBody(temporaryBusinessHourByDateSchema),
-    controller.getByDate
-);
-
-router.post(
-    "/temporary-business-hours/by-worker-and-date",
-    JWTService.authCookieOrBearer,
-    validateBody(temporaryBusinessHourByWorkerAndDateSchema),
-    controller.getByWorkerAndDate
-);
-
-router.post(
-    "/temporary-business-hours/exception/by-worker-and-date-exception",
-    JWTService.authCookieOrBearer,
-    validateBody(temporaryBusinessHourWorkerExceptionSchema),
-    controller.getDistinctDatesWithExceptionsByWorker
-);
-
-router.post(
-    "/temporary-business-hours/r-temporary-business",
-    JWTService.authCookieOrBearer,
-    validateBody(temporaryHoursRedisSchema),
-    controller.getTemporaryHoursFromRedis
-);
+// Fuera de alcance (scope schedules actual):
+// router.post(
+//     "/temporary-business-hours/by-date",
+//     JWTService.authCookieOrBearer,
+//     validateBody(temporaryBusinessHourByDateSchema),
+//     controller.getByDate
+// );
+//
+// router.post(
+//     "/temporary-business-hours/by-worker-and-date",
+//     JWTService.authCookieOrBearer,
+//     validateBody(temporaryBusinessHourByWorkerAndDateSchema),
+//     controller.getByWorkerAndDate
+// );
+//
+// router.post(
+//     "/temporary-business-hours/exception/by-worker-and-date-exception",
+//     JWTService.authCookieOrBearer,
+//     validateBody(temporaryBusinessHourWorkerExceptionSchema),
+//     controller.getDistinctDatesWithExceptionsByWorker
+// );
+//
+// router.post(
+//     "/temporary-business-hours/r-temporary-business",
+//     JWTService.authCookieOrBearer,
+//     validateBody(temporaryHoursRedisSchema),
+//     controller.getTemporaryHoursFromRedis
+// );
 
 router.put(
     "/temporary-business-hours/:id",
@@ -85,28 +86,29 @@ router.delete(
     controller.delete
 );
 
-router.post(
-    "/temporary-business-hours/autocomplete",
-    JWTService.authCookieOrBearer,
-    validateBody(temporaryBusinessHourAutocompleteSchema),
-    controller.autocomplete
-);
-
-router.post(
-    "/temporary-business-hours/r-temporary-business-hours",
-    [
-        JWTService.authCookieOrBearer,
-        OnlyAdminMiddleware.accessOnlyAdminOrManagerOrUser,
-        validateBody(temporaryHoursRedisSchema),
-    ],
-    controller.getTemporaryHoursFromRedis
-);
-
-router.get(
-    "/temporary-business-hours/:id",
-    JWTService.authCookieOrBearer,
-    validateParams(temporaryBusinessHourIdParamsSchema),
-    controller.getById
-);
+// Fuera de alcance (scope schedules actual):
+// router.post(
+//     "/temporary-business-hours/autocomplete",
+//     JWTService.authCookieOrBearer,
+//     validateBody(temporaryBusinessHourAutocompleteSchema),
+//     controller.autocomplete
+// );
+//
+// router.post(
+//     "/temporary-business-hours/r-temporary-business-hours",
+//     [
+//         JWTService.authCookieOrBearer,
+//         OnlyAdminMiddleware.accessOnlyAdminOrManagerOrUser,
+//         validateBody(temporaryHoursRedisSchema),
+//     ],
+//     controller.getTemporaryHoursFromRedis
+// );
+//
+// router.get(
+//     "/temporary-business-hours/:id",
+//     JWTService.authCookieOrBearer,
+//     validateParams(temporaryBusinessHourIdParamsSchema),
+//     controller.getById
+// );
 
 export default router;

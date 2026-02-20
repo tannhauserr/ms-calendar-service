@@ -19,6 +19,7 @@ import {
     UpdateByIdBodyDto,
     UpsertEventByPlatformBodyDto,
 } from "../dto";
+import { applyManageEventOptions } from "../utils/manage-event-options.util";
 import { EventPlatformQueryService } from "../services/event-platform.query.service";
 import { EventPlatformCommandService, UpdateEventByIdPayload } from "../services/event-platform.command.service";
 
@@ -31,7 +32,13 @@ export class EventPlatformController {
 
     public upsertEventByPlatform = async (req: any, res: any) => {
         try {
-            const payload: UpsertEventByPlatformBodyDto & SidebarBackendBookingPayload = req.body;
+            const payloadInput: UpsertEventByPlatformBodyDto & SidebarBackendBookingPayload = req.body;
+            const payload = applyManageEventOptions(payloadInput, {
+                worker: req.query?.worker,
+                startSlot: req.query?.startSlot,
+                date: req.query?.date,
+                eventStatusType: req.query?.eventStatusType,
+            });
             const token = req.token;
             await this.jwtService.verify(token);
 
@@ -259,9 +266,9 @@ export class EventPlatformController {
 
             const result = await this.commands.changeEventStatusByParticipant(
                 id,
+                action,
                 idClient,
-                idClientWorkspace,
-                action
+                idClientWorkspace
             );
 
             return res.status(200).json(Response.build("Estado del evento actualizado", 200, true, result));

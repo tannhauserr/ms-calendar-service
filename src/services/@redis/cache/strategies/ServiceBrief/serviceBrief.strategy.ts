@@ -208,7 +208,7 @@
 
 // src/services/@cache/strategies/ServiceBrief/serviceBrief.strategy.ts
 
-import { IRedisServiceBriefStrategy } from "../../interfaces/interfaces";
+import { IRedisServiceBriefStrategy } from "./interfaces";
 import { ServiceBrief } from "../../interfaces/models/service-brief";
 import { RedisCacheService } from "../../redis.service";
 

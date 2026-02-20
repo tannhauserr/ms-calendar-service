@@ -2,6 +2,7 @@ import { Event, EventPurposeType, Prisma, TemporaryBusinessHour } from "@prisma/
 import prisma from "../../../../lib/prisma";
 import CustomError from "../../../../models/custom-error/CustomError";
 import { Pagination } from "../../../../models/pagination";
+import { normalizePaginationInput } from "../../../../models/pagination";
 import { getGeneric } from "../../../../utils/get-genetic/getGenetic";
 import moment from "moment";
 import { TemporaryHoursMapType } from "../../../../models/interfaces/temporary-business-hours-type";
@@ -273,11 +274,11 @@ export class TemporaryBusinessHourService {
 
     async getTemporaryBusinessHourByWorkerAndDate(idWorker: string, date: Date): Promise<{
         id: string;
-        idUserFk: string;
+        idUserFk: string | null;
         date: Date;
         closed: boolean;
-        startTime: string;
-        endTime: string;
+        startTime: string | null;
+        endTime: string | null;
     }[]> {
         try {
             // Obtener el inicio y fin del día
@@ -574,8 +575,12 @@ export class TemporaryBusinessHourService {
 
     async getTemporaryBusinessHours2(pagination: Pagination): Promise<any> {
         try {
-            const skip = (pagination.page - 1) * pagination.itemsPerPage;
-            const take = pagination.itemsPerPage;
+            const normalized = normalizePaginationInput(pagination, {
+                context: "default",
+                defaultItemsPerPage: 20,
+            });
+            const skip = (normalized.page - 1) * normalized.itemsPerPage;
+            const take = normalized.itemsPerPage;
             const idUserFk = pagination.filters?.idUserFk?.value;
             const idWorkspaceFk = pagination.filters?.idWorkspaceFk?.value;
 
@@ -671,7 +676,7 @@ export class TemporaryBusinessHourService {
                 rows: groups,
                 pagination: {
                     totalItems: totalGroups,
-                    totalPages: Math.ceil(totalGroups / pagination.itemsPerPage),
+                    totalPages: Math.ceil(totalGroups / normalized.itemsPerPage),
                 },
             };
         } catch (error: any) {
@@ -855,7 +860,11 @@ export class TemporaryBusinessHourService {
             const temporaryHoursMap: TemporaryHoursMapType = {};
             const temporaryHoursStrategy = new TemporaryHoursStrategy();
 
-            const { start, end } = normalizeRange(range, true);
+            const normalizedRange = normalizeRange(range, true);
+            if (!normalizedRange) {
+                return temporaryHoursMap;
+            }
+            const { start, end } = normalizedRange;
 
 
             const wantedDays = listDaysInclusive(start, end);

@@ -5,10 +5,10 @@ export class RabbitMQService {
     private static _instance: RabbitMQService;
     private connection!: Connection;
     private channel!: Channel;
-    private readonly host: string = process.env.RABBITMQ_HOST;
+    private readonly host: string = process.env.RABBITMQ_HOST || "localhost";
     private readonly port: number = Number(process.env.RABBITMQ_PORT) || 5672;
-    private readonly user: string = process.env.RABBITMQ_USER;
-    private readonly password: string = process.env.RABBITMQ_PASSWORD;
+    private readonly user: string = process.env.RABBITMQ_USER || "guest";
+    private readonly password: string = process.env.RABBITMQ_PASSWORD || "guest";
     private readonly vhost: string = process.env.RABBITMQ_VHOST || '/';
 
     private constructor() { }

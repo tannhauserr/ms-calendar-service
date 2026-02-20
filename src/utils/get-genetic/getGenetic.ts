@@ -1,6 +1,5 @@
-import { Prisma } from "@prisma/client";
 import prisma from "../../lib/prisma";
-import { FilterJson, Pagination } from "../../models/pagination";
+import { Pagination, normalizePaginationInput } from "../../models/pagination";
 
 
 type IncludeRelations = {
@@ -24,10 +23,11 @@ type ModelType =
 
   ;
 
-  async function getGeneric(
+	  async function getGeneric(
     pagination: Pagination,
     modelName: ModelType,
-    includeRelations?: any) {
+    includeRelations?: any,
+    options?: { maxItemsPerPage?: number; maxPage?: number }) {
     const {
       orderBy,
       filters,
@@ -35,8 +35,12 @@ type ModelType =
       startDate,
       endDate,
     } = pagination;
-    const page = Math.max(1, +pagination.page);
-    const itemsPerPage = Math.max(1, +pagination.itemsPerPage);
+    const { page, itemsPerPage } = normalizePaginationInput(pagination, {
+      context: "default",
+      defaultItemsPerPage: 25,
+      maxItemsPerPage: options?.maxItemsPerPage,
+      maxPage: options?.maxPage,
+    });
   
     const skip = (page - 1) * itemsPerPage;
     const take = +itemsPerPage;
@@ -47,14 +51,6 @@ type ModelType =
   
   
   
-  
-    if (page < 1) {
-      throw new Error('The page value must be greater than or equal to 1.');
-    }
-  
-    if (itemsPerPage < 1) {
-      throw new Error('The itemsPerPage value must be greater than or equal to 1.');
-    }
   
     // Procesar filtros
     let where: any = {};
@@ -101,11 +97,12 @@ type ModelType =
     where = { ...where, deletedDate: null };
   
   
-    try {
-      const items = await prisma[modelName as string].findMany({
-        where,
-        skip,
-        take,
+	    try {
+	      const prismaClient = prisma as any;
+	      const items = await prismaClient[modelName as string].findMany({
+	        where,
+	        skip,
+	        take,
         orderBy: orderQuery,
         // include: includeRelations,
         select: includeRelations
@@ -113,7 +110,7 @@ type ModelType =
   
       // console.log(items)
   
-      const totalItems = await prisma[modelName as string].count({ where });
+	      const totalItems = await prismaClient[modelName as string].count({ where });
       const totalPages = Math.ceil(totalItems / itemsPerPage);
   
       return {
@@ -230,7 +227,7 @@ type ModelType =
   
   
   
-  function handleCondition(isEnumField, field, value, where) {
+	  function handleCondition(isEnumField: boolean | undefined, field: string, value: any, where: any) {
   
     if (Array.isArray(value)) {
       const conditions = value.map(val => {
@@ -258,15 +255,15 @@ type ModelType =
   // JSON
   // JSON
   
-  function processFiltersJson(filtersJson: any) {
-    let where = { AND: [] };
-    let conditionsByPath: { [key: string]: any[] } = {};
-  
-    // Recolectar condiciones por path
-    Object.entries(filtersJson).forEach(([key, filters]: any) => {
-      filters.forEach(filter => {
-        const { path, value } = filter;
-        let conditionValue = Array.isArray(value) ? value : [value]; // Asegurar que siempre sea un array
+	  function processFiltersJson(filtersJson: any) {
+	    let where: any = { AND: [] };
+	    let conditionsByPath: { [key: string]: any[] } = {};
+	  
+	    // Recolectar condiciones por path
+	    Object.entries(filtersJson).forEach(([key, filters]: [string, any]) => {
+	      (filters as any[]).forEach((filter: any) => {
+	        const { path, value } = filter;
+	        let conditionValue = Array.isArray(value) ? value : [value]; // Asegurar que siempre sea un array
   
         let pathKey = path.join('.'); // Convertir el array de path a string para usar como clave
   
@@ -276,9 +273,9 @@ type ModelType =
         }
   
         // Añadir la condición al arreglo correspondiente
-        conditionValue.forEach(val => {
-          conditionsByPath[pathKey].push({
-            [key]: {
+	        conditionValue.forEach((val: any) => {
+	          conditionsByPath[pathKey].push({
+	            [key]: {
               path: path,
               equals: val,
             }
@@ -288,7 +285,7 @@ type ModelType =
     });
   
     // Procesar las condiciones agrupadas por path y combinarlas con OR si es necesario
-    Object.values(conditionsByPath).forEach(conditions => {
+	    Object.values(conditionsByPath).forEach((conditions: any[]) => {
       if (conditions.length === 1) {
         // Si solo hay una condición para este path, añadirla directamente
         where.AND.push(conditions[0]);

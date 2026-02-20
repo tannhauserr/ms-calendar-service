@@ -225,7 +225,7 @@ export class EventClientUpdatePersistence {
                 const event = await tx.event.create({
                     data: {
                         idCompanyFk: input.idCompany,
-                        title: snapshot?.name,
+                        title: snapshot?.name ?? "Servicio",
                         idServiceFk: segment.serviceId,
                         idUserPlatformFk: segment.userId,
                         startDate: segment.start,
