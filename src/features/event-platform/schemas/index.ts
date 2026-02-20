@@ -9,5 +9,6 @@ export * from "./get-events.schema";
 export * from "./internal-get-event-data-by-id.schema";
 export * from "./internal-get-group-data-by-id.schema";
 export * from "./mark-comment-as-read.schema";
+export * from "./manage-event-options.query.schema";
 export * from "./update-by-id.schema";
 export * from "./upsert-event-by-platform.schema";

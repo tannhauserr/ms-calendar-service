@@ -1,0 +1,332 @@
+DemoWorkspaceSelector:
+  type: string
+  format: uuid
+  description: |
+    Selector demo para workspace.
+    - `29f8a525-d3f2-4bc2-89bb-f0f1f1958de9` -> válido (mock por defecto).
+    - `2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9` -> válido (workspace local con horarios).
+    - `00000000-0000-4000-8000-000000000001` -> inválido (mock).
+  enum:
+    - "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+    - "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+    - "00000000-0000-4000-8000-000000000001"
+  default: "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+
+DemoClientSelector:
+  type: string
+  format: uuid
+  description: |
+    Selector demo para cliente.
+    - `a2a81aad-d012-41b8-8c4e-aa5c2e6aa356` -> válido (mock).
+    - `00000000-0000-4000-8000-000000000002` -> inválido (mock).
+  enum:
+    - "a2a81aad-d012-41b8-8c4e-aa5c2e6aa356"
+    - "00000000-0000-4000-8000-000000000002"
+  default: "a2a81aad-d012-41b8-8c4e-aa5c2e6aa356"
+
+GenericSuccessResponse:
+  type: object
+  required: [message, ok]
+  properties:
+    message:
+      type: string
+    ok:
+      type: boolean
+      example: true
+    status:
+      type: integer
+      example: 200
+    item:
+      nullable: true
+      additionalProperties: true
+    code:
+      type: string
+
+GenericErrorResponse:
+  oneOf:
+    - type: object
+      required: [ok, message]
+      properties:
+        ok:
+          type: boolean
+          example: false
+        message:
+          type: string
+    - type: object
+      required: [message, ok, status]
+      properties:
+        message:
+          type: string
+        ok:
+          type: boolean
+          example: false
+        status:
+          type: integer
+        item:
+          nullable: true
+        code:
+          type: string
+
+ClientBaseContextRequest:
+  type: object
+  additionalProperties: true
+  required: [idCompany, idWorkspace, customer]
+  properties:
+    idCompany:
+      type: string
+      format: uuid
+    idWorkspace:
+      $ref: "#/DemoWorkspaceSelector"
+    idBookingPage:
+      type: string
+      format: uuid
+    customer:
+      type: object
+      required: [id]
+      properties:
+        id:
+          $ref: "#/DemoClientSelector"
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+
+ClientAppointmentsRequest:
+  allOf:
+    - $ref: "#/ClientBaseContextRequest"
+    - type: object
+      additionalProperties: true
+      properties:
+        scope:
+          type: string
+          enum: [upcoming, past]
+          default: upcoming
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        itemsPerPage:
+          type: integer
+          minimum: 1
+          default: 10
+
+ClientAppointmentByIdRequest:
+  allOf:
+    - $ref: "#/ClientBaseContextRequest"
+    - type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+          format: uuid
+
+ClientAttendee:
+  type: object
+  additionalProperties: true
+  required: [serviceId, durationMin]
+  properties:
+    serviceId:
+      type: string
+      format: uuid
+    durationMin:
+      type: integer
+      minimum: 1
+      example: 60
+    staffId:
+      type: string
+      format: uuid
+      nullable: true
+    categoryId:
+      type: string
+      format: uuid
+      nullable: true
+
+DemoConfigOverrides:
+  type: object
+  additionalProperties: false
+  properties:
+    bookingWindow:
+      type: object
+      additionalProperties: false
+      properties:
+        minLeadTimeMin:
+          type: integer
+          minimum: 0
+          default: 60
+        maxAdvanceDays:
+          type: integer
+          minimum: 0
+          default: 45
+        sameDayCutoffHourLocal:
+          type: integer
+          minimum: 0
+          maximum: 23
+          default: 0
+    limits:
+      type: object
+      additionalProperties: false
+      properties:
+        perUserPerDay:
+          type: integer
+          minimum: 0
+          default: 5
+        perUserConcurrent:
+          type: integer
+          minimum: 0
+          default: 5
+        maxServicesPerBooking:
+          type: integer
+          minimum: 1
+          default: 1
+
+ClientAddRequest:
+  allOf:
+    - $ref: "#/ClientBaseContextRequest"
+    - type: object
+      additionalProperties: true
+      required: [startLocalISO, timeZoneClient, attendees]
+      properties:
+        startLocalISO:
+          type: string
+          pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$"
+          example: "2026-02-20T10:00:00"
+        timeZoneClient:
+          type: string
+          example: "Europe/Madrid"
+        attendees:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/ClientAttendee"
+        note:
+          type: string
+        isCommentRead:
+          type: boolean
+        excludeEventId:
+          type: string
+          format: uuid
+        configOverrides:
+          $ref: "#/DemoConfigOverrides"
+
+ClientUpdateRequest:
+  allOf:
+    - $ref: "#/ClientBaseContextRequest"
+    - type: object
+      additionalProperties: true
+      required: [startLocalISO, timeZoneClient, attendees, idEvent]
+      properties:
+        startLocalISO:
+          type: string
+          pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$"
+          example: "2026-02-20T10:00:00"
+        timeZoneClient:
+          type: string
+          example: "Europe/Madrid"
+        attendees:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/ClientAttendee"
+        note:
+          type: string
+        isCommentRead:
+          type: boolean
+        excludeEventId:
+          type: string
+          format: uuid
+        idEvent:
+          type: string
+          format: uuid
+        deletedEventIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+ClientCancelRequest:
+  allOf:
+    - $ref: "#/ClientBaseContextRequest"
+    - type: object
+      additionalProperties: true
+      required: [idEvent]
+      properties:
+        idEvent:
+          type: string
+          format: uuid
+
+ClientConfirmRequest:
+  allOf:
+    - $ref: "#/ClientBaseContextRequest"
+    - type: object
+      additionalProperties: true
+      required: [idEvent]
+      properties:
+        idEvent:
+          type: string
+          format: uuid
+
+ClientAvailableDaysRequest:
+  type: object
+  additionalProperties: true
+  required: [idCompany, idWorkspace, timezone, range, attendees]
+  properties:
+    idCompany:
+      type: string
+      format: uuid
+    idWorkspace:
+      $ref: "#/DemoWorkspaceSelector"
+    idBookingPage:
+      type: string
+      format: uuid
+    timezone:
+      type: string
+      example: "Europe/Madrid"
+    range:
+      type: object
+      required: [start, end]
+      properties:
+        start:
+          type: string
+          format: date
+        end:
+          type: string
+          format: date
+    attendees:
+      type: array
+      minItems: 1
+      items:
+        $ref: "#/ClientAttendee"
+    excludeEventId:
+      type: string
+      format: uuid
+
+ClientAvailableTimesRequest:
+  type: object
+  additionalProperties: true
+  required: [idCompany, idWorkspace, date, timezone, attendees]
+  properties:
+    idCompany:
+      type: string
+      format: uuid
+    idWorkspace:
+      $ref: "#/DemoWorkspaceSelector"
+    idBookingPage:
+      type: string
+      format: uuid
+    date:
+      type: string
+      format: date
+    timezone:
+      type: string
+      example: "Europe/Madrid"
+    attendees:
+      type: array
+      minItems: 1
+      items:
+        $ref: "#/ClientAttendee"
+    excludeEventId:
+      type: string
+      format: uuid

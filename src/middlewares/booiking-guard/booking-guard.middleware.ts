@@ -916,6 +916,18 @@ export type BookingInputNormalized = {
         phone?: string;
         email?: string;
     };
+    configOverrides?: {
+        bookingWindow?: {
+            minLeadTimeMin?: number;
+            maxAdvanceDays?: number;
+            sameDayCutoffHourLocal?: number;
+        };
+        limits?: {
+            perUserPerDay?: number;
+            perUserConcurrent?: number;
+            maxServicesPerBooking?: number;
+        };
+    };
 };
 
 // Config del workspace, si no tienes tipado pon `any`
@@ -964,6 +976,83 @@ declare module "express-serve-static-core" {
 }
 
 export class BookingGuardsMiddleware {
+    private static isDemoConfigOverridesEnabled(): boolean {
+        return (
+            process.env.NODE_ENV === "development" &&
+            String(process.env.INTEGRATIONS_MODE ?? "http").toLowerCase() === "mock"
+        );
+    }
+
+    private static normalizeWorkspaceConfig(rawConfig: any): Record<string, any> {
+        if (!rawConfig) return {};
+        if (typeof rawConfig === "string") {
+            try {
+                const parsed = JSON.parse(rawConfig);
+                return parsed && typeof parsed === "object" ? parsed : {};
+            } catch {
+                return {};
+            }
+        }
+        return typeof rawConfig === "object" ? rawConfig : {};
+    }
+
+    private static sanitizeDemoConfigOverrides(rawOverrides: any): Record<string, any> | undefined {
+        if (!rawOverrides || typeof rawOverrides !== "object") return undefined;
+
+        const out: any = {};
+
+        const bookingWindow = rawOverrides.bookingWindow;
+        if (bookingWindow && typeof bookingWindow === "object") {
+            const nextBookingWindow: any = {};
+            if (Number.isFinite(bookingWindow.minLeadTimeMin)) {
+                nextBookingWindow.minLeadTimeMin = Math.max(
+                    0,
+                    Number(bookingWindow.minLeadTimeMin)
+                );
+            }
+            if (Number.isFinite(bookingWindow.maxAdvanceDays)) {
+                nextBookingWindow.maxAdvanceDays = Math.max(
+                    0,
+                    Number(bookingWindow.maxAdvanceDays)
+                );
+            }
+            if (Number.isFinite(bookingWindow.sameDayCutoffHourLocal)) {
+                nextBookingWindow.sameDayCutoffHourLocal = Math.max(
+                    0,
+                    Math.min(23, Number(bookingWindow.sameDayCutoffHourLocal))
+                );
+            }
+            if (Object.keys(nextBookingWindow).length > 0) {
+                out.bookingWindow = nextBookingWindow;
+            }
+        }
+
+        const limits = rawOverrides.limits;
+        if (limits && typeof limits === "object") {
+            const nextLimits: any = {};
+            if (Number.isFinite(limits.perUserPerDay)) {
+                nextLimits.perUserPerDay = Math.max(0, Number(limits.perUserPerDay));
+            }
+            if (Number.isFinite(limits.perUserConcurrent)) {
+                nextLimits.perUserConcurrent = Math.max(
+                    0,
+                    Number(limits.perUserConcurrent)
+                );
+            }
+            if (Number.isFinite(limits.maxServicesPerBooking)) {
+                nextLimits.maxServicesPerBooking = Math.max(
+                    1,
+                    Number(limits.maxServicesPerBooking)
+                );
+            }
+            if (Object.keys(nextLimits).length > 0) {
+                out.limits = nextLimits;
+            }
+        }
+
+        return Object.keys(out).length > 0 ? out : undefined;
+    }
+
     /* helper uniforme para 4xx */
     private static endBadRequest(
         res: Response,
@@ -1120,6 +1209,7 @@ export class BookingGuardsMiddleware {
                     // Usado en editar reservas
                     idEvent: p?.idEvent,
                     deletedEventIds: p?.deletedEventIds,
+                    configOverrides: p?.configOverrides,
                 };
 
                 req.booking = { ctx: { input } };
@@ -1180,7 +1270,34 @@ export class BookingGuardsMiddleware {
                 }
 
                 ctx.workspace = workspace;
-                ctx.config = workspace?.generalConfigJson || {};
+                const baseConfig = this.normalizeWorkspaceConfig(
+                    workspace?.generalConfigJson
+                );
+                ctx.config = baseConfig;
+
+                if (this.isDemoConfigOverridesEnabled()) {
+                    const demoOverrides = this.sanitizeDemoConfigOverrides(
+                        ctx.input?.configOverrides
+                    );
+                    if (demoOverrides) {
+                        ctx.config = {
+                            ...baseConfig,
+                            ...demoOverrides,
+                            bookingWindow: {
+                                ...(baseConfig?.bookingWindow ?? {}),
+                                ...(demoOverrides?.bookingWindow ?? {}),
+                            },
+                            limits: {
+                                ...(baseConfig?.limits ?? {}),
+                                ...(demoOverrides?.limits ?? {}),
+                            },
+                        };
+                        console.log(
+                            `${CONSOLE_COLOR.FgYellow}[BookingGuards.ResolveWorkspace] Demo configOverrides aplicados${CONSOLE_COLOR.Reset}`,
+                            demoOverrides
+                        );
+                    }
+                }
                 ctx.timeZoneWorkspace = workspace.timeZone;
 
 

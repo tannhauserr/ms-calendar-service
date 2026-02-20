@@ -2,6 +2,7 @@ import { Event, EventPurposeType, Prisma, TemporaryBusinessHour } from "@prisma/
 import prisma from "../../../../lib/prisma";
 import CustomError from "../../../../models/custom-error/CustomError";
 import { Pagination } from "../../../../models/pagination";
+import { normalizePaginationInput } from "../../../../models/pagination";
 import { getGeneric } from "../../../../utils/get-genetic/getGenetic";
 import moment from "moment";
 import { TemporaryHoursMapType } from "../../../../models/interfaces/temporary-business-hours-type";
@@ -574,8 +575,12 @@ export class TemporaryBusinessHourService {
 
     async getTemporaryBusinessHours2(pagination: Pagination): Promise<any> {
         try {
-            const skip = (pagination.page - 1) * pagination.itemsPerPage;
-            const take = pagination.itemsPerPage;
+            const normalized = normalizePaginationInput(pagination, {
+                context: "default",
+                defaultItemsPerPage: 20,
+            });
+            const skip = (normalized.page - 1) * normalized.itemsPerPage;
+            const take = normalized.itemsPerPage;
             const idUserFk = pagination.filters?.idUserFk?.value;
             const idWorkspaceFk = pagination.filters?.idWorkspaceFk?.value;
 
@@ -671,7 +676,7 @@ export class TemporaryBusinessHourService {
                 rows: groups,
                 pagination: {
                     totalItems: totalGroups,
-                    totalPages: Math.ceil(totalGroups / pagination.itemsPerPage),
+                    totalPages: Math.ceil(totalGroups / normalized.itemsPerPage),
                 },
             };
         } catch (error: any) {

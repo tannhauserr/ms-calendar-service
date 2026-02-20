@@ -2,7 +2,7 @@ import { EventParticipant, EventStatusType } from "@prisma/client";
 import { randomUUID } from "crypto";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
-import { ErrorCatalogByDomain } from "../../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../models/error-codes";
 import { ActionKey } from "../../../models/notification/util/action-to-senctions";
 import { createNotification as createNotificationPlatform } from "../../../models/notification/util/trigger/util/for-action-platform";
 import { SidebarBackendBookingPayload } from "../../../services/@database/event/dto/SidebarBackendBookingPayload";
@@ -17,7 +17,6 @@ import {
 export type { UpdateEventByIdPayload } from "./use-cases/update-event-by-id.use-case";
 
 type ParticipantAction = "accept" | "cancel";
-const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 const PARTICIPANT_ALLOWED: Record<EventStatusType, EventStatusType[]> = {
     PENDING: [EventStatusType.ACCEPTED, EventStatusType.CANCELLED_BY_CLIENT],
@@ -294,4 +293,5 @@ export class EventPlatformCommandService {
             throw new CustomError("EventPlatformCommandService.changeEventStatusByParticipant", error);
         }
     }
+
 }

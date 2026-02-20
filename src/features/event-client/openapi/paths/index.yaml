@@ -1,0 +1,493 @@
+clientAppointments:
+  post:
+    tags: [Event Client]
+    summary: Get client appointments (upcoming or past)
+    description: Returns bookings for the authenticated client in a workspace.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/ClientAppointmentsRequest"
+          examples:
+            upcoming:
+              value:
+                idCompany: "2fd3e7b0-10d1-45bf-80d4-00f92ff97a31"
+                idWorkspace: "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+                customer:
+                  id: "a2a81aad-d012-41b8-8c4e-aa5c2e6aa356"
+                scope: "upcoming"
+                page: 1
+                itemsPerPage: 10
+    responses:
+      "200":
+        description: Client appointments found
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Invalid payload or booking guard error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+clientAppointmentById:
+  post:
+    tags: [Event Client]
+    summary: Get one appointment by booking id
+    description: Returns one grouped booking for the authenticated client.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Booking id (group id)
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/ClientAppointmentByIdRequest"
+          examples:
+            byId:
+              value:
+                idCompany: "2fd3e7b0-10d1-45bf-80d4-00f92ff97a31"
+                idWorkspace: "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+                customer:
+                  id: "a2a81aad-d012-41b8-8c4e-aa5c2e6aa356"
+                id: "c8494d36-0f56-4247-a83d-72ce5659526c"
+    responses:
+      "200":
+        description: Appointment found
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Invalid payload or booking guard error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "404":
+        description: Appointment not found
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+clientAvailableDays:
+  post:
+    tags: [Event Client]
+    summary: Get available days for client booking
+    description: Use the same workspace/company where business hours were created. If `staffId` is provided and not eligible, all days can return as `dayoff`.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/ClientAvailableDaysRequest"
+          examples:
+            usingYourWorkspace:
+              summary: Workspace/company with business hours already loaded
+              value:
+                idCompany: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+                idWorkspace: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+                idBookingPage: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                timezone: "Europe/Madrid"
+                range:
+                  start: "2026-02-23"
+                  end: "2026-03-19"
+                attendees:
+                  - serviceId: "dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb"
+                    durationMin: 60
+            mockWorkspace:
+              summary: Default mock context
+              value:
+                idCompany: "2fd3e7b0-10d1-45bf-80d4-00f92ff97a31"
+                idWorkspace: "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+                idBookingPage: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                timezone: "Europe/Madrid"
+                range:
+                  start: "2026-02-23"
+                  end: "2026-03-19"
+                attendees:
+                  - serviceId: "dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb"
+                    durationMin: 60
+    responses:
+      "200":
+        description: Available days returned
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+clientAvailableTimes:
+  post:
+    tags: [Event Client]
+    summary: Get available time slots for client booking
+    description: For deterministic tests, start without `staffId` and use a workspace that has business/worker/temporary hours configured.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/ClientAvailableTimesRequest"
+          examples:
+            usingYourWorkspace:
+              summary: Workspace/company with business hours already loaded
+              value:
+                idCompany: "9f89db3a-4eb8-4d95-80a4-6ed31c65285a"
+                idWorkspace: "2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9"
+                idBookingPage: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                date: "2026-02-23"
+                timezone: "Europe/Madrid"
+                attendees:
+                  - serviceId: "dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb"
+                    durationMin: 60
+            mockWorkspace:
+              summary: Default mock context
+              value:
+                idCompany: "2fd3e7b0-10d1-45bf-80d4-00f92ff97a31"
+                idWorkspace: "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+                idBookingPage: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                date: "2026-02-23"
+                timezone: "Europe/Madrid"
+                attendees:
+                  - serviceId: "dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb"
+                    durationMin: 60
+    responses:
+      "200":
+        description: Available times returned
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+clientAdd:
+  post:
+    tags: [Event Client]
+    summary: Create client appointment
+    description: Creates a new booking from client-side flow.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/ClientAddRequest"
+          examples:
+            create:
+              value:
+                idCompany: "2fd3e7b0-10d1-45bf-80d4-00f92ff97a31"
+                idWorkspace: "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+                startLocalISO: "2026-02-20T10:00:00"
+                timeZoneClient: "Europe/Madrid"
+                attendees:
+                  - serviceId: "dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb"
+                    durationMin: 60
+                customer:
+                  id: "a2a81aad-d012-41b8-8c4e-aa5c2e6aa356"
+                  name: "Jane Doe"
+            invalidClient:
+              summary: Cliente inválido (debe fallar en modo mock)
+              value:
+                idCompany: "2fd3e7b0-10d1-45bf-80d4-00f92ff97a31"
+                idWorkspace: "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+                startLocalISO: "2026-02-20T10:00:00"
+                timeZoneClient: "Europe/Madrid"
+                attendees:
+                  - serviceId: "dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb"
+                    durationMin: 60
+                customer:
+                  id: "00000000-0000-4000-8000-000000000002"
+                  name: "Jane Doe"
+            invalidWorkspace:
+              summary: Workspace inválido (debe fallar en modo mock)
+              value:
+                idCompany: "2fd3e7b0-10d1-45bf-80d4-00f92ff97a31"
+                idWorkspace: "00000000-0000-4000-8000-000000000001"
+                startLocalISO: "2026-02-20T10:00:00"
+                timeZoneClient: "Europe/Madrid"
+                attendees:
+                  - serviceId: "dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb"
+                    durationMin: 60
+                customer:
+                  id: "a2a81aad-d012-41b8-8c4e-aa5c2e6aa356"
+                  name: "Jane Doe"
+            createWithConfigOverrides:
+              summary: Demo - sobrescribe bookingWindow/limits para esta petición
+              value:
+                idCompany: "2fd3e7b0-10d1-45bf-80d4-00f92ff97a31"
+                idWorkspace: "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+                startLocalISO: "2026-02-20T10:00:00"
+                timeZoneClient: "Europe/Madrid"
+                attendees:
+                  - serviceId: "dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb"
+                    durationMin: 60
+                customer:
+                  id: "a2a81aad-d012-41b8-8c4e-aa5c2e6aa356"
+                  name: "Jane Doe"
+                configOverrides:
+                  bookingWindow:
+                    minLeadTimeMin: 0
+                    maxAdvanceDays: 365
+                  limits:
+                    perUserPerDay: 10
+                    perUserConcurrent: 10
+                    maxServicesPerBooking: 2
+    responses:
+      "200":
+        description: Appointment created or already joined
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "201":
+        description: Appointment created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+clientUpdate:
+  post:
+    tags: [Event Client]
+    summary: Update client appointment
+    description: Updates a booking from client-side flow.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/ClientUpdateRequest"
+    responses:
+      "200":
+        description: Appointment updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation or business rule error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "403":
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+clientCancel:
+  post:
+    tags: [Event Client]
+    summary: Cancel client appointment
+    description: Cancels the booking for the authenticated client.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/ClientCancelRequest"
+          examples:
+            cancel:
+              value:
+                idCompany: "2fd3e7b0-10d1-45bf-80d4-00f92ff97a31"
+                idWorkspace: "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+                customer:
+                  id: "a2a81aad-d012-41b8-8c4e-aa5c2e6aa356"
+                idEvent: "3c95251f-eb0b-407b-b7d7-e76976fb7d04"
+    responses:
+      "200":
+        description: Appointment cancelled
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+
+clientConfirm:
+  post:
+    tags: [Event Client]
+    summary: Confirm client appointment
+    description: Confirms the booking for the authenticated client.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/index.yaml#/ClientConfirmRequest"
+          examples:
+            confirm:
+              value:
+                idCompany: "2fd3e7b0-10d1-45bf-80d4-00f92ff97a31"
+                idWorkspace: "29f8a525-d3f2-4bc2-89bb-f0f1f1958de9"
+                customer:
+                  id: "a2a81aad-d012-41b8-8c4e-aa5c2e6aa356"
+                idEvent: "3c95251f-eb0b-407b-b7d7-e76976fb7d04"
+    responses:
+      "200":
+        description: Appointment confirmed
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericSuccessResponse"
+      "400":
+        description: Validation error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "401":
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/index.yaml#/GenericErrorResponse"

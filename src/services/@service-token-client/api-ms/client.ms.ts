@@ -1,6 +1,5 @@
 // src/services/@service-token-client/api-ms/client-workspace.ms.ts
 import axios from "axios";
-import { attachServiceAuth } from "../service-token-client.service";
 // import { RedisStrategyFactory } from "../../@redis/cache/strategies/redisStrategyFactory";
 import { CONSOLE_COLOR } from "../../../constant/console-color";
 import CustomError from "../../../models/custom-error/CustomError";
@@ -8,20 +7,27 @@ import type { ClientWorkspaceBrief } from "../../@redis/cache/interfaces/models/
 import type { IRedisClientWorkspaceBriefStrategy } from "../../@redis/cache/interfaces/interfaces";
 import { create } from "domain";
 import { RedisStrategyFactory } from "../../@redis/cache/strategies/redisStrategyFactory";
+import {
+    createMockClientWorkspaceByClientAndWorkspace,
+    getMockClientWorkspacesByClientIds,
+    getMockClientWorkspacesByIds,
+    isMockIntegrationsMode,
+} from "../mock/mock-integrations";
 
 const TARGET_MS_NAME = process.env.MS_CLIENT_NAME || "client";
 const THIS_MS_NAME = process.env.MS_NAME || process.env.MS_CALENDAR_NAME || "calendar";
 
 
-// 🔹 Secret interno para comunicación entre microservicios
-const internalSecret = process.env.INTERNAL_MS_SECRET;
+// 🔹 Token interno para MS-Client
+const internalSecret = process.env.TOKEN_CLIENT;
 // ✅ Cliente propio de este archivo (singleton del módulo)
 const client = axios.create({
     baseURL: `${process.env.URL_BACK_MS_GATEWAY}/${TARGET_MS_NAME}/api/ms`,
     timeout: 5000,
-    headers: internalSecret
-        ? { "x-internal-ms-secret": internalSecret }
-        : {},
+    headers: {
+        "x-internal-ms-allowed": THIS_MS_NAME,
+        ...(internalSecret ? { "x-internal-ms-secret": internalSecret } : {}),
+    },
 });
 
 client.interceptors.request.use((cfg) => {
@@ -40,9 +46,6 @@ client.interceptors.request.use((cfg) => {
 });
 
 
-// Enganchamos el interceptor aquí (aud=receiver, sub=this)
-// attachServiceAuth(client, TARGET_MS_NAME, THIS_MS_NAME);
-
 const normEmail = (s?: string) => (s ?? "").trim().toLowerCase();
 
 export async function getClientWorkspacesByIds(
@@ -50,6 +53,10 @@ export async function getClientWorkspacesByIds(
     idCompany: string
 ): Promise<ClientWorkspaceBrief[]> {
     try {
+        if (isMockIntegrationsMode()) {
+            return getMockClientWorkspacesByIds(idClientWorkspaceList, idCompany);
+        }
+
         const valid = (idClientWorkspaceList || []).filter((x) => x && x.trim() !== "");
         if (!valid.length) return [];
         const redis = RedisStrategyFactory.getStrategy("clientWorkspaceBrief") as unknown as IRedisClientWorkspaceBriefStrategy;
@@ -87,6 +94,10 @@ export async function getClientWorkspacesByClientIds(
     idCompany?: string
 ): Promise<ClientWorkspaceBrief[]> {
     try {
+        if (isMockIntegrationsMode()) {
+            return getMockClientWorkspacesByClientIds(clientIds, idCompany);
+        }
+
         const valid = (clientIds || []).filter((x) => x && x.trim() !== "");
         if (!valid.length) return [];
         const redis = RedisStrategyFactory.getStrategy("clientWorkspaceBrief") as unknown as IRedisClientWorkspaceBriefStrategy;
@@ -122,6 +133,13 @@ export async function getClientWorkspacesByClientIds(
 
 export async function createClientWorkspaceByClientAndWorkspace(idClient: string, idWorkspace: string, idCompany: string): Promise<ClientWorkspaceBrief | null> {
     try {
+        if (isMockIntegrationsMode()) {
+            return createMockClientWorkspaceByClientAndWorkspace(
+                idClient,
+                idWorkspace,
+                idCompany
+            );
+        }
 
         const { data } = await client.post(`/internal/client-workspaces/create-from-microservices`, {
             idClient,

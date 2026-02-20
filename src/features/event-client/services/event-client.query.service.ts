@@ -1,5 +1,6 @@
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
+import { normalizePaginationInput } from "../../../models/pagination";
 
 type BookingScope = "upcoming" | "past";
 
@@ -307,15 +308,16 @@ export class EventClientQueryService {
         );
 
         const defaultPerPage = scope === "upcoming" ? 25 : 30;
-        const effectiveItemsPerPage =
-            itemsPerPage && itemsPerPage > 0
-                ? Math.min(itemsPerPage, defaultPerPage)
-                : defaultPerPage;
+        const normalized = normalizePaginationInput(
+            { page, itemsPerPage },
+            { context: "default", defaultItemsPerPage: defaultPerPage }
+        );
+        const effectiveItemsPerPage = normalized.itemsPerPage;
 
         const total = allBookings.length;
         const totalPages = Math.max(1, Math.ceil(total / effectiveItemsPerPage));
 
-        let currentPage = page && page > 0 ? page : 1;
+        let currentPage = normalized.page;
         if (scope === "upcoming") {
             currentPage = 1;
         } else if (currentPage > totalPages) {

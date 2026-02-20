@@ -1,6 +1,6 @@
 import { EventStatusType, Prisma } from "@prisma/client";
 import prisma from "../../../lib/prisma";
-import { FilterJson, Pagination } from "../../../models/pagination";
+import { FilterJson, Pagination, normalizePaginationInput } from "../../../models/pagination";
 import { hashClientValue } from "../../client-data-crypto/clientDataCrypto";
 
 
@@ -26,7 +26,8 @@ async function getGenericSpecialEvent2(
     pagination: Pagination,
     modelName: ModelType,
     includeRelations?: any,
-    notCancelled?: boolean
+    notCancelled?: boolean,
+    options?: { maxItemsPerPage?: number; maxPage?: number }
 ) {
     const {
         orderBy,
@@ -35,8 +36,12 @@ async function getGenericSpecialEvent2(
         startDate,
         endDate,
     } = pagination;
-    const page = Math.max(1, +pagination.page);
-    const itemsPerPage = Math.max(1, +pagination.itemsPerPage);
+    const { page, itemsPerPage } = normalizePaginationInput(pagination, {
+        context: "default",
+        defaultItemsPerPage: 25,
+        maxItemsPerPage: options?.maxItemsPerPage,
+        maxPage: options?.maxPage,
+    });
 
     const skip = (page - 1) * itemsPerPage;
     const take = +itemsPerPage;

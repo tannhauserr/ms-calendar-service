@@ -97,6 +97,19 @@ export class PublicEventFeatureController {
                 }
             }
 
+            if (!workspace?.id) {
+                return res
+                    .status(400)
+                    .json(
+                        Response.build(
+                            "Workspace no encontrado para el idWorkspace enviado",
+                            400,
+                            false,
+                            null
+                        )
+                    );
+            }
+
             const config = workspace?.config || workspace?.generalConfigJson || {};
             workspace.config = config;
 

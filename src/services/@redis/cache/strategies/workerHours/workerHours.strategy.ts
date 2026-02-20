@@ -3,7 +3,7 @@
 // import { IRedisWorkerHoursStrategy } from "../../interfaces/interfaces";
 
 import { HoursRangeInput, normalizeRange, listDaysInclusive, weekdayNameFromISO } from "../../../../@database/all-business-services/interfaces";
-import { IRedisWorkerHoursStrategy } from "../../interfaces/interfaces";
+import { IRedisWorkerHoursStrategy } from "./interfaces";
 import { TokenKeys } from "../../keys/token.keys";
 import { RedisCacheService } from "../../redis.service";
 

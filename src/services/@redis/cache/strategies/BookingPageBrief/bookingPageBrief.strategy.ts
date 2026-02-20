@@ -100,7 +100,7 @@
 // }
 
 
-import { IRedisBookingPageBriefStrategy } from "../../interfaces/interfaces";
+import { IRedisBookingPageBriefStrategy } from "./interfaces";
 import { BookingPageBrief } from "../../interfaces/models/booking-brief";
 import { RedisCacheService } from "../../redis.service";
 

@@ -64,3 +64,47 @@ export interface FilterJson {
   value: any;
   relation?: string;
 }
+
+export const PAGINATION_MAX_PAGE = 999;
+export const PAGINATION_MAX_ITEMS_DEFAULT = 100;
+export const PAGINATION_MAX_ITEMS_CALENDAR = 1000;
+
+type PaginationContext = "default" | "calendar";
+
+export const normalizePaginationInput = (
+  pagination: Partial<Pagination> | undefined,
+  options?: {
+    context?: PaginationContext;
+    defaultPage?: number;
+    defaultItemsPerPage?: number;
+    maxPage?: number;
+    maxItemsPerPage?: number;
+  }
+) => {
+  const context = options?.context ?? "default";
+  const maxPage = options?.maxPage ?? PAGINATION_MAX_PAGE;
+  const maxItemsPerPage =
+    options?.maxItemsPerPage ??
+    (context === "calendar" ? PAGINATION_MAX_ITEMS_CALENDAR : PAGINATION_MAX_ITEMS_DEFAULT);
+
+  const defaultPage = options?.defaultPage ?? 1;
+  const defaultItemsPerPage = options?.defaultItemsPerPage ?? 25;
+
+  const rawPage = Number(pagination?.page ?? defaultPage);
+  const rawItemsPerPage = Number(pagination?.itemsPerPage ?? defaultItemsPerPage);
+
+  const page = Number.isFinite(rawPage)
+    ? Math.min(Math.max(1, Math.trunc(rawPage)), maxPage)
+    : defaultPage;
+
+  const itemsPerPage = Number.isFinite(rawItemsPerPage)
+    ? Math.min(Math.max(1, Math.trunc(rawItemsPerPage)), maxItemsPerPage)
+    : defaultItemsPerPage;
+
+  return {
+    page,
+    itemsPerPage,
+    maxPage,
+    maxItemsPerPage,
+  };
+};

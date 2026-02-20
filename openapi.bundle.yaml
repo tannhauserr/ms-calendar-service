@@ -1,0 +1,2649 @@
+openapi: 3.0.3
+info:
+  title: MS Calendar API
+  version: 1.0.0
+  description: OpenAPI spec split by feature.
+servers:
+  - url: http://localhost:3201
+    description: Local development
+  - url: http://localhost:3299/calendar
+    description: Local API gateway (prefix /calendar)
+tags:
+  - name: Demo
+    description: Helpers to test protected endpoints quickly in development
+  - name: Event Platform
+    description: Platform-side event management
+  - name: Event Client
+    description: Client-side booking flow (create, edit, list, confirm, cancel)
+  - name: Schedules
+    description: Business/worker hours, temporary exceptions, and worker absences
+paths:
+  /api/demo/token:
+    get:
+      tags:
+        - Demo
+      summary: Generate demo JWT token
+      description: Development-only endpoint. Returns a ready-to-use JWT so evaluators can authorize protected endpoints directly from Swagger UI.
+      parameters:
+        - in: query
+          name: expiresIn
+          required: false
+          schema:
+            type: string
+            example: 2h
+          description: JWT expiration (example 2h, 30m, 1d).
+      responses:
+        '200':
+          description: Demo token generated
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - ok
+                  - token
+                  - claims
+                  - authorizationHeader
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  token:
+                    type: string
+                  claims:
+                    type: object
+                    required:
+                      - idUser
+                      - idCompanySelected
+                      - role
+                    properties:
+                      idUser:
+                        type: string
+                        format: uuid
+                      idCompanySelected:
+                        type: string
+                        format: uuid
+                      role:
+                        type: string
+                        example: ROLE_OWNER
+                  authorizationHeader:
+                    type: string
+                    example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '404':
+          description: Not available outside development environment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Missing JWT configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/events/v2/platform/manage-event:
+    post:
+      tags:
+        - Event Platform
+      summary: Create or update a booking group from platform sidebar
+      description: |
+        Upserts events for a booking group. Optional query params let you choose worker, start slot (15-minute increments), and event status. `sendNotification` is forced to `false` by backend.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: worker
+          required: false
+          schema:
+            type: string
+            enum:
+              - David
+              - Grabiella
+              - Scott
+          description: Assign this worker to all services.
+        - in: query
+          name: startSlot
+          required: false
+          schema:
+            type: string
+            enum:
+              - '08:00'
+              - '08:15'
+              - '08:30'
+              - '08:45'
+              - '09:00'
+              - '09:15'
+              - '09:30'
+              - '09:45'
+              - '10:00'
+              - '10:15'
+              - '10:30'
+              - '10:45'
+              - '11:00'
+              - '11:15'
+              - '11:30'
+              - '11:45'
+              - '12:00'
+              - '12:15'
+              - '12:30'
+              - '12:45'
+              - '13:00'
+              - '13:15'
+              - '13:30'
+              - '13:45'
+              - '14:00'
+              - '14:15'
+              - '14:30'
+              - '14:45'
+              - '15:00'
+              - '15:15'
+              - '15:30'
+              - '15:45'
+              - '16:00'
+              - '16:15'
+              - '16:30'
+              - '16:45'
+              - '17:00'
+              - '17:15'
+              - '17:30'
+              - '17:45'
+              - '18:00'
+              - '18:15'
+              - '18:30'
+              - '18:45'
+              - '19:00'
+              - '19:15'
+              - '19:30'
+              - '19:45'
+              - '20:00'
+          description: Start time in 15-minute slots.
+        - in: query
+          name: date
+          required: false
+          schema:
+            type: string
+            format: date
+            example: '2026-02-20'
+          description: Date used together with `startSlot`.
+        - in: query
+          name: eventStatusType
+          required: false
+          schema:
+            type: string
+            enum:
+              - PENDING
+              - ACCEPTED
+              - CONFIRMED
+              - COMPLETED
+              - CANCELLED
+              - CANCELLED_BY_CLIENT
+              - CANCELLED_BY_CLIENT_REMOVED
+              - PAID
+              - NO_SHOW
+          description: Optional event status.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/manage-event.request.schema'
+            examples:
+              createBooking:
+                summary: Create booking
+                value:
+                  type: event
+                  mode: create
+                  idCompany: 2fd3e7b0-10d1-45bf-80d4-00f92ff97a31
+                  idWorkspace: 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+                  startDate: '2026-02-20T10:00:00.000Z'
+                  endDate: '2026-02-20T11:30:00.000Z'
+                  sendNotification: true
+                  commentClient: Cliente prefiere profesional senior
+                  services:
+                    - idService: dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb
+                      duration: 60
+                      name: Haircut
+                      price: 25
+                      discount: 0
+                      idWorker: 2917f4e1-3e9e-4868-a1f0-fc4f26fbf531
+                  clients:
+                    - idClient: a2a81aad-d012-41b8-8c4e-aa5c2e6aa356
+                      idClientWorkspace: 33f6cd95-1524-4167-b882-f3118ea2ccf6
+              editBooking:
+                summary: Edit booking
+                value:
+                  type: event
+                  mode: edit
+                  idGroup: c8494d36-0f56-4247-a83d-72ce5659526c
+                  idCompany: 2fd3e7b0-10d1-45bf-80d4-00f92ff97a31
+                  idWorkspace: 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+                  startDate: '2026-02-20T11:00:00.000Z'
+                  endDate: '2026-02-20T12:30:00.000Z'
+                  sendNotification: false
+                  services:
+                    - idEvent: f0ec4583-6d20-4e89-a267-799fd4f10871
+                      idService: dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb
+                      duration: 90
+                      name: Color
+                      price: 40
+                      discount: 5
+                      idWorker: 2917f4e1-3e9e-4868-a1f0-fc4f26fbf531
+                  clients:
+                    - idClient: a2a81aad-d012-41b8-8c4e-aa5c2e6aa356
+                      idClientWorkspace: 33f6cd95-1524-4167-b882-f3118ea2ccf6
+      responses:
+        '200':
+          description: Booking managed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/manage-event.success.response.schema'
+              examples:
+                success:
+                  value:
+                    message: Eventos creados exitosamente
+                    ok: true
+                    status: 200
+                    item:
+                      count: 1
+                      events:
+                        - id: f0ec4583-6d20-4e89-a267-799fd4f10871
+                          idGroup: c8494d36-0f56-4247-a83d-72ce5659526c
+                          idCompanyFk: 2fd3e7b0-10d1-45bf-80d4-00f92ff97a31
+                          idWorkspaceFk: 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+        '400':
+          description: Invalid request payload or business validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-error.response.schema'
+              examples:
+                validationFromMiddleware:
+                  value:
+                    ok: false
+                    message: 'type: Invalid literal value, expected "event"'
+                validationFromController:
+                  value:
+                    message: El campo 'services' debe ser un array
+                    ok: false
+                    status: 400
+                    item: null
+                    code: MSCAL402
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-error.response.schema'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-error.response.schema'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-error.response.schema'
+  /api/events/client-web/appointments:
+    post:
+      tags:
+        - Event Client
+      summary: Get client appointments (upcoming or past)
+      description: Returns bookings for the authenticated client in a workspace.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientAppointmentsRequest'
+            examples:
+              upcoming:
+                value:
+                  idCompany: 2fd3e7b0-10d1-45bf-80d4-00f92ff97a31
+                  idWorkspace: 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+                  customer:
+                    id: a2a81aad-d012-41b8-8c4e-aa5c2e6aa356
+                  scope: upcoming
+                  page: 1
+                  itemsPerPage: 10
+      responses:
+        '200':
+          description: Client appointments found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+        '400':
+          description: Invalid payload or booking guard error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/events/client-web/appointments/{id}:
+    post:
+      tags:
+        - Event Client
+      summary: Get one appointment by booking id
+      description: Returns one grouped booking for the authenticated client.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Booking id (group id)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientAppointmentByIdRequest'
+            examples:
+              byId:
+                value:
+                  idCompany: 2fd3e7b0-10d1-45bf-80d4-00f92ff97a31
+                  idWorkspace: 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+                  customer:
+                    id: a2a81aad-d012-41b8-8c4e-aa5c2e6aa356
+                  id: c8494d36-0f56-4247-a83d-72ce5659526c
+      responses:
+        '200':
+          description: Appointment found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+        '400':
+          description: Invalid payload or booking guard error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '404':
+          description: Appointment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/events/client-web/available-days:
+    post:
+      tags:
+        - Event Client
+      summary: Get available days for client booking
+      description: Use the same workspace/company where business hours were created. If `staffId` is provided and not eligible, all days can return as `dayoff`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientAvailableDaysRequest'
+            examples:
+              usingYourWorkspace:
+                summary: Workspace/company with business hours already loaded
+                value:
+                  idCompany: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+                  idWorkspace: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+                  idBookingPage: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  timezone: Europe/Madrid
+                  range:
+                    start: '2026-02-23'
+                    end: '2026-03-19'
+                  attendees:
+                    - serviceId: dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb
+                      durationMin: 60
+              mockWorkspace:
+                summary: Default mock context
+                value:
+                  idCompany: 2fd3e7b0-10d1-45bf-80d4-00f92ff97a31
+                  idWorkspace: 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+                  idBookingPage: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  timezone: Europe/Madrid
+                  range:
+                    start: '2026-02-23'
+                    end: '2026-03-19'
+                  attendees:
+                    - serviceId: dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb
+                      durationMin: 60
+      responses:
+        '200':
+          description: Available days returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/events/client-web/available-times:
+    post:
+      tags:
+        - Event Client
+      summary: Get available time slots for client booking
+      description: For deterministic tests, start without `staffId` and use a workspace that has business/worker/temporary hours configured.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientAvailableTimesRequest'
+            examples:
+              usingYourWorkspace:
+                summary: Workspace/company with business hours already loaded
+                value:
+                  idCompany: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+                  idWorkspace: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+                  idBookingPage: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  date: '2026-02-23'
+                  timezone: Europe/Madrid
+                  attendees:
+                    - serviceId: dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb
+                      durationMin: 60
+              mockWorkspace:
+                summary: Default mock context
+                value:
+                  idCompany: 2fd3e7b0-10d1-45bf-80d4-00f92ff97a31
+                  idWorkspace: 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+                  idBookingPage: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  date: '2026-02-23'
+                  timezone: Europe/Madrid
+                  attendees:
+                    - serviceId: dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb
+                      durationMin: 60
+      responses:
+        '200':
+          description: Available times returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/events/client-add:
+    post:
+      tags:
+        - Event Client
+      summary: Create client appointment
+      description: Creates a new booking from client-side flow.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientAddRequest'
+            examples:
+              create:
+                value:
+                  idCompany: 2fd3e7b0-10d1-45bf-80d4-00f92ff97a31
+                  idWorkspace: 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+                  startLocalISO: '2026-02-20T10:00:00'
+                  timeZoneClient: Europe/Madrid
+                  attendees:
+                    - serviceId: dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb
+                      durationMin: 60
+                  customer:
+                    id: a2a81aad-d012-41b8-8c4e-aa5c2e6aa356
+                    name: Jane Doe
+              invalidClient:
+                summary: Cliente inválido (debe fallar en modo mock)
+                value:
+                  idCompany: 2fd3e7b0-10d1-45bf-80d4-00f92ff97a31
+                  idWorkspace: 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+                  startLocalISO: '2026-02-20T10:00:00'
+                  timeZoneClient: Europe/Madrid
+                  attendees:
+                    - serviceId: dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb
+                      durationMin: 60
+                  customer:
+                    id: 00000000-0000-4000-8000-000000000002
+                    name: Jane Doe
+              invalidWorkspace:
+                summary: Workspace inválido (debe fallar en modo mock)
+                value:
+                  idCompany: 2fd3e7b0-10d1-45bf-80d4-00f92ff97a31
+                  idWorkspace: 00000000-0000-4000-8000-000000000001
+                  startLocalISO: '2026-02-20T10:00:00'
+                  timeZoneClient: Europe/Madrid
+                  attendees:
+                    - serviceId: dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb
+                      durationMin: 60
+                  customer:
+                    id: a2a81aad-d012-41b8-8c4e-aa5c2e6aa356
+                    name: Jane Doe
+              createWithConfigOverrides:
+                summary: Demo - sobrescribe bookingWindow/limits para esta petición
+                value:
+                  idCompany: 2fd3e7b0-10d1-45bf-80d4-00f92ff97a31
+                  idWorkspace: 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+                  startLocalISO: '2026-02-20T10:00:00'
+                  timeZoneClient: Europe/Madrid
+                  attendees:
+                    - serviceId: dc3f6ee6-7ac3-4d56-9f23-cdbaf936f8bb
+                      durationMin: 60
+                  customer:
+                    id: a2a81aad-d012-41b8-8c4e-aa5c2e6aa356
+                    name: Jane Doe
+                  configOverrides:
+                    bookingWindow:
+                      minLeadTimeMin: 0
+                      maxAdvanceDays: 365
+                    limits:
+                      perUserPerDay: 10
+                      perUserConcurrent: 10
+                      maxServicesPerBooking: 2
+      responses:
+        '200':
+          description: Appointment created or already joined
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+        '201':
+          description: Appointment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/events/client-update:
+    post:
+      tags:
+        - Event Client
+      summary: Update client appointment
+      description: Updates a booking from client-side flow.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientUpdateRequest'
+      responses:
+        '200':
+          description: Appointment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+        '400':
+          description: Validation or business rule error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/events/client-cancel:
+    post:
+      tags:
+        - Event Client
+      summary: Cancel client appointment
+      description: Cancels the booking for the authenticated client. `status` must be `CANCELLED_BY_CLIENT`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCancelRequest'
+            examples:
+              cancel:
+                value:
+                  idCompany: 2fd3e7b0-10d1-45bf-80d4-00f92ff97a31
+                  idWorkspace: 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+                  customer:
+                    id: a2a81aad-d012-41b8-8c4e-aa5c2e6aa356
+                  idEvent: 3c95251f-eb0b-407b-b7d7-e76976fb7d04
+                  status: CANCELLED_BY_CLIENT
+      responses:
+        '200':
+          description: Appointment cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/events/client-confirm:
+    post:
+      tags:
+        - Event Client
+      summary: Confirm client appointment
+      description: Confirms the booking for the authenticated client. `status` must be `CONFIRMED`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientConfirmRequest'
+            examples:
+              confirm:
+                value:
+                  idCompany: 2fd3e7b0-10d1-45bf-80d4-00f92ff97a31
+                  idWorkspace: 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+                  customer:
+                    id: a2a81aad-d012-41b8-8c4e-aa5c2e6aa356
+                  idEvent: 3c95251f-eb0b-407b-b7d7-e76976fb7d04
+                  status: CONFIRMED
+      responses:
+        '200':
+          description: Appointment confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/business-hours/add:
+    post:
+      tags:
+        - Schedules
+      summary: Create business hours
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessHourAddRequest'
+            examples:
+              mondaySlot:
+                summary: Real payload - business hour add
+                value:
+                  weekDayType: MONDAY
+                  startTime: '16:00'
+                  endTime: '20:00'
+                  closed: false
+                  idCompanyFk: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+                  idWorkspaceFk: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+      responses:
+        '200':
+          description: Business hour created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/business-hours/search:
+    post:
+      tags:
+        - Schedules
+      summary: Search business hours by workspace
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessHoursSearchRequest'
+            examples:
+              byWorkspace:
+                value:
+                  idWorkspace: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+      responses:
+        '200':
+          description: Business hours found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/business-hours/{id}:
+    put:
+      tags:
+        - Schedules
+      summary: Update business hour by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            $ref: '#/components/schemas/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessHourUpdateRequest'
+            examples:
+              mondaySlotUpdate:
+                summary: Real payload - business hour update
+                value:
+                  id: 348d852f-13d2-4990-b883-b594273b2c94
+                  weekDayType: MONDAY
+                  startTime: '09:00'
+                  endTime: '15:00'
+                  closed: false
+                  idCompanyFk: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+                  idWorkspaceFk: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+      responses:
+        '200':
+          description: Business hour updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/business-hours:
+    delete:
+      tags:
+        - Schedules
+      summary: Delete one or multiple business hours
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteByIdListRequest'
+            examples:
+              deleteOneOrClose:
+                summary: Real payload - delete business hour
+                value:
+                  idList:
+                    - 348d852f-13d2-4990-b883-b594273b2c94
+                  action: true
+      responses:
+        '200':
+          description: Business hour(s) deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/business-hours/r-business-hours:
+    post:
+      tags:
+        - Schedules
+      summary: Get business hours map from cache/database
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessHoursRedisRequest'
+            examples:
+              workspaceCacheLookup:
+                value:
+                  idCompany: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+                  idWorkspace: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+      responses:
+        '200':
+          description: Business hours map returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/worker-business-hours/add:
+    post:
+      tags:
+        - Schedules
+      summary: Create worker business hours
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkerBusinessHourAddRequest'
+            examples:
+              fridayWorkerSlot:
+                value:
+                  idUserFk: 65f1d8f1-9fa5-4382-9286-b5938f5cf44f
+                  weekDayType: FRIDAY
+                  startTime: '10:00'
+                  endTime: '13:00'
+                  closed: false
+                  idCompanyFk: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+                  idWorkspaceFk: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+      responses:
+        '200':
+          description: Worker business hour created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/worker-business-hours/by-worker/{idWorker}/workspace/{idWorkspace}:
+    get:
+      tags:
+        - Schedules
+      summary: Get worker business hours by worker and workspace
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: idWorker
+          required: true
+          schema:
+            $ref: '#/components/schemas/IdParam'
+        - in: path
+          name: idWorkspace
+          required: true
+          schema:
+            $ref: '#/components/schemas/IdParam'
+      responses:
+        '200':
+          description: Worker business hours found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/worker-business-hours/{id}:
+    put:
+      tags:
+        - Schedules
+      summary: Update worker business hour by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            $ref: '#/components/schemas/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkerBusinessHourUpdateRequest'
+      responses:
+        '200':
+          description: Worker business hour updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/worker-business-hours:
+    delete:
+      tags:
+        - Schedules
+      summary: Delete one or multiple worker business hours
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteByIdListRequest'
+            examples:
+              deleteWorkerHour:
+                value:
+                  idList:
+                    - 348d852f-13d2-4990-b883-b594273b2c94
+                  action: true
+      responses:
+        '200':
+          description: Worker business hour(s) deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/worker-business-hours/r-worker-business-hours:
+    post:
+      tags:
+        - Schedules
+      summary: Get worker hours map from cache/database
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkerHoursRedisRequest'
+            examples:
+              workerHoursLookup:
+                value:
+                  idUserList:
+                    - 65f1d8f1-9fa5-4382-9286-b5938f5cf44f
+                  idWorkspace: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+      responses:
+        '200':
+          description: Worker hours map returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/temporary-business-hours/search:
+    post:
+      tags:
+        - Schedules
+      summary: Search temporary business hour exceptions
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaginationSearchRequest'
+      responses:
+        '200':
+          description: Temporary business hours found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/temporary-business-hours/add:
+    post:
+      tags:
+        - Schedules
+      summary: Create temporary business hour exception
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemporaryBusinessHourAddRequest'
+            examples:
+              createTemporaryWorkerBlock:
+                value:
+                  idUserFk: 65f1d8f1-9fa5-4382-9286-b5938f5cf44f
+                  idCompanyFk: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+                  idWorkspaceFk: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+                  date: '2026-02-19T11:00:00.000Z'
+                  closed: false
+                  startTime: '00:15'
+                  endTime: '08:15'
+      responses:
+        '200':
+          description: Temporary business hour created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/temporary-business-hours/{id}:
+    put:
+      tags:
+        - Schedules
+      summary: Update temporary business hour by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            $ref: '#/components/schemas/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemporaryBusinessHourUpdateRequest'
+      responses:
+        '200':
+          description: Temporary business hour updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/temporary-business-hours:
+    delete:
+      tags:
+        - Schedules
+      summary: Delete temporary business hours
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemporaryDeleteRequest'
+      responses:
+        '200':
+          description: Temporary business hour(s) deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/worker-absences:
+    post:
+      tags:
+        - Schedules
+      summary: Search worker absences
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkerAbsenceListRequest'
+            examples:
+              byWorkerAndWorkspace:
+                value:
+                  pagination:
+                    page: 1
+                    itemsPerPage: 10
+                    filters:
+                      idUserFk:
+                        value: 65f1d8f1-9fa5-4382-9286-b5938f5cf44f
+                      idWorkspaceFk:
+                        value: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+      responses:
+        '200':
+          description: Worker absences found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/worker-absences/add:
+    post:
+      tags:
+        - Schedules
+      summary: Create worker absence
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkerAbsenceAddRequest'
+            examples:
+              createVacationAbsence:
+                value:
+                  idUserFk: 65f1d8f1-9fa5-4382-9286-b5938f5cf44f
+                  startDate: '2026-02-19T18:24:17.536Z'
+                  endDate: '2026-02-19T18:24:17.536Z'
+                  eventPurposeType: VACATION
+                  description: asd
+                  idWorkspaceFk: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+                  idCompanyFk: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+                  title: Test Title ausencia
+      responses:
+        '200':
+          description: Worker absence created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/worker-absences/update-{id}:
+    post:
+      tags:
+        - Schedules
+      summary: Update worker absence by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            $ref: '#/components/schemas/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkerAbsenceUpdateRequest'
+            examples:
+              updateVacationAbsence:
+                value:
+                  id: a22086e4-daef-4487-9a9e-863e04bff35f
+                  idUserFk: 65f1d8f1-9fa5-4382-9286-b5938f5cf44f
+                  startDate: '2026-02-16T23:00:00.000Z'
+                  endDate: '2026-02-17T22:59:59.999Z'
+                  eventPurposeType: VACATION
+                  description: Descansa este días
+                  idWorkspaceFk: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+                  idCompanyFk: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+                  title: Test Title ausencia
+      responses:
+        '200':
+          description: Worker absence updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+  /api/worker-absences/delete-definitive:
+    post:
+      tags:
+        - Schedules
+      summary: Delete worker absences definitively
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteByIdListRequest'
+      responses:
+        '200':
+          description: Worker absence(s) deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/index_GenericSuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    GenericErrorResponse:
+      oneOf:
+        - type: object
+          required:
+            - ok
+            - message
+          properties:
+            ok:
+              type: boolean
+              example: false
+            message:
+              type: string
+        - type: object
+          required:
+            - message
+            - ok
+            - status
+          properties:
+            message:
+              type: string
+            ok:
+              type: boolean
+              example: false
+            status:
+              type: integer
+            item:
+              nullable: true
+            code:
+              type: string
+    manage-event.request.schema:
+      type: object
+      additionalProperties: true
+      required:
+        - type
+        - idCompany
+        - idWorkspace
+        - startDate
+        - services
+        - clients
+      properties:
+        type:
+          type: string
+          enum:
+            - event
+        mode:
+          type: string
+          enum:
+            - create
+            - edit
+            - view
+          description: Client/editor mode from platform sidebar.
+        idGroup:
+          type: string
+          format: uuid
+          description: Existing booking group id. Optional when creating.
+        idCompany:
+          type: string
+          format: uuid
+        idWorkspace:
+          type: string
+          format: uuid
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        sendNotification:
+          type: boolean
+          enum:
+            - false
+          default: false
+        description:
+          type: string
+        eventStatusType:
+          type: string
+          enum:
+            - PENDING
+            - ACCEPTED
+            - CONFIRMED
+            - COMPLETED
+            - CANCELLED
+            - CANCELLED_BY_CLIENT
+            - CANCELLED_BY_CLIENT_REMOVED
+            - PAID
+            - NO_SHOW
+        commentClient:
+          type: string
+        services:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            properties:
+              idEvent:
+                type: string
+                format: uuid
+              idService:
+                type: string
+                format: uuid
+              duration:
+                type: integer
+              name:
+                type: string
+              price:
+                type: number
+              discount:
+                type: number
+              idWorker:
+                type: string
+                format: uuid
+        clients:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            properties:
+              idClient:
+                type: string
+                format: uuid
+              idClientWorkspace:
+                type: string
+                format: uuid
+    manage-event.success.response.schema:
+      type: object
+      required:
+        - message
+        - ok
+        - status
+        - item
+      properties:
+        message:
+          type: string
+        ok:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        item:
+          type: object
+          required:
+            - events
+            - count
+          properties:
+            events:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  idGroup:
+                    type: string
+                    format: uuid
+                  idCompanyFk:
+                    type: string
+                    format: uuid
+                  idWorkspaceFk:
+                    type: string
+                    format: uuid
+            count:
+              type: integer
+              minimum: 0
+    generic-error.response.schema:
+      oneOf:
+        - type: object
+          required:
+            - ok
+            - message
+          properties:
+            ok:
+              type: boolean
+              example: false
+            message:
+              type: string
+        - type: object
+          required:
+            - message
+            - ok
+            - status
+          properties:
+            message:
+              type: string
+            ok:
+              type: boolean
+              example: false
+            status:
+              type: integer
+            item:
+              nullable: true
+            code:
+              type: string
+    DemoWorkspaceSelector:
+      type: string
+      format: uuid
+      description: |
+        Selector demo para workspace.
+        - `29f8a525-d3f2-4bc2-89bb-f0f1f1958de9` -> válido (mock por defecto).
+        - `2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9` -> válido (workspace local con horarios).
+        - `00000000-0000-4000-8000-000000000001` -> inválido (mock).
+      enum:
+        - 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+        - 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+        - 00000000-0000-4000-8000-000000000001
+      default: 29f8a525-d3f2-4bc2-89bb-f0f1f1958de9
+    DemoClientSelector:
+      type: string
+      format: uuid
+      description: |
+        Selector demo para cliente.
+        - `a2a81aad-d012-41b8-8c4e-aa5c2e6aa356` -> válido (mock).
+        - `00000000-0000-4000-8000-000000000002` -> inválido (mock).
+      enum:
+        - a2a81aad-d012-41b8-8c4e-aa5c2e6aa356
+        - 00000000-0000-4000-8000-000000000002
+      default: a2a81aad-d012-41b8-8c4e-aa5c2e6aa356
+    ClientBaseContextRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - idCompany
+        - idWorkspace
+        - customer
+      properties:
+        idCompany:
+          type: string
+          format: uuid
+        idWorkspace:
+          $ref: '#/components/schemas/DemoWorkspaceSelector'
+        idBookingPage:
+          type: string
+          format: uuid
+        customer:
+          type: object
+          required:
+            - id
+          properties:
+            id:
+              $ref: '#/components/schemas/DemoClientSelector'
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+            phone:
+              type: string
+    ClientAppointmentsRequest:
+      allOf:
+        - $ref: '#/components/schemas/ClientBaseContextRequest'
+        - type: object
+          additionalProperties: true
+          properties:
+            scope:
+              type: string
+              enum:
+                - upcoming
+                - past
+              default: upcoming
+            page:
+              type: integer
+              minimum: 1
+              default: 1
+            itemsPerPage:
+              type: integer
+              minimum: 1
+              default: 10
+    GenericSuccessResponse:
+      type: object
+      required:
+        - message
+        - ok
+      properties:
+        message:
+          type: string
+        ok:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        item:
+          nullable: true
+          additionalProperties: true
+        code:
+          type: string
+    ClientAppointmentByIdRequest:
+      allOf:
+        - $ref: '#/components/schemas/ClientBaseContextRequest'
+        - type: object
+          additionalProperties: true
+          properties:
+            id:
+              type: string
+              format: uuid
+    ClientAttendee:
+      type: object
+      additionalProperties: true
+      required:
+        - serviceId
+        - durationMin
+      properties:
+        serviceId:
+          type: string
+          format: uuid
+        durationMin:
+          type: integer
+          minimum: 1
+          example: 60
+        staffId:
+          type: string
+          format: uuid
+          nullable: true
+        categoryId:
+          type: string
+          format: uuid
+          nullable: true
+    ClientAvailableDaysRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - idCompany
+        - idWorkspace
+        - timezone
+        - range
+        - attendees
+      properties:
+        idCompany:
+          type: string
+          format: uuid
+        idWorkspace:
+          $ref: '#/components/schemas/DemoWorkspaceSelector'
+        idBookingPage:
+          type: string
+          format: uuid
+        timezone:
+          type: string
+          example: Europe/Madrid
+        range:
+          type: object
+          required:
+            - start
+            - end
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+        attendees:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ClientAttendee'
+        excludeEventId:
+          type: string
+          format: uuid
+    ClientAvailableTimesRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - idCompany
+        - idWorkspace
+        - date
+        - timezone
+        - attendees
+      properties:
+        idCompany:
+          type: string
+          format: uuid
+        idWorkspace:
+          $ref: '#/components/schemas/DemoWorkspaceSelector'
+        idBookingPage:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        timezone:
+          type: string
+          example: Europe/Madrid
+        attendees:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ClientAttendee'
+        excludeEventId:
+          type: string
+          format: uuid
+    DemoConfigOverrides:
+      type: object
+      additionalProperties: false
+      properties:
+        bookingWindow:
+          type: object
+          additionalProperties: false
+          properties:
+            minLeadTimeMin:
+              type: integer
+              minimum: 0
+              default: 60
+            maxAdvanceDays:
+              type: integer
+              minimum: 0
+              default: 45
+            sameDayCutoffHourLocal:
+              type: integer
+              minimum: 0
+              maximum: 23
+              default: 0
+        limits:
+          type: object
+          additionalProperties: false
+          properties:
+            perUserPerDay:
+              type: integer
+              minimum: 0
+              default: 5
+            perUserConcurrent:
+              type: integer
+              minimum: 0
+              default: 5
+            maxServicesPerBooking:
+              type: integer
+              minimum: 1
+              default: 1
+    ClientAddRequest:
+      allOf:
+        - $ref: '#/components/schemas/ClientBaseContextRequest'
+        - type: object
+          additionalProperties: true
+          required:
+            - startLocalISO
+            - timeZoneClient
+            - attendees
+          properties:
+            startLocalISO:
+              type: string
+              pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$
+              example: '2026-02-20T10:00:00'
+            timeZoneClient:
+              type: string
+              example: Europe/Madrid
+            attendees:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/ClientAttendee'
+            note:
+              type: string
+            isCommentRead:
+              type: boolean
+            excludeEventId:
+              type: string
+              format: uuid
+            configOverrides:
+              $ref: '#/components/schemas/DemoConfigOverrides'
+    ClientUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/ClientBaseContextRequest'
+        - type: object
+          additionalProperties: true
+          required:
+            - startLocalISO
+            - timeZoneClient
+            - attendees
+            - idEvent
+          properties:
+            startLocalISO:
+              type: string
+              pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$
+              example: '2026-02-20T10:00:00'
+            timeZoneClient:
+              type: string
+              example: Europe/Madrid
+            attendees:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/ClientAttendee'
+            note:
+              type: string
+            isCommentRead:
+              type: boolean
+            excludeEventId:
+              type: string
+              format: uuid
+            idEvent:
+              type: string
+              format: uuid
+            deletedEventIds:
+              type: array
+              items:
+                type: string
+                format: uuid
+    ClientCancelRequest:
+      allOf:
+        - $ref: '#/components/schemas/ClientBaseContextRequest'
+        - type: object
+          additionalProperties: true
+          required:
+            - idEvent
+            - status
+          properties:
+            idEvent:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum:
+                - CANCELLED_BY_CLIENT
+              default: CANCELLED_BY_CLIENT
+              description: Debe ser CANCELLED_BY_CLIENT para esta ruta.
+    ClientConfirmRequest:
+      allOf:
+        - $ref: '#/components/schemas/ClientBaseContextRequest'
+        - type: object
+          additionalProperties: true
+          required:
+            - idEvent
+            - status
+          properties:
+            idEvent:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum:
+                - CONFIRMED
+              default: CONFIRMED
+              description: Debe ser CONFIRMED para esta ruta.
+    WeekDayType:
+      type: string
+      enum:
+        - MONDAY
+        - TUESDAY
+        - WEDNESDAY
+        - THURSDAY
+        - FRIDAY
+        - SATURDAY
+        - SUNDAY
+    BusinessHourAddRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - weekDayType
+      properties:
+        idCompanyFk:
+          type: string
+          format: uuid
+        idWorkspaceFk:
+          type: string
+          format: uuid
+        idWorkspace:
+          type: string
+          format: uuid
+        weekDayType:
+          $ref: '#/components/schemas/WeekDayType'
+        startTime:
+          type: string
+          example: '09:00'
+        endTime:
+          type: string
+          example: '18:00'
+        closed:
+          type: boolean
+          example: false
+      example:
+        weekDayType: MONDAY
+        startTime: '16:00'
+        endTime: '20:00'
+        closed: false
+        idCompanyFk: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+        idWorkspaceFk: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+    index_GenericSuccessResponse:
+      type: object
+      required:
+        - message
+        - ok
+      properties:
+        message:
+          type: string
+        ok:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        item:
+          nullable: true
+          additionalProperties: true
+    BusinessHoursSearchRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - idWorkspace
+      properties:
+        idWorkspace:
+          type: string
+          format: uuid
+    IdParam:
+      type: string
+      format: uuid
+    BusinessHourUpdateRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+          format: uuid
+        idCompanyFk:
+          type: string
+          format: uuid
+        idWorkspaceFk:
+          type: string
+          format: uuid
+        weekDayType:
+          $ref: '#/components/schemas/WeekDayType'
+        startTime:
+          type: string
+        endTime:
+          type: string
+        closed:
+          type: boolean
+      example:
+        id: 348d852f-13d2-4990-b883-b594273b2c94
+        weekDayType: MONDAY
+        startTime: '09:00'
+        endTime: '15:00'
+        closed: false
+        idCompanyFk: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+        idWorkspaceFk: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+    DeleteByIdListRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - idList
+      properties:
+        idList:
+          oneOf:
+            - type: string
+              format: uuid
+            - type: array
+              minItems: 1
+              items:
+                type: string
+                format: uuid
+        action:
+          type: boolean
+          description: Optional legacy flag sent by some clients.
+      example:
+        idList:
+          - 348d852f-13d2-4990-b883-b594273b2c94
+        action: true
+    BusinessHoursRedisRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - idCompany
+        - idWorkspace
+      properties:
+        idCompany:
+          type: string
+          format: uuid
+        idWorkspace:
+          type: string
+          format: uuid
+      example:
+        idCompany: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+        idWorkspace: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+    WorkerBusinessHourAddRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - idUserFk
+        - idCompanyFk
+        - idWorkspaceFk
+        - weekDayType
+      properties:
+        idUserFk:
+          type: string
+          format: uuid
+        idCompanyFk:
+          type: string
+          format: uuid
+        idWorkspaceFk:
+          type: string
+          format: uuid
+        weekDayType:
+          $ref: '#/components/schemas/WeekDayType'
+        startTime:
+          type: string
+          example: '09:00'
+        endTime:
+          type: string
+          example: '18:00'
+        closed:
+          type: boolean
+          example: false
+      example:
+        idUserFk: 65f1d8f1-9fa5-4382-9286-b5938f5cf44f
+        weekDayType: FRIDAY
+        startTime: '10:00'
+        endTime: '13:00'
+        closed: false
+        idCompanyFk: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+        idWorkspaceFk: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+    WorkerBusinessHourUpdateRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+          format: uuid
+        idUserFk:
+          type: string
+          format: uuid
+        idWorkspaceFk:
+          type: string
+          format: uuid
+        weekDayType:
+          $ref: '#/components/schemas/WeekDayType'
+        startTime:
+          type: string
+        endTime:
+          type: string
+        closed:
+          type: boolean
+    WorkerHoursRedisRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - idUserList
+        - idWorkspace
+      properties:
+        idUserList:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
+        idWorkspace:
+          type: string
+          format: uuid
+      example:
+        idUserList:
+          - 65f1d8f1-9fa5-4382-9286-b5938f5cf44f
+        idWorkspace: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+    PaginationSearchRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        pagination:
+          type: object
+          additionalProperties: true
+    TemporaryBusinessHourAddRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - idCompanyFk
+        - idWorkspaceFk
+        - date
+      properties:
+        idCompanyFk:
+          type: string
+          format: uuid
+        idWorkspaceFk:
+          type: string
+          format: uuid
+        idUserFk:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        startTime:
+          type: string
+          example: '10:00'
+        endTime:
+          type: string
+          example: '12:00'
+        closed:
+          type: boolean
+      example:
+        idUserFk: 65f1d8f1-9fa5-4382-9286-b5938f5cf44f
+        idCompanyFk: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+        idWorkspaceFk: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+        date: '2026-02-19T11:00:00.000Z'
+        closed: false
+        startTime: '00:15'
+        endTime: '08:15'
+    TemporaryBusinessHourUpdateRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+          format: uuid
+        idCompanyFk:
+          type: string
+          format: uuid
+        idWorkspaceFk:
+          type: string
+          format: uuid
+        idUserFk:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date-time
+        startTime:
+          type: string
+        endTime:
+          type: string
+        closed:
+          type: boolean
+    TemporaryDeleteRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - idList
+        - idWorkspace
+      properties:
+        idList:
+          oneOf:
+            - type: string
+              format: uuid
+            - type: array
+              minItems: 1
+              items:
+                type: string
+                format: uuid
+        idWorkspace:
+          type: string
+          format: uuid
+    WorkerAbsenceListRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        pagination:
+          type: object
+          additionalProperties: true
+      example:
+        pagination:
+          page: 1
+          itemsPerPage: 10
+          filters:
+            idUserFk:
+              value: 65f1d8f1-9fa5-4382-9286-b5938f5cf44f
+            idWorkspaceFk:
+              value: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+    EventPurposeType:
+      type: string
+      enum:
+        - APPOINTMENT
+        - VACATION
+        - SICK_LEAVE
+        - PERSONAL_DAY
+        - UNPAID_LEAVE
+        - TEMPORARY_BLOCK
+        - OTHER
+    WorkerAbsenceAddRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - idUserFk
+        - idCompanyFk
+        - idWorkspaceFk
+        - startDate
+        - endDate
+      properties:
+        idUserFk:
+          type: string
+          format: uuid
+        idCompanyFk:
+          type: string
+          format: uuid
+        idWorkspaceFk:
+          type: string
+          format: uuid
+        idEventFk:
+          type: string
+          format: uuid
+          description: Optional event id if backend flow uses connect instead of creating event.
+        title:
+          type: string
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        eventPurposeType:
+          $ref: '#/components/schemas/EventPurposeType'
+      example:
+        idUserFk: 65f1d8f1-9fa5-4382-9286-b5938f5cf44f
+        startDate: '2026-02-19T18:24:17.536Z'
+        endDate: '2026-02-19T18:24:17.536Z'
+        eventPurposeType: VACATION
+        description: asd
+        idWorkspaceFk: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+        idCompanyFk: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+        title: Test Title ausencia
+    WorkerAbsenceUpdateRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - idUserFk
+        - startDate
+        - endDate
+      properties:
+        id:
+          type: string
+          format: uuid
+        idEventFk:
+          type: string
+          format: uuid
+        idUserFk:
+          type: string
+          format: uuid
+        idCompanyFk:
+          type: string
+          format: uuid
+        idWorkspaceFk:
+          type: string
+          format: uuid
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        title:
+          type: string
+        description:
+          type: string
+        eventPurposeType:
+          $ref: '#/components/schemas/EventPurposeType'
+      example:
+        id: a22086e4-daef-4487-9a9e-863e04bff35f
+        idUserFk: 65f1d8f1-9fa5-4382-9286-b5938f5cf44f
+        startDate: '2026-02-16T23:00:00.000Z'
+        endDate: '2026-02-17T22:59:59.999Z'
+        eventPurposeType: VACATION
+        description: Descansa este días
+        idWorkspaceFk: 2e9c6bcf-5d06-4af4-b85f-df4f4f0297f9
+        idCompanyFk: 9f89db3a-4eb8-4d95-80a4-6ed31c65285a
+        title: Test Title ausencia

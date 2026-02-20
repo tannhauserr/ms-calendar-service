@@ -27,6 +27,7 @@ router.post(
     controller.get
 );
 
+// Fuera de alcance (scope schedules actual):
 router.post(
     "/worker-absences/add",
     [
@@ -37,34 +38,34 @@ router.post(
     ],
     controller.add
 );
-
-router.get(
-    "/worker-absences-:id",
-    [
-        JWTService.authCookieOrBearer,
-        OnlyAdminMiddleware.accessOnlyAdminOrManager,
-        validateParams(workerAbsenceIdParamsSchema),
-    ],
-    controller.getById
-);
-
-router.post(
-    "/worker-absences/by-workspace",
-    JWTService.authCookieOrBearer,
-    OnlyAdminMiddleware.accessOnlyAdminOrManager,
-    validateBody(getWorkerAbsenceByWorkspaceSchema),
-    controller.getByWorkspace
-);
-
-router.post(
-    "/worker-absences/by-user",
-    [
-        JWTService.authCookieOrBearer,
-        OnlyAdminMiddleware.accessOnlyAdminOrManager,
-        validateBody(getWorkerAbsenceByUserSchema),
-    ],
-    controller.getByUser
-);
+//
+// router.get(
+//     "/worker-absences-:id",
+//     [
+//         JWTService.authCookieOrBearer,
+//         OnlyAdminMiddleware.accessOnlyAdminOrManager,
+//         validateParams(workerAbsenceIdParamsSchema),
+//     ],
+//     controller.getById
+// );
+//
+// router.post(
+//     "/worker-absences/by-workspace",
+//     JWTService.authCookieOrBearer,
+//     OnlyAdminMiddleware.accessOnlyAdminOrManager,
+//     validateBody(getWorkerAbsenceByWorkspaceSchema),
+//     controller.getByWorkspace
+// );
+//
+// router.post(
+//     "/worker-absences/by-user",
+//     [
+//         JWTService.authCookieOrBearer,
+//         OnlyAdminMiddleware.accessOnlyAdminOrManager,
+//         validateBody(getWorkerAbsenceByUserSchema),
+//     ],
+//     controller.getByUser
+// );
 
 router.post(
     "/worker-absences/update-:id",

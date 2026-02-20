@@ -1,15 +1,13 @@
 import { Prisma, WorkerBusinessHour, WeekDayType, $Enums } from "@prisma/client";
 import prisma from "../../../lib/prisma";
 import CustomError from "../../../models/custom-error/CustomError";
-import { ErrorCatalogByDomain } from "../../../models/error-codes";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../models/error-codes";
 import { Pagination } from "../../../models/pagination";
 import { getGeneric } from "../../../utils/get-genetic/getGenetic";
 import { WorkerHoursMapType } from "../../../models/interfaces";
 import { WorkerHoursStrategy } from "../../../services/@redis/cache/strategies/workerHours/workerHours.strategy";
 import moment from "moment";
 import { TIME_SECONDS } from "../../../constant/time";
-
-const withCatalogMessage = (message: string, detail: string): string => `${message} ${detail}`;
 
 export class WorkerBusinessHourService {
     /** Creates a service instance. */
@@ -30,58 +28,59 @@ export class WorkerBusinessHourService {
         }
     }
 
-    /** Returns one worker business-hour record by id. */
-    async getWorkerBusinessHourById(id: string): Promise<WorkerBusinessHour | null> {
-        try {
-            return await prisma.workerBusinessHour.findUnique({
-                where: { id: id },
-                select: {
-                    id: true,
-                    idUserFk: true,
-                    weekDayType: true,
-                    startTime: true,
-                    endTime: true,
-                    closed: true,
-                    idWorkspaceFk: true,
-                    idCompanyFk: true,
-
-
-
-                    createdDate: true,
-                    updatedDate: true,
-                    deletedDate: true,
-                }
-            });
-        } catch (error: any) {
-            throw new CustomError('WorkerBusinessHourWorkerBusinessHour.getWorkerBusinessHourById', error);
-        }
-    }
-
-    /** Returns worker business-hour records by weekday. */
-    async getWorkerBusinessHourByWeekDay(weekDayType: WeekDayType): Promise<WorkerBusinessHour[]> {
-        try {
-            return await prisma.workerBusinessHour.findMany({
-                where: { weekDayType: weekDayType },
-                select: {
-                    id: true,
-                    idUserFk: true,
-                    weekDayType: true,
-                    idWorkspaceFk: true,
-                    idCompanyFk: true,
-                    startTime: true,
-                    endTime: true,
-                    closed: true,
-                    createdDate: true,
-                    updatedDate: true,
-                    deletedDate: true,
-                },
-                orderBy: { startTime: 'asc' },
-            });
-        } catch (error: any) {
-            throw new CustomError('WorkerBusinessHourWorkerBusinessHour.getWorkerBusinessHourById', error);
-        }
-    }
-
+    // Fuera de alcance (scope schedules actual):
+    // /** Returns one worker business-hour record by id. */
+    // async getWorkerBusinessHourById(id: string): Promise<WorkerBusinessHour | null> {
+    //     try {
+    //         return await prisma.workerBusinessHour.findUnique({
+    //             where: { id: id },
+    //             select: {
+    //                 id: true,
+    //                 idUserFk: true,
+    //                 weekDayType: true,
+    //                 startTime: true,
+    //                 endTime: true,
+    //                 closed: true,
+    //                 idWorkspaceFk: true,
+    //                 idCompanyFk: true,
+    //
+    //
+    //
+    //                 createdDate: true,
+    //                 updatedDate: true,
+    //                 deletedDate: true,
+    //             }
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError('WorkerBusinessHourWorkerBusinessHour.getWorkerBusinessHourById', error);
+    //     }
+    // }
+    //
+    // /** Returns worker business-hour records by weekday. */
+    // async getWorkerBusinessHourByWeekDay(weekDayType: WeekDayType): Promise<WorkerBusinessHour[]> {
+    //     try {
+    //         return await prisma.workerBusinessHour.findMany({
+    //             where: { weekDayType: weekDayType },
+    //             select: {
+    //                 id: true,
+    //                 idUserFk: true,
+    //                 weekDayType: true,
+    //                 idWorkspaceFk: true,
+    //                 idCompanyFk: true,
+    //                 startTime: true,
+    //                 endTime: true,
+    //                 closed: true,
+    //                 createdDate: true,
+    //                 updatedDate: true,
+    //                 deletedDate: true,
+    //             },
+    //             orderBy: { startTime: 'asc' },
+    //         });
+    //     } catch (error: any) {
+    //         throw new CustomError('WorkerBusinessHourWorkerBusinessHour.getWorkerBusinessHourById', error);
+    //     }
+    // }
+    //
     /** Returns worker business-hour records by worker and workspace. */
     async getWorkerBusinessHourByWorkerAndWorkspace(idWorker: string, idWorkspace: string): Promise<{
         id: string;
@@ -179,27 +178,28 @@ export class WorkerBusinessHourService {
         }
     }
 
-    /** Returns all worker business-hour records. */
-    async getWorkerBusinessHours() {
-        try {
-            let select: Prisma.WorkerBusinessHourSelect = {
-                id: true,
-                weekDayType: true,
-                idUserFk: true,
-                startTime: true,
-                endTime: true,
-                closed: true,
-            };
-
-            const result = await prisma.workerBusinessHour.findMany({
-                select: select,
-                orderBy: { startTime: 'asc' },
-            });
-            return result;
-        } catch (error: any) {
-            throw new CustomError('BusinessHourBusinessHour.getBusinessHours', error);
-        }
-    }
+    // Fuera de alcance (scope schedules actual):
+    // /** Returns all worker business-hour records. */
+    // async getWorkerBusinessHours() {
+    //     try {
+    //         let select: Prisma.WorkerBusinessHourSelect = {
+    //             id: true,
+    //             weekDayType: true,
+    //             idUserFk: true,
+    //             startTime: true,
+    //             endTime: true,
+    //             closed: true,
+    //         };
+    //
+    //         const result = await prisma.workerBusinessHour.findMany({
+    //             select: select,
+    //             orderBy: { startTime: 'asc' },
+    //         });
+    //         return result;
+    //     } catch (error: any) {
+    //         throw new CustomError('BusinessHourBusinessHour.getBusinessHours', error);
+    //     }
+    // }
 
 
     /** Deletes worker business-hour records for one weekday. */
@@ -311,7 +311,7 @@ export class WorkerBusinessHourService {
                 workerHoursMap[userId] = workerHours;
             }
         }
-        const missing = userIds.filter(u => !workerHoursMap[u]);
+        const missing = userIds.filter((u) => !workerHoursMap[u]);
 
         if (missing.length > 0) {
             const records = await prisma.workerBusinessHour.findMany({
@@ -326,15 +326,15 @@ export class WorkerBusinessHourService {
             }
 
             for (const r of records) {
-                const weekDay = r.weekDayType; // MONDAY...
-                const start = (r.startTime as unknown as string);
-                const end = (r.endTime as unknown as string);
+                const weekDay = r.weekDayType;
+                const start = r.startTime as unknown as string;
+                const end = r.endTime as unknown as string;
 
                 if (!workerHoursMap[r.idUserFk]) workerHoursMap[r.idUserFk] = {};
                 if (!workerHoursMap[r.idUserFk]![weekDay]) workerHoursMap[r.idUserFk]![weekDay] = [];
 
                 if (r.closed) {
-                    workerHoursMap[r.idUserFk]![weekDay] = null;
+                    workerHoursMap[r.idUserFk]![weekDay] = null as any;
                 } else if (workerHoursMap[r.idUserFk]![weekDay] !== null) {
                     workerHoursMap[r.idUserFk]![weekDay]!.push([start, end]);
                 }

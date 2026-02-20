@@ -1,6 +1,7 @@
 import express from 'express';
 import { EventPlatformController } from '../../features/event-platform/controllers/event-platform.controller';
 import { BusinessHourInternalController } from '../../features/businessHour/controllers/business-hour.internal.controller';
+import { MicroserviceAuthMiddleware } from '../../middlewares/microservice-auth.middleware';
 import { validateBody } from '../../middlewares/validate-zod.middleware';
 import {
     internalGetEventDataByIdBodySchema,
@@ -14,29 +15,27 @@ const router = express.Router();
 const eventController = new EventPlatformController();
 const businessHoursController = new BusinessHourInternalController();
 
+router.use(MicroserviceAuthMiddleware.verify);
+
 // Obtener event
 router.post('/event/data', [
-    // MicroserviceAuthMiddleware.verify
     validateBody(internalGetEventDataByIdBodySchema),
 ], eventController.internalGetEventDataById);
 
 router.post('/event/group/data', [
-    // MicroserviceAuthMiddleware.verif
     validateBody(internalGetGroupDataByIdBodySchema),
 ], eventController.internalGetGroupDataById);  
 
 // obtener business hour a partir del id Workspace
 router.post('/business-hours/data', [
-    // MicroserviceAuthMiddleware.verify
 ], businessHoursController.getBusinessHoursFromRedis);
 
 // generar horario base para un workspace
 router.post('/business-hours/generate-workspace', [
-    // MicroserviceAuthMiddleware.verify
 ], businessHoursController.generateWorkspaceBusinessHours);
 
 // BookingPages (batch)
-// router.post('/booking-pages/_batch', [MicroserviceAuthMiddleware.verify], bookingPageController.internalBatchByIds);
+// router.post('/booking-pages/_batch', bookingPageController.internalBatchByIds);
 
 
 export default router;

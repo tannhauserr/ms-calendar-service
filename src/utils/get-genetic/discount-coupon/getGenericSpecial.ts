@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { Pagination } from "../../../models/pagination";
+import { Pagination, normalizePaginationInput } from "../../../models/pagination";
 import prisma from "../../../lib/prisma";
 
 
@@ -15,6 +15,7 @@ async function getGenericSpecial(
     modelName: ModelType,
     includeRelations?: any,
     isValid?: boolean,
+    options?: { maxItemsPerPage?: number; maxPage?: number },
 ) {
     const {
         orderBy,
@@ -23,25 +24,18 @@ async function getGenericSpecial(
         startDate,
         endDate,
     } = pagination;
-    const page = Math.max(1, +pagination.page);
-    const itemsPerPage = Math.max(1, +pagination.itemsPerPage);
+    const { page, itemsPerPage } = normalizePaginationInput(pagination, {
+        context: "default",
+        defaultItemsPerPage: 25,
+        maxItemsPerPage: options?.maxItemsPerPage,
+        maxPage: options?.maxPage,
+    });
 
     const skip = (page - 1) * itemsPerPage;
     const take = +itemsPerPage;
 
 
     console.log(filters)
-
-
-
-    if (page < 1) {
-        throw new Error('The page value must be greater than or equal to 1.');
-    }
-
-    if (itemsPerPage < 1) {
-        throw new Error('The itemsPerPage value must be greater than or equal to 1.');
-    }
-
     // Procesar filtros
     let where: any = {};
     // if (filters) {

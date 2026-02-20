@@ -34,14 +34,15 @@ export class WorkerAbsenceController {
         }
     }
 
+    // Fuera de alcance (scope schedules actual):
     public add = async (req: any, res: any, next: any) => {
         try {
             const body = req.body as AddWorkerAbsenceDto;
             const token = req.token;
             await this.jwtService.verify(token);
-
+    
             const { idEventFk, ...rest } = body;
-
+    
             const result = await this.workerAbsenceService.addWorkerAbsence(rest as any);
             res.status(200).json(Response.build("Ausencia registrada", 200, true, result));
         } catch (err: any) {
@@ -62,45 +63,46 @@ export class WorkerAbsenceController {
     //     }
     // }
 
-    public getById = async (req: any, res: any, next: any) => {
-        try {
-            const { id } = req.params as WorkerAbsenceIdParamsDto;
-            const token = req.token;
-            await this.jwtService.verify(token);
-
-            const result = await this.workerAbsenceService.getWorkerAbsenceById(id);
-            res.status(200).json(Response.build("Ausencia encontrada", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
-
-    public getByWorkspace = async (req: any, res: any, next: any) => {
-
-        try {
-            const { idWorkspace } = req.body as GetWorkerAbsenceByWorkspaceDto;
-            const token = req.token;
-            await this.jwtService.verify(token);
-
-            const result = await this.workerAbsenceService.getWorkerAbsencesByWorkspace(idWorkspace);
-            res.status(200).json(Response.build("Ausencias encontradas", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
-
-    public getByUser = async (req: any, res: any, next: any) => {
-        try {
-            const { idUser } = req.body as GetWorkerAbsenceByUserDto;
-            const token = req.token;
-            await this.jwtService.verify(token);
-
-            const result = await this.workerAbsenceService.getWorkerAbsencesByUser(idUser);
-            res.status(200).json(Response.build("Ausencias encontradas", 200, true, result));
-        } catch (err: any) {
-            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-        }
-    }
+    // Fuera de alcance (scope schedules actual):
+    // public getById = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { id } = req.params as WorkerAbsenceIdParamsDto;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+    //
+    //         const result = await this.workerAbsenceService.getWorkerAbsenceById(id);
+    //         res.status(200).json(Response.build("Ausencia encontrada", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
+    //
+    // public getByWorkspace = async (req: any, res: any, next: any) => {
+    //
+    //     try {
+    //         const { idWorkspace } = req.body as GetWorkerAbsenceByWorkspaceDto;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+    //
+    //         const result = await this.workerAbsenceService.getWorkerAbsencesByWorkspace(idWorkspace);
+    //         res.status(200).json(Response.build("Ausencias encontradas", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
+    //
+    // public getByUser = async (req: any, res: any, next: any) => {
+    //     try {
+    //         const { idUser } = req.body as GetWorkerAbsenceByUserDto;
+    //         const token = req.token;
+    //         await this.jwtService.verify(token);
+    //
+    //         const result = await this.workerAbsenceService.getWorkerAbsencesByUser(idUser);
+    //         res.status(200).json(Response.build("Ausencias encontradas", 200, true, result));
+    //     } catch (err: any) {
+    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+    //     }
+    // }
 
     public update = async (req: any, res: any, next: any) => {
         try {

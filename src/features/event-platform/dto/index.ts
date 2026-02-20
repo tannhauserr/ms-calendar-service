@@ -35,4 +35,3 @@ export type UpsertEventByPlatformBodyDto = z.infer<typeof upsertEventByPlatformB
 
 export type InternalGetEventDataByIdBodyDto = z.infer<typeof internalGetEventDataByIdBodySchema>;
 export type InternalGetGroupDataByIdBodyDto = z.infer<typeof internalGetGroupDataByIdBodySchema>;
-
