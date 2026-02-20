@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { CONSOLE_COLOR } from "../../../../constant/console-color";
 import { TIME_SECONDS } from "../../../../constant/time";
 import CustomError from "../../../../models/custom-error/CustomError";
+import { ErrorCatalogByDomain, withCatalogMessage } from "../../../../models/error-codes";
 import { computeSlotConfig, getUsersWhoCanPerformService_SPECIAL, getEventsOverlappingRange_SPECIAL, groupEventsByUser_SPECIAL, subtractBusyFromShift_SPECIAL, mergeTouchingWindows_SPECIAL, assignSequentially_SPECIAL } from "../../../../services/@database/event/availability-special.service";
 import { _getServicesSnapshotById } from "../../../../services/@database/event/util/getInfoServices";
 import { RedisStrategyFactory } from "../../../../services/@redis/cache/strategies/redisStrategyFactory";
@@ -12,9 +13,6 @@ import { IRedisRoundRobinStrategy } from "../../../../services/@redis/cache/stra
 import { InputRequiredPolicy, InputFormatPolicy, BookingInPastPolicy, EligibleProfessionalsPolicy, ServiceById, AssignmentSegment, getAssignmentMode, AssignmentMode, AssignmentModeStrategy, SingleGroupAssignmentStrategy, SingleIndividualAssignmentStrategy, MultiIndividualAssignmentStrategy, AssignmentStrategyInput } from "../../domain";
 import { BookingPersistence } from "../persistence";
 import { AddFromWebInput, AddFromWebDeps, StartContextResult, AvailabilityContext, MomentRange, ResolveAssignmentResult } from "./event-client-write.types";
-
-
-
 
 
 export class EventClientWriteService {
@@ -254,7 +252,12 @@ export class EventClientWriteService {
                     include: { groupEvents: true },
                 });
                 if (same) return { event: ev!, action: "already-in" };
-                throw new Error("Ese horario ya está ocupado.");
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.availability.BOOKING_ERR_OVERLAP_CONFLICT.message,
+                        "Ese horario ya está ocupado."
+                    )
+                );
             }
 
             // Grupal
@@ -278,7 +281,14 @@ export class EventClientWriteService {
             });
 
             if (already) return { event: ev!, action: "already-in" };
-            if (count >= capacity) throw new Error("No quedan plazas disponibles en ese grupo.");
+            if (count >= capacity) {
+                throw new Error(
+                    withCatalogMessage(
+                        ErrorCatalogByDomain.booking.common.BOOKING_ERR_GENERIC.message,
+                        "No quedan plazas disponibles en ese grupo."
+                    )
+                );
+            }
 
             await tx.eventParticipant.create({
                 data: {
@@ -308,7 +318,14 @@ export class EventClientWriteService {
             },
             select: { id: true },
         });
-        if (overlappingOther) throw new Error("Ese profesional ya tiene otro evento en ese horario.");
+        if (overlappingOther) {
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.booking.availability.BOOKING_ERR_OVERLAP_CONFLICT.message,
+                    "Ese profesional ya tiene otro evento en ese horario."
+                )
+            );
+        }
 
         let group = params.idGroup
             ? await tx.groupEvents.findUnique({ where: { id: params.idGroup } })
@@ -425,19 +442,39 @@ export class EventClientWriteService {
                 timeZoneClient: input.timeZoneClient,
             })
         ) {
-            throw new Error("Faltan idCompany/idWorkspace/timeZoneWorkspace/timeZoneClient");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.booking.validation.BOOKING_ERR_VALIDATION_INPUT.message,
+                    "Faltan idCompany/idWorkspace/timeZoneWorkspace/timeZoneClient"
+                )
+            );
         }
 
         if (!InputFormatPolicy.isStartLocalISO(input.startLocalISO)) {
-            throw new Error("startLocalISO debe ser YYYY-MM-DDTHH:mm:ss");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.booking.validation.BOOKING_ERR_VALIDATION_INPUT.message,
+                    "startLocalISO debe ser YYYY-MM-DDTHH:mm:ss"
+                )
+            );
         }
 
         if (!InputRequiredPolicy.hasAttendees(input.attendees)) {
-            throw new Error("attendees vacío");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.booking.validation.BOOKING_ERR_VALIDATION_INPUT.message,
+                    "attendees vacío"
+                )
+            );
         }
 
         if (!InputRequiredPolicy.hasCustomerIdentifiers(input.customer)) {
-            throw new Error("Falta customer.id/customer.idClientWorkspace");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.booking.validation.BOOKING_ERR_VALIDATION_INPUT.message,
+                    "Falta customer.id/customer.idClientWorkspace"
+                )
+            );
         }
     }
 
@@ -451,7 +488,12 @@ export class EventClientWriteService {
     ): StartContextResult {
         const startClient = moment.tz(startLocalISO, "YYYY-MM-DDTHH:mm:ss", timeZoneClient);
         if (!startClient.isValid()) {
-            throw new Error("startLocalISO inválido");
+            throw new Error(
+                withCatalogMessage(
+                    ErrorCatalogByDomain.booking.validation.BOOKING_ERR_VALIDATION_INPUT.message,
+                    "startLocalISO inválido"
+                )
+            );
         }
 
         const startWS = startClient.clone().tz(timeZoneWorkspace);
@@ -822,7 +864,12 @@ export class EventClientWriteService {
             createEvent: async (tx, segment) => {
                 const service = params.serviceById[segment.serviceId];
                 if (!service) {
-                    throw new Error("Servicio no disponible o no pertenece a este workspace.");
+                    throw new Error(
+                        withCatalogMessage(
+                            ErrorCatalogByDomain.booking.common.BOOKING_ERR_GENERIC.message,
+                            "Servicio no disponible o no pertenece a este workspace."
+                        )
+                    );
                 }
 
                 return this.createOrJoinGroupEvent(tx, {
