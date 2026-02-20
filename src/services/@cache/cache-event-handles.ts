@@ -24,7 +24,7 @@ import { KeyCacheType } from "./keys-cache";
  * @param key 
  * @param value 
  */
-export const handleCacheDelete = async (key: KeyCacheType, value) => {
+export const handleCacheDelete = async (key: KeyCacheType, value: unknown) => {
     console.log(`DELETE "${key}" ha sido eliminada.`);
     try {
         const parts = key.split("_");
@@ -40,7 +40,6 @@ export const handleCacheDelete = async (key: KeyCacheType, value) => {
         console.error(e)
     }
 }
-
 
 
 

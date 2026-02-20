@@ -171,7 +171,7 @@ export const runFastPathSingleFlow = async (params: RunFastPathSingleFlowParams)
 
     const segment = {
         serviceId: svcReq.serviceId,
-        userId: chosen,
+        userId: chosen as string,
         start: startWS.clone().seconds(0).milliseconds(0),
         end: endWS.clone().seconds(0).milliseconds(0),
     };

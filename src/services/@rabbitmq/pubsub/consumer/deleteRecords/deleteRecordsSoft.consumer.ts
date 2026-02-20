@@ -3,7 +3,7 @@ import { Channel, ConsumeMessage } from "amqplib";
 import { RabbitPubSubService } from "../../facade-pubsub/rabbit-pubsub.service";
 import prisma from "../../../../../lib/prisma";
 import { RabbitMQKeys } from "../../../keys/rabbitmq.keys";
-import { RequestDeleteRecords } from "./interfaces";
+import { DeleteRecordsTable, RequestDeleteRecords } from "./interfaces";
 import { RedisStrategyFactory } from "../../../../@redis/cache/strategies/redisStrategyFactory";
 import { MessageReliabilityStrategy } from "../../../../@redis/cache/strategies/messageReliability/message-reliability.strategy";
 import { DeadLetterMessageService } from "../../dead-letter/dead-letter-message.service";
@@ -24,6 +24,22 @@ function validateIdsAreStrings(ids: unknown): ids is string[] {
     if (!Array.isArray(ids) || ids.length === 0) return false;
     for (const v of ids) if (typeof v !== "string" || v.trim().length === 0) return false;
     return true;
+}
+
+function isDeleteRecordsTable(value: unknown): value is DeleteRecordsTable {
+    if (typeof value !== "string") return false;
+    return new Set<DeleteRecordsTable>([
+        "companies",
+        "workspaces",
+        "userWorkspaces-byWorkspace",
+        "userWorkspaces-byWorkspace-hard",
+        "userWorkspaces-byUser",
+        "clientWorkspaces",
+        "clients",
+        "users",
+        "usersEventDeleteDefinitive",
+        "calendarEvents",
+    ]).has(value as DeleteRecordsTable);
 }
 
 
@@ -150,19 +166,7 @@ async function deleteSOFTRecordsConsumer(): Promise<void> {
             const { table, ids, idRelation } = (content || {}) as Partial<RequestDeleteRecords>;
 
             // ✅ Validación mínima
-            const allowedTables = new Set([
-                "companies",
-                "workspaces",
-                "userWorkspaces-byWorkspace",
-                "userWorkspaces-byWorkspace-hard",
-                "userWorkspaces-byUser",
-                "clientWorkspaces",
-                "clients",
-                "users",
-                // Caso especial para Eventos
-                "usersEventDeleteDefinitive",
-            ]);
-            if (!allowedTables.has(table) || !validateIdsAreStrings(ids)) {
+            if (!isDeleteRecordsTable(table) || !validateIdsAreStrings(ids)) {
                 console.error(`[Calendar-MS][Delete] Payload inválido table=${table} → DLQ`);
                 return nack(false);
             }

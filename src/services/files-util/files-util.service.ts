@@ -16,7 +16,7 @@ const createReadStream = util.promisify(fs.createReadStream);
 
 export class FilesUtilService {
 
-    static storeVideoFromYoutube = async (url, path) => {
+    static storeVideoFromYoutube = async (url: string, path: string): Promise<string | null> => {
         try {
             await pipeline(
                 ytdl(url),
@@ -30,7 +30,7 @@ export class FilesUtilService {
         }
     }
 
-    static getFile = async (path) => {
+    static getFile = async (path: string): Promise<NodeJS.ReadableStream | null> => {
         try {
             return await fs.createReadStream(path);
         } catch (e) {
@@ -39,12 +39,12 @@ export class FilesUtilService {
         }
     }
 
-    static deleteFile = async (path) => {
+    static deleteFile = async (path: string): Promise<void> => {
         await unlink(path);
     }
 
 
-    static existFile = async (path) => {
-        return await fs.existsSync(path);
+    static existFile = async (path: string): Promise<boolean> => {
+        return fs.existsSync(path);
     }
 }

@@ -41,7 +41,7 @@ export class EventClientWriteService {
                 temporaryHoursService,
                 bookingConfig,
                 cache,
-                autoConfirmClientBookings,
+                autoConfirmClientBookings = false,
             } = deps;
 
             console.log(CONSOLE_COLOR.FgMagenta, "[addEventFromWeb] input:", input, CONSOLE_COLOR.Reset);

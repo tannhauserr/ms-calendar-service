@@ -1,9 +1,12 @@
 import { CONSOLE_COLOR } from "../../constant/console-color";
+import axios from "axios";
 
-const axios = require('axios');
+type ImageConfig = {
+    logo?: string | null;
+};
 
 export class ImageService {
-    static async checkImageUrl(url) {
+    static async checkImageUrl(url: string): Promise<boolean> {
         try {
             const response = await axios.head(url);
             return response.status >= 200 && response.status < 300;
@@ -14,7 +17,7 @@ export class ImageService {
         }
     }
 
-    static async constructFullLogoUrl(config) {
+    static async constructFullLogoUrl(config: ImageConfig): Promise<string | null> {
         if (!config.logo) return null;
 
         const isFullUrl = config.logo.startsWith('http://') || config.logo.startsWith('https://');

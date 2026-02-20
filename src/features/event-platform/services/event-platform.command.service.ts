@@ -240,9 +240,9 @@ export class EventPlatformCommandService {
 
     public async changeEventStatusByParticipant(
         id: string,
-        idClient: string,
-        idClientWorkspace: string,
-        action: ParticipantAction
+        action: ParticipantAction,
+        idClient?: string | null,
+        idClientWorkspace?: string | null,
     ): Promise<EventParticipant | undefined> {
         try {
             const event = await prisma.event.findUnique({

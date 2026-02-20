@@ -274,11 +274,11 @@ export class TemporaryBusinessHourService {
 
     async getTemporaryBusinessHourByWorkerAndDate(idWorker: string, date: Date): Promise<{
         id: string;
-        idUserFk: string;
+        idUserFk: string | null;
         date: Date;
         closed: boolean;
-        startTime: string;
-        endTime: string;
+        startTime: string | null;
+        endTime: string | null;
     }[]> {
         try {
             // Obtener el inicio y fin del día
@@ -860,7 +860,11 @@ export class TemporaryBusinessHourService {
             const temporaryHoursMap: TemporaryHoursMapType = {};
             const temporaryHoursStrategy = new TemporaryHoursStrategy();
 
-            const { start, end } = normalizeRange(range, true);
+            const normalizedRange = normalizeRange(range, true);
+            if (!normalizedRange) {
+                return temporaryHoursMap;
+            }
+            const { start, end } = normalizedRange;
 
 
             const wantedDays = listDaysInclusive(start, end);

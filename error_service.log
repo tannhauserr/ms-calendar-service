@@ -3407,3 +3407,993 @@ Timed out fetching a new connection from the connection pool. More info: http://
               at EventClientCommandService.confirmEventFromWeb (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/event-client/services/event-client.command.service.ts:360:23)
               at EventClientController.confirmEventFromWeb (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/features/event-client/controllers/event-client.controller.ts:204:28)
     }
+[2026-02-20 19:00:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:00:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:01:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:01:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:02:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:02:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:03:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:03:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:04:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:04:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:05:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:05:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:06:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:06:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:07:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:07:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:08:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:08:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:09:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:09:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:10:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:10:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:11:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:11:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:12:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:12:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:13:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:13:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:14:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:14:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:15:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:15:30] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }
+[2026-02-20 19:16:00] [31mERROR[39m: [36mError en servicio (verbose)[39m
+    [35mservice[39m: "WaitListService.getPendingWaitList"
+    [35merrorFile[39m: "/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js"
+    [35merrorLine[39m: 121
+    err: {
+      "type": "PrismaClientInitializationError",
+      "message": "\nInvalid `prisma.waitList.findMany()` invocation in\n/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42\n\n  125 async getPendingWaitList(limit: number): Promise<WaitList[]> {\n  126     try {\n  127         const now = new Date();\n→ 128         return await prisma.waitList.findMany(\nAuthentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.\n\nPlease make sure to provide valid database credentials for the database server at `localhost`.",
+      "stack":
+          PrismaClientInitializationError: 
+          Invalid `prisma.waitList.findMany()` invocation in
+          /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:42
+          
+            125 async getPendingWaitList(limit: number): Promise<WaitList[]> {
+            126     try {
+            127         const now = new Date();
+          → 128         return await prisma.waitList.findMany(
+          Authentication failed against database server at `localhost`, the provided database credentials for `test_calendar` are not valid.
+          
+          Please make sure to provide valid database credentials for the database server at `localhost`.
+              at $n.handleRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:7615)
+              at $n.handleAndLogRequestError (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6623)
+              at $n.request (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:121:6307)
+              at l (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/node_modules/@prisma/client/runtime/library.js:130:9633)
+              at /Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/lib/prisma.ts:239:24
+              at WaitListService.getPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@database/all-business-services/wait-list/wait-list.service.ts:128:20)
+              at WaitListCronService.processPendingWaitList (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:46:25)
+              at Job.job (/Users/alfredo/Programming/trabajo/redbluecode/24-08-booking-hairdresser/ms-calendar-gl/src/services/@cron/wait-list-cron.service.ts:25:21)
+      "name": "PrismaClientInitializationError",
+      "clientVersion": "5.22.0"
+    }

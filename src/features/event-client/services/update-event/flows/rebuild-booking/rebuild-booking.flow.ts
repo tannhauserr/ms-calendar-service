@@ -199,7 +199,7 @@ export const runRebuildBookingFlow = async (params: RunRebuildBookingFlowParams)
 
         chosenSegments.push({
             serviceId: attendee.serviceId,
-            userId: chosen,
+            userId: chosen as string,
             start: segStart,
             end: segEnd,
         });

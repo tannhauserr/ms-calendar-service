@@ -196,7 +196,7 @@ export class EventV2Service {
   */
 
 
-    markCommentAsRead = async (eventId: string, idWorkspace) => {
+    markCommentAsRead = async (eventId: string, idWorkspace: string) => {
         try {
             if (!eventId) {
                 throw new Error("El id del evento es requerido");
@@ -777,12 +777,12 @@ export class EventV2Service {
     }
 
 
-    async getEventWithoutWorkerById_Counter(idWorkspace): Promise<any> {
+    async getEventWithoutWorkerById_Counter(idWorkspace: string): Promise<any> {
 
 
     }
 
-    async getEventWithoutWorkerById_List(idWorkspace, pagination: Pagination): Promise<any> {
+    async getEventWithoutWorkerById_List(idWorkspace: string, pagination: Pagination): Promise<any> {
 
 
     }

@@ -31,5 +31,5 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-EXPOSE 3300
+EXPOSE 3201
 CMD ["node", "build/index.js"]

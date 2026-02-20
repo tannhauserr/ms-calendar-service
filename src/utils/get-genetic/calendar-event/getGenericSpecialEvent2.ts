@@ -1,6 +1,6 @@
-import { EventStatusType, Prisma } from "@prisma/client";
+import { EventStatusType } from "@prisma/client";
 import prisma from "../../../lib/prisma";
-import { FilterJson, Pagination, normalizePaginationInput } from "../../../models/pagination";
+import { Pagination, normalizePaginationInput } from "../../../models/pagination";
 import { hashClientValue } from "../../client-data-crypto/clientDataCrypto";
 
 
@@ -159,7 +159,8 @@ async function getGenericSpecialEvent2(
 
 
     try {
-        const items = await prisma[modelName as string].findMany({
+        const prismaClient = prisma as any;
+        const items = await prismaClient[modelName as string].findMany({
             where,
             skip,
             take,
@@ -170,7 +171,7 @@ async function getGenericSpecialEvent2(
 
         // console.log(items)
 
-        const totalItems = await prisma[modelName as string].count({ where });
+        const totalItems = await prismaClient[modelName as string].count({ where });
         const totalPages = Math.ceil(totalItems / itemsPerPage);
 
         return {
@@ -282,7 +283,7 @@ function processFilters(filters: Record<string, {
             isEnum,
         } = filter; // Cambiar a 'is' por defecto
 
-        const isEnumField = field.endsWith('Type') || isEnum;
+        const isEnumField = field.endsWith('Type') || Boolean(isEnum);
 
         const isMin = field.startsWith('min_');
         const isMax = field.startsWith('max_');
@@ -357,7 +358,7 @@ function mergeDeep(target: any, source: any): any {
 
 
 
-function handleCondition(isEnumField, field, value, where) {
+function handleCondition(isEnumField: boolean | undefined, field: string, value: any, where: any) {
 
     if (Array.isArray(value)) {
         const conditions = value.map(val => {
@@ -386,12 +387,12 @@ function handleCondition(isEnumField, field, value, where) {
 // JSON
 
 function processFiltersJson(filtersJson: any) {
-    let where = { AND: [] };
+    let where: any = { AND: [] };
     let conditionsByPath: { [key: string]: any[] } = {};
 
     // Recolectar condiciones por path
-    Object.entries(filtersJson).forEach(([key, filters]: any) => {
-        filters.forEach(filter => {
+    Object.entries(filtersJson).forEach(([key, filters]: [string, any]) => {
+        (filters as any[]).forEach((filter: any) => {
             const { path, value } = filter;
             let conditionValue = Array.isArray(value) ? value : [value]; // Asegurar que siempre sea un array
 
@@ -403,7 +404,7 @@ function processFiltersJson(filtersJson: any) {
             }
 
             // Añadir la condición al arreglo correspondiente
-            conditionValue.forEach(val => {
+            conditionValue.forEach((val: any) => {
                 conditionsByPath[pathKey].push({
                     [key]: {
                         path: path,
@@ -415,7 +416,7 @@ function processFiltersJson(filtersJson: any) {
     });
 
     // Procesar las condiciones agrupadas por path y combinarlas con OR si es necesario
-    Object.values(conditionsByPath).forEach(conditions => {
+    Object.values(conditionsByPath).forEach((conditions: any[]) => {
         if (conditions.length === 1) {
             // Si solo hay una condición para este path, añadirla directamente
             where.AND.push(conditions[0]);

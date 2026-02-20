@@ -19,7 +19,7 @@ dotenv.config({ path: `.env.${runtimeNodeEnv}` });
 const envSchema = z
     .object({
         NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-        PORT: z.coerce.number().int().positive().default(3200),
+        PORT: z.coerce.number().int().positive().default(3201),
         LOG_LEVEL: z
             .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
             .default("info"),

@@ -168,13 +168,12 @@ export class BusinessHourService {
     /** Updates one business-hour record. */
     async updateBusinessHour(item: BusinessHour): Promise<BusinessHour> {
         try {
-            const id = item.id as string;
-            delete item.id;
+            const { id, ...rest } = item as BusinessHour & { id: string };
 
             return await prisma.businessHour.update({
                 where: { id: id },
                 data: {
-                    ...item,
+                    ...rest,
                     updatedDate: new Date(),
                 },
             });

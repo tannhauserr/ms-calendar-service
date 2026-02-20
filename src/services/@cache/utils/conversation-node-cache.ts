@@ -21,13 +21,13 @@ export interface ConversationCacheProps {
 
 export namespace ConversationNodeCache {
 
-    export const deleteConversation = (id): void => {
+    export const deleteConversation = (id: string): void => {
         // const ncs = NodeCacheService.instance;
         // let n = ncs.getNodeCache().del(keyCache.conversation + id);
         // console.log(n)
     }
 
-    export const getConversation = (id) => {
+    export const getConversation = (id: string) => {
     
   
     }
@@ -184,7 +184,6 @@ export namespace ConversationNodeCache {
 
 
 }
-
 
 
 

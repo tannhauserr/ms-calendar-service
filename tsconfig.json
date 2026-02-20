@@ -1,6 +1,9 @@
 {
+  "ts-node": {
+    "files": true
+  },
   "compilerOptions": {
-    "strictNullChecks": false,
+    "strictNullChecks": true,
     // "target": "es5",
     "target": "ES2019",
     "module": "commonjs",
@@ -20,7 +23,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "strictPropertyInitialization": false,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "downlevelIteration": true,
   },
   "include": [

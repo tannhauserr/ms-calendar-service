@@ -8,7 +8,7 @@ type NotificationType =
 
 
 export class NotificationWhere {
-    notificationType: NotificationType = undefined;
+    notificationType?: NotificationType = undefined;
     id?: number = undefined;
     title?: string = undefined;
     message?: string = undefined;
