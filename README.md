@@ -46,10 +46,17 @@ Responsabilidades principales:
 
 Módulos principales actuales:
 
-- `event-platform`: alta/edición/gestión de eventos desde plataforma.
-- `event-client`: flujo de citas desde cliente (crear, editar, cancelar, confirmar).
-- `businessHour`, `worker-business-hour`, `temporary-business-hour`, `worker-absence`.
-- `public-event`: endpoints públicos relacionados con eventos.
+- `event-platform`: alta, edición y gestión operativa de eventos desde plataforma interna.
+- `event-client`: flujo de citas desde cliente (creación, edición, cancelación y confirmación).
+- `public-event`: endpoints públicos relacionados con eventos y disponibilidad.
+- `dead-letter-management`: operación de mensajes en dead-letter (consulta y replay manual controlado por rol).
+
+Módulos de disponibilidad y jornadas:
+
+- `business-hour`: horario base del workspace.
+- `worker-business-hour`: horario individual de cada miembro del workspace.
+- `temporary-business-hour`: bloques temporales intradía para ajustes puntuales de disponibilidad en fechas concretas.
+- `worker-absence`: gestión de ausencias prolongadas (vacaciones, enfermedad u otras bajas).
 
 Endpoint de salud:
 
@@ -224,7 +231,7 @@ Los consumers de RabbitMQ críticos (`updateServiceInEvent` y `deleteSOFTRecords
 
 Feature dedicado:
 
-- `src/features/ops-dlq`
+- `src/features/dead-letter-management`
 
 Endpoints de operación DLQ:
 

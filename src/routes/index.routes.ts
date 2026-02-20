@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import jwt from "jsonwebtoken";
-import businessHourRouter from '../features/businessHour';
+import businessHourRouter from '../features/business-hour';
 import temporaryBusinessHourRouter from '../features/temporary-business-hour';
 import workerAbsenceRouter from '../features/worker-absence';
 import workerBusinessHourRouter from '../features/worker-business-hour';
 import eventPlatformRouter from '../features/event-platform';
 import eventClientRouter from '../features/event-client';
-import opsDlqRouter from '../features/ops-dlq';
+import deadLetterManagementRouter from '../features/dead-letter-management';
 import publicEventRouter from '../features/public-event';
 import microservicesRouter from './@ms/microservices.routes';
 
@@ -81,7 +81,7 @@ router.use("/api", require('./upload-file/upload-file.routes'));
 // Event routes
 router.use("/api", eventPlatformRouter);
 router.use("/api", eventClientRouter);
-router.use("/api", opsDlqRouter);
+router.use("/api", deadLetterManagementRouter);
 
 // businessHour routes
 router.use("/api", businessHourRouter);

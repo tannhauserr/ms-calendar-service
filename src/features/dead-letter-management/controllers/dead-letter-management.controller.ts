@@ -2,13 +2,13 @@ import { buildControllerErrorResponse } from "../../../models/error-codes";
 import { Response } from "../../../models/messages/response";
 import { JWTService } from "../../../services/jwt/jwt.service";
 import { DeadLetterMessagesQueryDto, ReplayDeadLetterMessageParamsDto } from "../dto";
-import { OpsDlqCommandService } from "../services/ops-dlq.command.service";
-import { OpsDlqQueryService } from "../services/ops-dlq.query.service";
+import { DeadLetterManagementCommandService } from "../services/dead-letter-management.command.service";
+import { DeadLetterManagementQueryService } from "../services/dead-letter-management.query.service";
 
-export class OpsDlqController {
+export class DeadLetterManagementController {
     private readonly jwtService: JWTService = JWTService.instance;
-    private readonly queries: OpsDlqQueryService = new OpsDlqQueryService();
-    private readonly commands: OpsDlqCommandService = new OpsDlqCommandService();
+    private readonly queries: DeadLetterManagementQueryService = new DeadLetterManagementQueryService();
+    private readonly commands: DeadLetterManagementCommandService = new DeadLetterManagementCommandService();
     private readonly allowedRoles = new Set(["ROLE_SUPER_ADMIN", "ROLE_DEVELOPER"]);
 
     private async verifyRole(token: string): Promise<string> {

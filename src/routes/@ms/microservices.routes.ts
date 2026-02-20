@@ -1,6 +1,6 @@
 import express from 'express';
 import { EventPlatformController } from '../../features/event-platform/controllers/event-platform.controller';
-import { BusinessHourInternalController } from '../../features/businessHour/controllers/business-hour.internal.controller';
+import { BusinessHourInternalController } from '../../features/business-hour/controllers/business-hour.internal.controller';
 import { MicroserviceAuthMiddleware } from '../../middlewares/microservice-auth.middleware';
 import { validateBody } from '../../middlewares/validate-zod.middleware';
 import {

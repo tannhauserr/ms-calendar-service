@@ -2,11 +2,11 @@ import express from "express";
 import { RequestIdempotencyMiddleware } from "../../middlewares/request-idempotency.middleware";
 import { validateParams, validateQuery } from "../../middlewares/validate-zod.middleware";
 import { JWTService } from "../../services/jwt/jwt.service";
-import { OpsDlqController } from "./controllers/ops-dlq.controller";
+import { DeadLetterManagementController } from "./controllers/dead-letter-management.controller";
 import { deadLetterMessagesQuerySchema, replayDeadLetterMessageParamsSchema } from "./schemas";
 
 const router = express.Router();
-const controller = new OpsDlqController();
+const controller = new DeadLetterManagementController();
 const preventDuplicateClicks = RequestIdempotencyMiddleware.preventDuplicateClicks({
     ttlSeconds: 5,
     methods: ["POST", "PUT", "PATCH", "DELETE"],

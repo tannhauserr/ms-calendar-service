@@ -170,7 +170,7 @@
 
 // BusinessHourMiddleware.ts
 import moment from "moment-timezone";
-import { BusinessHourService } from "../../features/businessHour/services/business-hour.service";
+import { BusinessHourService } from "../../features/business-hour/services/business-hour.service";
 import { TemporaryBusinessHourService } from "../../features/temporary-business-hour/services/temporary-business-hour.service";
 import { WorkerBusinessHourService } from "../../features/worker-business-hour/services/worker-business-hour.service";
 import { Response } from "../../models/messages/response";

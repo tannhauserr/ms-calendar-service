@@ -4,7 +4,7 @@ import {
     DeadLetterMessageService,
 } from "../../../services/@rabbitmq/pubsub/dead-letter/dead-letter-message.service";
 
-export class OpsDlqQueryService {
+export class DeadLetterManagementQueryService {
     private readonly deadLetterMessageService = DeadLetterMessageService.instance;
 
     public async getDeadLetterMessages(params: {
@@ -16,7 +16,7 @@ export class OpsDlqQueryService {
         try {
             return this.deadLetterMessageService.listMessages(params);
         } catch (error: any) {
-            throw new CustomError("OpsDlqQueryService.getDeadLetterMessages", error);
+            throw new CustomError("DeadLetterManagementQueryService.getDeadLetterMessages", error);
         }
     }
 }
