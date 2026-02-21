@@ -107,6 +107,39 @@ describe("EventPlatform routes integration", () => {
         expect(getEventsListMock).toHaveBeenCalledWith(payload.pagination, "co-1", "ws-1");
     });
 
+    it("POST /events-list clamps pagination bounds instead of failing validation", async () => {
+        const payload = {
+            pagination: {
+                page: 0,
+                itemsPerPage: 100000,
+                orderBy: null,
+                filters: {
+                    idWorkspaceFk: {
+                        relation: "groupEvents",
+                        value: "ws-1",
+                    },
+                },
+            },
+            idCompany: "co-1",
+            idWorkspace: "ws-1",
+        };
+
+        const response = await request(app)
+            .post("/api/events-list")
+            .send(payload)
+            .expect(200);
+
+        expect(response.body.ok).toBe(true);
+        expect(getEventsListMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                page: 1,
+                itemsPerPage: 1000,
+            }),
+            "co-1",
+            "ws-1"
+        );
+    });
+
     it("GET /events-:id returns event by id", async () => {
         const response = await request(app)
             .get("/api/events-ev-1")

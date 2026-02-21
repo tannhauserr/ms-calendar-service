@@ -70,3 +70,6 @@ node_modules.zip
 
 
 error_service.log
+error_service_simple.log
+prisma/seed/
+prisma/seed/*

@@ -1,5 +1,5 @@
 import { z } from "zod";
 import { deadLetterMessagesQuerySchema, replayDeadLetterMessageParamsSchema } from "../schemas";
 
-export type DeadLetterMessagesQueryDto = z.infer<typeof deadLetterMessagesQuerySchema>;
-export type ReplayDeadLetterMessageParamsDto = z.infer<typeof replayDeadLetterMessageParamsSchema>;
+export interface DeadLetterMessagesQueryDto extends z.infer<typeof deadLetterMessagesQuerySchema> {}
+export interface ReplayDeadLetterMessageParamsDto extends z.infer<typeof replayDeadLetterMessageParamsSchema> {}
