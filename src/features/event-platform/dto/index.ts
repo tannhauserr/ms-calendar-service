@@ -16,22 +16,23 @@ import {
     upsertEventByPlatformBodySchema,
 } from "../schemas";
 
-export type GetEventsBodyDto = z.infer<typeof getEventsBodySchema>;
-export type GetEventsListBodyDto = z.infer<typeof getEventsListBodySchema>;
-export type GetEventByIdParamsDto = z.infer<typeof getEventByIdParamsSchema>;
+export interface GetEventsBodyDto extends z.infer<typeof getEventsBodySchema> {}
+export interface GetEventsListBodyDto extends z.infer<typeof getEventsListBodySchema> {}
+export interface GetEventByIdParamsDto extends z.infer<typeof getEventByIdParamsSchema> {}
 
-export type GetEventExtraDataBodyDto = z.infer<typeof getEventExtraDataBodySchema>;
-export type GetEventExtraDataParamsDto = z.infer<typeof getEventExtraDataParamsSchema>;
+export interface GetEventExtraDataBodyDto extends z.infer<typeof getEventExtraDataBodySchema> {}
+export interface GetEventExtraDataParamsDto extends z.infer<typeof getEventExtraDataParamsSchema> {}
 
-export type MarkCommentAsReadBodyDto = z.infer<typeof markCommentAsReadBodySchema>;
-export type DeleteEventBodyDto = z.infer<typeof deleteEventBodySchema>;
-export type ChangeEventStatusBodyDto = z.infer<typeof changeEventStatusBodySchema>;
-export type ChangeEventStatusByParticipantBodyDto = z.infer<typeof changeEventStatusByParticipantBodySchema>;
+export interface MarkCommentAsReadBodyDto extends z.infer<typeof markCommentAsReadBodySchema> {}
+export interface DeleteEventBodyDto extends z.infer<typeof deleteEventBodySchema> {}
+export interface ChangeEventStatusBodyDto extends z.infer<typeof changeEventStatusBodySchema> {}
+export interface ChangeEventStatusByParticipantBodyDto
+    extends z.infer<typeof changeEventStatusByParticipantBodySchema> {}
 
-export type UpdateByIdBodyDto = z.infer<typeof updateByIdBodySchema>;
-export type UpdateByIdParamsDto = z.infer<typeof updateByIdParamsSchema>;
+export interface UpdateByIdBodyDto extends z.infer<typeof updateByIdBodySchema> {}
+export interface UpdateByIdParamsDto extends z.infer<typeof updateByIdParamsSchema> {}
 
-export type UpsertEventByPlatformBodyDto = z.infer<typeof upsertEventByPlatformBodySchema>;
+export interface UpsertEventByPlatformBodyDto extends z.infer<typeof upsertEventByPlatformBodySchema> {}
 
-export type InternalGetEventDataByIdBodyDto = z.infer<typeof internalGetEventDataByIdBodySchema>;
-export type InternalGetGroupDataByIdBodyDto = z.infer<typeof internalGetGroupDataByIdBodySchema>;
+export interface InternalGetEventDataByIdBodyDto extends z.infer<typeof internalGetEventDataByIdBodySchema> {}
+export interface InternalGetGroupDataByIdBodyDto extends z.infer<typeof internalGetGroupDataByIdBodySchema> {}

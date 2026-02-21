@@ -7,9 +7,16 @@ export const dateOrStringSchema = z.union([
     z.date(),
 ]);
 
+const clampInt = (value: number, min: number, max: number): number => {
+    return Math.min(max, Math.max(min, Math.trunc(value)));
+};
+
+const clampedPaginationNumberSchema = (min: number, max: number) =>
+    z.coerce.number().transform((value) => clampInt(value, min, max)).optional();
+
 export const paginationSchema = z.looseObject({
-        page: z.coerce.number().int().positive().max(999).optional(),
-        itemsPerPage: z.coerce.number().int().positive().max(1000).optional(),
+        page: clampedPaginationNumberSchema(1, 999),
+        itemsPerPage: clampedPaginationNumberSchema(1, 1000),
         orderBy: z.looseObject({
                 field: z.string().trim().min(1),
                 order: z.enum(["asc", "desc"]),

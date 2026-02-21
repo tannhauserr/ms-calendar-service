@@ -14,15 +14,17 @@ import {
     updateTemporaryBusinessHourSchema,
 } from "../schemas";
 
-export type AddTemporaryBusinessHourDto = z.infer<typeof addTemporaryBusinessHourSchema>;
-export type UpdateTemporaryBusinessHourDto = z.infer<typeof updateTemporaryBusinessHourSchema>;
-export type GetTemporaryBusinessHoursDto = z.infer<typeof getTemporaryBusinessHoursSchema>;
-export type TemporaryBusinessHourByDateDto = z.infer<typeof temporaryBusinessHourByDateSchema>;
-export type TemporaryBusinessHourByDateQueryDto = z.infer<typeof temporaryBusinessHourByDateQuerySchema>;
-export type TemporaryBusinessHourByWorkerAndDateDto = z.infer<typeof temporaryBusinessHourByWorkerAndDateSchema>;
-export type TemporaryBusinessHourByWorkerAndDateQueryDto = z.infer<typeof temporaryBusinessHourByWorkerAndDateQuerySchema>;
-export type TemporaryBusinessHourWorkerExceptionDto = z.infer<typeof temporaryBusinessHourWorkerExceptionSchema>;
-export type DeleteTemporaryBusinessHourDto = z.infer<typeof deleteTemporaryBusinessHourSchema>;
-export type TemporaryBusinessHourAutocompleteDto = z.infer<typeof temporaryBusinessHourAutocompleteSchema>;
-export type TemporaryHoursRedisDto = z.infer<typeof temporaryHoursRedisSchema>;
-export type TemporaryBusinessHourIdParamsDto = z.infer<typeof temporaryBusinessHourIdParamsSchema>;
+export interface AddTemporaryBusinessHourDto extends z.infer<typeof addTemporaryBusinessHourSchema> {}
+export interface UpdateTemporaryBusinessHourDto extends z.infer<typeof updateTemporaryBusinessHourSchema> {}
+export interface GetTemporaryBusinessHoursDto extends z.infer<typeof getTemporaryBusinessHoursSchema> {}
+export interface TemporaryBusinessHourByDateDto extends z.infer<typeof temporaryBusinessHourByDateSchema> {}
+export interface TemporaryBusinessHourByDateQueryDto extends z.infer<typeof temporaryBusinessHourByDateQuerySchema> {}
+export interface TemporaryBusinessHourByWorkerAndDateDto extends z.infer<typeof temporaryBusinessHourByWorkerAndDateSchema> {}
+export interface TemporaryBusinessHourByWorkerAndDateQueryDto
+    extends z.infer<typeof temporaryBusinessHourByWorkerAndDateQuerySchema> {}
+export interface TemporaryBusinessHourWorkerExceptionDto
+    extends z.infer<typeof temporaryBusinessHourWorkerExceptionSchema> {}
+export interface DeleteTemporaryBusinessHourDto extends z.infer<typeof deleteTemporaryBusinessHourSchema> {}
+export interface TemporaryBusinessHourAutocompleteDto extends z.infer<typeof temporaryBusinessHourAutocompleteSchema> {}
+export interface TemporaryHoursRedisDto extends z.infer<typeof temporaryHoursRedisSchema> {}
+export interface TemporaryBusinessHourIdParamsDto extends z.infer<typeof temporaryBusinessHourIdParamsSchema> {}

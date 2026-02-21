@@ -12,23 +12,23 @@ import {
     updateBusinessHourSchema,
 } from "../schemas";
 
-export type AddBusinessHourDto = z.infer<typeof addBusinessHourSchema>;
-export type UpdateBusinessHourDto = z.infer<typeof updateBusinessHourSchema>;
-export type GetBusinessHoursDto = z.infer<typeof getBusinessHoursSchema>;
-export type GetBusinessHoursQueryDto = z.infer<typeof getBusinessHoursQuerySchema>;
-export type DeleteBusinessHourDto = z.infer<typeof deleteBusinessHourSchema>;
-export type BusinessHoursRedisDto = z.infer<typeof businessHoursRedisSchema>;
-export type BusinessHoursRedisQueryDto = z.infer<typeof businessHoursRedisQuerySchema>;
-export type BusinessHourIdParamsDto = z.infer<typeof businessHourIdParamsSchema>;
-export type BusinessHourWeekDayParamsDto = z.infer<typeof businessHourWeekDayParamsSchema>;
-export type WorkspaceBusinessHourDraftDto = {
+export interface AddBusinessHourDto extends z.infer<typeof addBusinessHourSchema> {}
+export interface UpdateBusinessHourDto extends z.infer<typeof updateBusinessHourSchema> {}
+export interface GetBusinessHoursDto extends z.infer<typeof getBusinessHoursSchema> {}
+export interface GetBusinessHoursQueryDto extends z.infer<typeof getBusinessHoursQuerySchema> {}
+export interface DeleteBusinessHourDto extends z.infer<typeof deleteBusinessHourSchema> {}
+export interface BusinessHoursRedisDto extends z.infer<typeof businessHoursRedisSchema> {}
+export interface BusinessHoursRedisQueryDto extends z.infer<typeof businessHoursRedisQuerySchema> {}
+export interface BusinessHourIdParamsDto extends z.infer<typeof businessHourIdParamsSchema> {}
+export interface BusinessHourWeekDayParamsDto extends z.infer<typeof businessHourWeekDayParamsSchema> {}
+export interface WorkspaceBusinessHourDraftDto {
     weekDayType: WeekDayType;
     startTime?: string | null;
     endTime?: string | null;
     closed?: boolean;
-};
-export type InternalGenerateWorkspaceBusinessHoursDto = {
+}
+export interface InternalGenerateWorkspaceBusinessHoursDto {
     idCompany: string;
     idWorkspace: string;
     businessHours: WorkspaceBusinessHourDraftDto[];
-};
+}

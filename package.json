@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node build/index.js",
     "build": "rimraf build && tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "openapi:bundle": "npx -y @redocly/cli bundle openapi.yaml -o openapi.bundle.yaml",
     "test": "jest --runInBand",
     "test:integration": "jest --runInBand tests/integration",
@@ -22,7 +23,9 @@
     "prisma:migrate:deploy": "dotenv -e .env.production -- npx prisma migrate deploy",
     "prisma:migrate:reset": "dotenv -e .env.development -- npx prisma migrate reset",
     "prisma:seed": "dotenv -e .env.development -- ts-node ./prisma/seed/seed.ts",
-    "prisma:seed:prod": "dotenv -e .env.production -- ts-node ./prisma/seed/seed.ts",
+    "prisma:seed:prod": "dotenv -e .env.development -- ts-node ./prisma/seed/seed.ts",
+    "prisma:seed:events:jan17:dev": "dotenv -e .env.development -- ts-node ./prisma/seed/seed-events-2026-01-17.ts",
+    "prisma:seed:events:jan17:prod": "dotenv -e .env.production -- ts-node ./prisma/seed/seed-events-2026-01-17.ts",
     "prisma:backfill:event-sensitive:dev": "dotenv -e .env.development -- ts-node ./prisma/seed/backfill-event-sensitive-data.ts",
     "prisma:backfill:event-sensitive:prod": "dotenv -e .env.production -- ts-node ./prisma/seed/backfill-event-sensitive-data.ts",
     "prisma:generate:dev": "dotenv -e .env.development -- npx prisma generate",
