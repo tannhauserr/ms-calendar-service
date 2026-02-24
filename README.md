@@ -19,6 +19,7 @@ Microservicio de calendario y citas de Guololo. Centraliza la lógica de eventos
 ## Tabla de contenidos
 
 - [Contexto](#contexto)
+- [Esquema de integración](#esquema-de-integración)
 - [Alcance funcional](#alcance-funcional)
 - [Stack técnico](#stack-técnico)
 - [Quickstart local](#quickstart-local)
@@ -29,6 +30,7 @@ Microservicio de calendario y citas de Guololo. Centraliza la lógica de eventos
 - [DLQ: persistencia y replay](#dlq-persistencia-y-replay)
 - [Deuda técnica](#deuda-técnica)
 - [Variables de entorno relevantes](#variables-de-entorno-relevantes)
+- [Documentación ampliada](#documentación-ampliada)
 - [Estructura del repositorio](#estructura-del-repositorio)
 
 ## Contexto
@@ -41,6 +43,20 @@ Responsabilidades principales:
 - Gestionar disponibilidad por negocio, profesional y excepciones temporales.
 - Publicar y consumir eventos internos (RabbitMQ/Redis, según entorno).
 - Mantener contratos OpenAPI para consumo interno y validación funcional.
+
+## Esquema de integración
+
+![Esquema de integración MS Calendar](./.github/assets/booking-guololo.svg)
+
+### Leyenda
+
+- Líneas sólidas → Comunicación síncrona entre servicios
+- Líneas discontinuas → Eventos asíncronos (RabbitMQ)
+- `validateUserContext()` → Identidad + pertenencia + autorización
+- `validateClientContext()` → Validación de cliente + tenant
+- `getServiceSnapshot()` → Datos inmutables de la reserva
+- `booking.*` → Eventos del ciclo de vida de la reserva
+- `service.updated` → Evento de cambio en catálogo
 
 ## Alcance funcional
 
@@ -57,6 +73,12 @@ Módulos de disponibilidad y jornadas:
 - `worker-business-hour`: horario individual de cada miembro del workspace.
 - `temporary-business-hour`: bloques temporales intradía para ajustes puntuales de disponibilidad en fechas concretas.
 - `worker-absence`: gestión de ausencias prolongadas (vacaciones, enfermedad u otras bajas).
+
+Endpoints de búsqueda en uso (schedules):
+
+- `POST /api/business-hours/search`
+- `POST /api/worker-business-hours/search`
+- `POST /api/temporary-business-hours/search`
 
 Endpoint de salud:
 
@@ -142,19 +164,9 @@ Hay dos entornos locales distintos para evitar mezclar datos:
 - `demo/dev` (día a día): usa `docker-compose.yml` y PostgreSQL en `localhost:5432`.
 - `integration rabbit` (tests E2E de mensajería): usa `docker-compose.integration.yml` y PostgreSQL en `localhost:55432`.
 
-Flujo `integration rabbit`:
+Flujo completo de integración Rabbit (up, migrate, test y down):
 
-```bash
-npm run it:rabbitmq:up
-npm run it:rabbitmq:migrate
-npm run test:integration:rabbitmq
-```
-
-Parar y limpiar:
-
-```bash
-npm run it:rabbitmq:down
-```
+- [`docs/rabbitmq.md`](./docs/rabbitmq.md)
 
 Nota operativa:
 
@@ -169,11 +181,8 @@ Nota operativa:
 | `npm run build` | Compila TypeScript a `build/`. |
 | `npm run start` | Ejecuta build compilado. |
 | `npm run test` | Ejecuta tests. |
-| `npm run test:integration` | Ejecuta suite de integración. |
-| `npm run it:rabbitmq:up` | Levanta stack aislado para integración Rabbit (Postgres, RabbitMQ, Redis). |
-| `npm run it:rabbitmq:migrate` | Aplica migraciones en la BD de integración Rabbit (`localhost:55432`). |
-| `npm run test:integration:rabbitmq` | Ejecuta tests de integración Rabbit con servicios reales. |
-| `npm run it:rabbitmq:down` | Baja y limpia volúmenes del stack de integración Rabbit. |
+| `npm run test:integration` | Ejecuta suite de rutas HTTP (Supertest + mocks de dependencias externas). |
+| `npm run test:integration:rabbitmq` | Ejecuta tests de integración Rabbit con servicios reales (flujo completo en `docs/rabbitmq.md`). |
 | `npm run openapi:bundle` | Genera `openapi.bundle.yaml`. |
 | `npm run prisma:migrate:dev` | Aplica migraciones en entorno dev. |
 | `npm run prisma:generate:dev` | Genera Prisma Client en dev. |
@@ -275,6 +284,16 @@ Variables críticas para ejecutar correctamente:
 - `URL_BACK_MS_GATEWAY`
 - `URL_BACK_MS_AUTH`
 - `URL_NEXTJS`
+
+## Documentación ampliada
+
+Para detalle técnico y operativa, revisar:
+
+- [`docs/README.md`](./docs/README.md)
+- [`docs/system-context.md`](./docs/system-context.md)
+- [`docs/security.md`](./docs/security.md)
+- [`docs/rabbitmq.md`](./docs/rabbitmq.md)
+- [`docs/runbook.md`](./docs/runbook.md)
 
 ## Estructura del repositorio
 

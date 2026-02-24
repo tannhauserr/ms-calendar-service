@@ -32,14 +32,13 @@ router.post(
     controller.add
 );
 
-// Fuera de alcance (scope schedules actual):
-// router.post(
-//     "/worker-business-hours/search",
-//     JWTService.authCookieOrBearer,
-//     validateBody(getWorkerBusinessHoursSchema),
-//     controller.get
-// );
-//
+router.post(
+    "/worker-business-hours/search",
+    JWTService.authCookieOrBearer,
+    validateBody(getWorkerBusinessHoursSchema),
+    controller.get
+);
+
 // router.get(
 //     "/worker-business-hours/by-weekday/:weekDayType",
 //     JWTService.authCookieOrBearer,

@@ -13,7 +13,7 @@ Documentacion tecnica del microservicio de calendario.
 
 La operativa DLQ ya no vive en `event-platform`. Ahora esta separada en un feature dedicado:
 
-- `src/features/ops-dlq`
+- `src/features/dead-letter-management`
 
 Endpoints operativos:
 
@@ -32,14 +32,9 @@ Para evitar confundir datos o puertos:
 - `docker-compose.yml` es para demo/dev normal (`PostgreSQL -> localhost:5432`).
 - `docker-compose.integration.yml` es para integración Rabbit (`PostgreSQL -> localhost:55432`, `RabbitMQ -> 5673`, `Redis -> 6380`).
 
-Comandos para integración Rabbit:
+Flujo de integración Rabbit:
 
-```bash
-npm run it:rabbitmq:up
-npm run it:rabbitmq:migrate
-npm run test:integration:rabbitmq
-npm run it:rabbitmq:down
-```
+- ver detalle en [`rabbitmq.md`](./rabbitmq.md)
 
 ## Orden recomendado de lectura
 

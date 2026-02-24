@@ -98,13 +98,16 @@ Estado MVP:
 
 Riesgos abiertos:
 
-- rutas internas sin middleware activo de auth entre MS
 - DLQ sin remediacion automatica
 - sin rotacion activa de JWT key (MVP)
 
+Estado confirmado en codigo:
+
+- `api/ms/internal/*` ya esta protegido por `MicroserviceAuthMiddleware.verify`
+- se valida caller permitido (`x-internal-ms-allowed`) y secreto interno (`x-internal-ms-secret`)
+
 Plan minimo sugerido (cuando toque hardening):
 
-1. activar middleware de auth en `api/ms/internal/*`
-2. mantener tokens por destino y politica de rotacion por MS
-3. definir runbook de rotacion de `JWT_PRIVATE_KEY` y tokens internos
-4. alertas basicas por 401/403, 5xx y crecimiento de DLQ
+1. mantener tokens por destino y politica de rotacion por MS
+2. definir runbook de rotacion de `JWT_PRIVATE_KEY` y tokens internos
+3. alertas basicas por 401/403, 5xx y crecimiento de DLQ

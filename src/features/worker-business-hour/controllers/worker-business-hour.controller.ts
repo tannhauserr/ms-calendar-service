@@ -50,20 +50,19 @@ export class WorkerBusinessHourController {
         }
     }
 
-    // Fuera de alcance (scope schedules actual):
-    // public get = async (req: any, res: any, next: any) => {
-    //     try {
-    //         const { pagination } = req.body as GetWorkerBusinessHoursDto;
-    //         const token = req.token;
-    //         await this.jwtService.verify(token);
-    //
-    //         const result = await this.workBusinessHourService.getWorkerBusinessHours();
-    //         res.status(200).json({ message: "Registros encontrados", ok: true, item: result });
-    //     } catch (err: any) {
-    //         res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
-    //     }
-    // }
-    //
+    public get = async (req: any, res: any, next: any) => {
+        try {
+            const { pagination } = req.body as GetWorkerBusinessHoursDto;
+            const token = req.token;
+            await this.jwtService.verify(token);
+
+            const result = await this.workBusinessHourService.getWorkerBusinessHours();
+            res.status(200).json({ message: "Registros encontrados", ok: true, item: result });
+        } catch (err: any) {
+            res.status(500).json(buildControllerErrorResponse("INTERNAL_SERVER_ERROR", 500, err?.message));
+        }
+    }
+
     // public getById = async (req: any, res: any, next: any) => {
     //     try {
     //         const { id } = req.params as WorkerBusinessHourIdParamsDto;
