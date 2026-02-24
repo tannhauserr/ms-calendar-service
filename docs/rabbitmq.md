@@ -109,7 +109,7 @@ Comportamiento:
 
 - ambos flujos (`deleteSOFTRecords` y `updateServiceInEvent`) tienen consumer DLQ dedicado
 - los mensajes muertos se persisten en DB en `deadLetterMessages`
-- existe replay manual hacia cola principal mediante feature `ops-dlq`
+- existe replay manual hacia cola principal mediante feature `dead-letter-management`
 - no hay replay automatico (es intencional por control operativo)
 
 Endpoints de operacion:
@@ -144,6 +144,10 @@ npm run it:rabbitmq:migrate
 npm run test:integration:rabbitmq
 npm run it:rabbitmq:down
 ```
+
+Nota operativa:
+
+- para `test:integration:rabbitmq` no hace falta `npm run start`; los consumers se inicializan dentro del test.
 
 Cobertura actual de esa suite:
 

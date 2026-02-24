@@ -142,6 +142,53 @@ export async function getWorkspacesByIds(ids: string[]) {
     }
 }
 
+export type CheckAccountRole =
+    | "ROLE_ADMIN"
+    | "ROLE_USER"
+    | "ROLE_MANAGER"
+    | "ROLE_OWNER"
+    | "ROLE_OUTCAST"
+    | "ROLE_SUPER_ADMIN"
+    | "ROLE_DEVELOPER"
+    | "ROLE_SUPPORT";
+
+export type CheckAccountResult = {
+    valid: boolean;
+    message?: string;
+    idUser?: string;
+    idCompany?: string;
+    role?: CheckAccountRole | null;
+};
+
+export async function checkUserBelongsToCompany(
+    idUser: string,
+    idCompany: string,
+    roleAllowedList?: CheckAccountRole[]
+): Promise<CheckAccountResult> {
+    try {
+        if (!idUser || !idCompany) {
+            return { valid: false, message: "idUser and idCompany are required" };
+        }
+
+        const params: Record<string, string> = { idUser, idCompany };
+        if (roleAllowedList?.length) {
+            params.roleAllowedList = roleAllowedList.join(",");
+        }
+
+        const { data } = await client.get(`/internal/security/check-account`, { params });
+        return data as CheckAccountResult;
+    } catch (err: any) {
+        new CustomError(`${CONSOLE_COLOR.BgRed} [checkUserBelongsToCompany] error ${CONSOLE_COLOR.Reset}`, err);
+        const errorPayload = err?.response?.data;
+        return {
+            valid: false,
+            message: errorPayload?.message || "check-account failed",
+            idUser,
+            idCompany,
+            role: null,
+        };
+    }
+}
 
 
 

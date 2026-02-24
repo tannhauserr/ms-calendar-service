@@ -66,7 +66,7 @@ export class EventPlatformQueryService {
                     normalizedPagination,
                     "event",
                     select,
-                    false,
+                    true,
                     { maxItemsPerPage }
                 );
 
@@ -125,7 +125,7 @@ export class EventPlatformQueryService {
                 normalizedPagination,
                 "event",
                 select,
-                true,
+                false,
                 { maxItemsPerPage }
             );
             result.rows = result.rows.map((row: any) => this.withGroupFields(row as any));

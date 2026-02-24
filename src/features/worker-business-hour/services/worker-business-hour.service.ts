@@ -178,28 +178,27 @@ export class WorkerBusinessHourService {
         }
     }
 
-    // Fuera de alcance (scope schedules actual):
-    // /** Returns all worker business-hour records. */
-    // async getWorkerBusinessHours() {
-    //     try {
-    //         let select: Prisma.WorkerBusinessHourSelect = {
-    //             id: true,
-    //             weekDayType: true,
-    //             idUserFk: true,
-    //             startTime: true,
-    //             endTime: true,
-    //             closed: true,
-    //         };
-    //
-    //         const result = await prisma.workerBusinessHour.findMany({
-    //             select: select,
-    //             orderBy: { startTime: 'asc' },
-    //         });
-    //         return result;
-    //     } catch (error: any) {
-    //         throw new CustomError('BusinessHourBusinessHour.getBusinessHours', error);
-    //     }
-    // }
+    /** Returns all worker business-hour records. */
+    async getWorkerBusinessHours() {
+        try {
+            const select: Prisma.WorkerBusinessHourSelect = {
+                id: true,
+                weekDayType: true,
+                idUserFk: true,
+                startTime: true,
+                endTime: true,
+                closed: true,
+            };
+
+            const result = await prisma.workerBusinessHour.findMany({
+                select,
+                orderBy: { startTime: 'asc' },
+            });
+            return result;
+        } catch (error: any) {
+            throw new CustomError('BusinessHourBusinessHour.getBusinessHours', error);
+        }
+    }
 
 
     /** Deletes worker business-hour records for one weekday. */

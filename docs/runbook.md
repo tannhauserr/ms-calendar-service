@@ -135,9 +135,4 @@ Accion operativa recomendada:
 
 ## 6) Ejecucion rapida de integracion Rabbit
 
-```bash
-npm run it:rabbitmq:up
-npm run it:rabbitmq:migrate
-npm run test:integration:rabbitmq
-npm run it:rabbitmq:down
-```
+- usar flujo oficial documentado en [`rabbitmq.md`](./rabbitmq.md)

@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 const verifyMock = jest.fn<() => Promise<{ role: string; idUser: string }>>();
 const addTemporaryBusinessHourMock = jest.fn<() => Promise<any>>();
 const getTemporaryBusinessHours2Mock = jest.fn<() => Promise<any>>();
-const getTemporaryBusinessHourByDateMock = jest.fn<() => Promise<any>>();
 const updateTemporaryBusinessHourMock = jest.fn<() => Promise<any>>();
 const deleteTemporaryBusinessHourFromRedisMock = jest.fn<() => Promise<any>>();
 const deleteTemporaryHoursCacheMock = jest.fn<() => Promise<void>>();
@@ -34,7 +33,6 @@ jest.mock("../../../src/features/temporary-business-hour/services/temporary-busi
     TemporaryBusinessHourService: class {
         addTemporaryBusinessHour = addTemporaryBusinessHourMock;
         getTemporaryBusinessHours2 = getTemporaryBusinessHours2Mock;
-        getTemporaryBusinessHourByDate = getTemporaryBusinessHourByDateMock;
         updateTemporaryBusinessHour = updateTemporaryBusinessHourMock;
         deleteTemporaryBusinessHourFromRedis = deleteTemporaryBusinessHourFromRedisMock;
     },
@@ -60,7 +58,6 @@ describe("TemporaryBusinessHour routes integration", () => {
             temporary: { id: "tmp-1", idWorkspaceFk: "ws-1", idUserFk: "u-1" },
         });
         getTemporaryBusinessHours2Mock.mockResolvedValue([{ id: "tmp-1" }]);
-        getTemporaryBusinessHourByDateMock.mockResolvedValue([{ id: "tmp-1" }]);
         updateTemporaryBusinessHourMock.mockResolvedValue({
             temporary: { id: "tmp-1", idWorkspaceFk: "ws-1", idUserFk: "u-1" },
         });
@@ -87,15 +84,6 @@ describe("TemporaryBusinessHour routes integration", () => {
     it("POST /temporary-business-hours/search reads records", async () => {
         await request(app).post("/api/temporary-business-hours/search").send({}).expect(200);
         expect(getTemporaryBusinessHours2Mock).toHaveBeenCalledTimes(1);
-    });
-
-    it("POST /temporary-business-hours/by-date reads by date", async () => {
-        await request(app)
-            .post("/api/temporary-business-hours/by-date")
-            .send({ date: "2026-02-17" })
-            .expect(200);
-
-        expect(getTemporaryBusinessHourByDateMock).toHaveBeenCalledWith("2026-02-17");
     });
 
     it("PUT /temporary-business-hours/:id updates a record", async () => {
