@@ -4,10 +4,10 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 
 const verifyMock = jest.fn<() => Promise<{ role: string; idUser: string }>>();
 const addWorkerBusinessHourMock = jest.fn<() => Promise<any>>();
-const getWorkerBusinessHoursMock = jest.fn<() => Promise<any>>();
 const getWorkerBusinessHourByWorkerAndWorkspaceMock = jest.fn<() => Promise<any>>();
 const updateWorkerBusinessHourMock = jest.fn<() => Promise<any>>();
 const deleteWorkerBusinessHourMock = jest.fn<() => Promise<any>>();
+const getWorkerHoursFromRedisMock = jest.fn<() => Promise<any>>();
 const deleteWorkerHoursCacheMock = jest.fn<() => Promise<void>>();
 
 jest.mock("../../../src/services/jwt/jwt.service", () => ({
@@ -41,10 +41,10 @@ jest.mock("../../../src/middlewares/business-hour/business-hour.middleware", () 
 jest.mock("../../../src/features/worker-business-hour/services/worker-business-hour.service", () => ({
     WorkerBusinessHourService: class {
         addWorkerBusinessHour = addWorkerBusinessHourMock;
-        getWorkerBusinessHours = getWorkerBusinessHoursMock;
         getWorkerBusinessHourByWorkerAndWorkspace = getWorkerBusinessHourByWorkerAndWorkspaceMock;
         updateWorkerBusinessHour = updateWorkerBusinessHourMock;
         deleteWorkerBusinessHour = deleteWorkerBusinessHourMock;
+        getWorkerHoursFromRedis = getWorkerHoursFromRedisMock;
     },
 }));
 
@@ -65,10 +65,10 @@ describe("WorkerBusinessHour routes integration", () => {
         jest.clearAllMocks();
         verifyMock.mockResolvedValue({ role: "ROLE_ADMIN", idUser: "u-1" });
         addWorkerBusinessHourMock.mockResolvedValue({ id: "wbh-1", idWorkspaceFk: "ws-1", idUserFk: "u-1" });
-        getWorkerBusinessHoursMock.mockResolvedValue([{ id: "wbh-1" }]);
         getWorkerBusinessHourByWorkerAndWorkspaceMock.mockResolvedValue([{ id: "wbh-1" }]);
         updateWorkerBusinessHourMock.mockResolvedValue({ id: "wbh-1", idWorkspaceFk: "ws-1", idUserFk: "u-1" });
         deleteWorkerBusinessHourMock.mockResolvedValue({ count: 1 });
+        getWorkerHoursFromRedisMock.mockResolvedValue({ "u-1": { MONDAY: [["09:00", "17:00"]] } });
         deleteWorkerHoursCacheMock.mockResolvedValue(undefined);
     });
 
@@ -86,11 +86,6 @@ describe("WorkerBusinessHour routes integration", () => {
             .expect(200);
 
         expect(addWorkerBusinessHourMock).toHaveBeenCalledTimes(1);
-    });
-
-    it("POST /worker-business-hours/search reads records", async () => {
-        await request(app).post("/api/worker-business-hours/search").send({}).expect(200);
-        expect(getWorkerBusinessHoursMock).toHaveBeenCalledTimes(1);
     });
 
     it("GET /worker-business-hours/by-worker/:idWorker/workspace/:idWorkspace reads by worker", async () => {
@@ -121,5 +116,14 @@ describe("WorkerBusinessHour routes integration", () => {
 
     it("old update path returns 404", async () => {
         await request(app).post("/api/worker-business-hours/update-wbh-1").send({}).expect(404);
+    });
+
+    it("POST /worker-business-hours/r-worker-business-hours/search reads redis data", async () => {
+        await request(app)
+            .post("/api/worker-business-hours/r-worker-business-hours/search")
+            .send({ idUserList: ["u-1"], idWorkspace: "ws-1" })
+            .expect(200);
+
+        expect(getWorkerHoursFromRedisMock).toHaveBeenCalledWith(["u-1"], "ws-1");
     });
 });

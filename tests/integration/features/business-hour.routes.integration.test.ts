@@ -4,8 +4,6 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 
 const verifyMock = jest.fn<() => Promise<{ role: string; idUser: string }>>();
 const addBusinessHourMock = jest.fn<() => Promise<any>>();
-const getBusinessHoursMock = jest.fn<() => Promise<any>>();
-const getBusinessHourByIdMock = jest.fn<() => Promise<any>>();
 const updateBusinessHourMock = jest.fn<() => Promise<any>>();
 const deleteBusinessHourMock = jest.fn<() => Promise<any>>();
 const getBusinessHoursFromRedisMock = jest.fn<() => Promise<any>>();
@@ -44,8 +42,6 @@ jest.mock("../../../src/middlewares/business-hour/business-hour.middleware", () 
 jest.mock("../../../src/features/business-hour/services/business-hour.service", () => ({
     BusinessHourService: class {
         addBusinessHour = addBusinessHourMock;
-        getBusinessHours = getBusinessHoursMock;
-        getBusinessHourById = getBusinessHourByIdMock;
         updateBusinessHour = updateBusinessHourMock;
         deleteBusinessHour = deleteBusinessHourMock;
         getBusinessHoursFromRedis = getBusinessHoursFromRedisMock;
@@ -69,8 +65,6 @@ describe("BusinessHour routes integration", () => {
         jest.clearAllMocks();
         verifyMock.mockResolvedValue({ role: "ROLE_ADMIN", idUser: "u-1" });
         addBusinessHourMock.mockResolvedValue({ id: "bh-1", idWorkspaceFk: "ws-1" });
-        getBusinessHoursMock.mockResolvedValue([{ id: "bh-1" }]);
-        getBusinessHourByIdMock.mockResolvedValue({ id: "bh-1" });
         updateBusinessHourMock.mockResolvedValue({ id: "bh-1", idWorkspaceFk: "ws-1" });
         deleteBusinessHourMock.mockResolvedValue({ count: 1 });
         getBusinessHoursFromRedisMock.mockResolvedValue({ MONDAY: [["09:00", "17:00"]] });
@@ -92,13 +86,13 @@ describe("BusinessHour routes integration", () => {
         expect(addBusinessHourMock).toHaveBeenCalledTimes(1);
     });
 
-    it("POST /business-hours/search reads records", async () => {
+    it("POST /business-hours/r-business-hours/search reads redis data", async () => {
         await request(app)
-            .post("/api/business-hours/search")
-            .send({ idWorkspace: "ws-1" })
+            .post("/api/business-hours/r-business-hours/search")
+            .send({ idCompany: "co-1", idWorkspace: "ws-1" })
             .expect(200);
 
-        expect(getBusinessHoursMock).toHaveBeenCalledWith("ws-1");
+        expect(getBusinessHoursFromRedisMock).toHaveBeenCalledWith("co-1", "ws-1");
     });
 
     it("PUT /business-hours/:id updates a record", async () => {

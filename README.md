@@ -76,8 +76,8 @@ Módulos de disponibilidad y jornadas:
 
 Endpoints de búsqueda en uso (schedules):
 
-- `POST /api/business-hours/search`
-- `POST /api/worker-business-hours/search`
+- `POST /api/business-hours/r-business-hours/search`
+- `POST /api/worker-business-hours/r-worker-business-hours/search`
 - `POST /api/temporary-business-hours/search`
 
 Endpoint de salud:
@@ -170,7 +170,9 @@ Flujo completo de integración Rabbit (up, migrate, test y down):
 
 Nota operativa:
 
+- `npm test` y `npm run test:integration` ejecutan solo la suite HTTP mockeada (`tests/integration/features`), sin RabbitMQ.
 - para `test:integration:rabbitmq` no hace falta `npm run start`; los consumers se inicializan dentro del test.
+- la suite `test:integration:rabbitmq` usa `ENABLE_REDIS=false` en su env de test; Redis no es obligatorio.
 
 ## Comandos principales
 
@@ -180,9 +182,11 @@ Nota operativa:
 | `npm run demo` | Inicia en modo demo (`INTEGRATIONS_MODE=mock`, sin Redis/RabbitMQ). |
 | `npm run build` | Compila TypeScript a `build/`. |
 | `npm run start` | Ejecuta build compilado. |
-| `npm run test` | Ejecuta tests. |
-| `npm run test:integration` | Ejecuta suite de rutas HTTP (Supertest + mocks de dependencias externas). |
+| `npm run test` | Alias de `test:integration:http` (suite HTTP mockeada). |
+| `npm run test:integration` | Alias de `test:integration:http` (suite HTTP mockeada). |
+| `npm run test:integration:http` | Ejecuta solo `tests/integration/features` (Supertest + mocks, sin RabbitMQ). |
 | `npm run test:integration:rabbitmq` | Ejecuta tests de integración Rabbit con servicios reales (flujo completo en `docs/rabbitmq.md`). |
+| `npm run test:integration:all` | Ejecuta todas las suites de `tests/integration` (HTTP + RabbitMQ). |
 | `npm run openapi:bundle` | Genera `openapi.bundle.yaml`. |
 | `npm run prisma:migrate:dev` | Aplica migraciones en entorno dev. |
 | `npm run prisma:generate:dev` | Genera Prisma Client en dev. |

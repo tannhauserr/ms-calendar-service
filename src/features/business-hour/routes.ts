@@ -11,7 +11,6 @@ import {
     businessHourWeekDayParamsSchema,
     businessHoursRedisSchema,
     deleteBusinessHourSchema,
-    getBusinessHoursSchema,
     updateBusinessHourSchema,
 } from "./schemas";
 
@@ -31,12 +30,12 @@ router.post(
     controller.add
 );
 
-router.post(
-    "/business-hours/search",
-    JWTService.authCookieOrBearer,
-    validateBody(getBusinessHoursSchema),
-    controller.get
-);
+// router.post(
+//     "/business-hours/search",
+//     JWTService.authCookieOrBearer,
+//     validateBody(getBusinessHoursSchema),
+//     controller.get
+// );
 //
 // router.get(
 //     "/business-hours/by-weekday/:weekDayType",
@@ -73,6 +72,13 @@ router.delete(
 
 router.post(
     "/business-hours/r-business-hours",
+    JWTService.authCookieOrBearer,
+    validateBody(businessHoursRedisSchema),
+    controller.getBusinessHoursFromRedis
+);
+
+router.post(
+    "/business-hours/r-business-hours/search",
     JWTService.authCookieOrBearer,
     validateBody(businessHoursRedisSchema),
     controller.getBusinessHoursFromRedis

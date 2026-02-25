@@ -8,7 +8,6 @@ import { validateBody, validateParams } from "../../middlewares/validate-zod.mid
 import {
     addWorkerBusinessHourSchema,
     deleteWorkerBusinessHourSchema,
-    getWorkerBusinessHoursSchema,
     updateWorkerBusinessHourSchema,
     workerBusinessHourByWorkerAndWorkspaceParamsSchema,
     workerBusinessHourIdParamsSchema,
@@ -32,12 +31,12 @@ router.post(
     controller.add
 );
 
-router.post(
-    "/worker-business-hours/search",
-    JWTService.authCookieOrBearer,
-    validateBody(getWorkerBusinessHoursSchema),
-    controller.get
-);
+// router.post(
+//     "/worker-business-hours/search",
+//     JWTService.authCookieOrBearer,
+//     validateBody(getWorkerBusinessHoursSchema),
+//     controller.get
+// );
 
 // router.get(
 //     "/worker-business-hours/by-weekday/:weekDayType",
@@ -81,6 +80,16 @@ router.delete(
 
 router.post(
     "/worker-business-hours/r-worker-business-hours",
+    [
+        JWTService.authCookieOrBearer,
+        OnlyAdminMiddleware.accessOnlyAdminOrManagerOrUser,
+        validateBody(workerHoursRedisSchema),
+    ],
+    controller.getWorkerHoursFromRedis
+);
+
+router.post(
+    "/worker-business-hours/r-worker-business-hours/search",
     [
         JWTService.authCookieOrBearer,
         OnlyAdminMiddleware.accessOnlyAdminOrManagerOrUser,
