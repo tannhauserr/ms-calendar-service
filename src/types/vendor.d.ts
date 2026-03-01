@@ -10,11 +10,6 @@ declare module "cors" {
     export = cors;
 }
 
-declare module "multer" {
-    const multer: any;
-    export = multer;
-}
-
 declare module "bcryptjs" {
     const bcrypt: any;
     export = bcrypt;
