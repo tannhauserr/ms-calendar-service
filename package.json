@@ -51,6 +51,10 @@
     "ts-jest": "^29.4.6",
     "typescript": "^5.3.3"
   },
+  "overrides": {
+    "minimatch": "^3.1.5",
+    "qs": "^6.15.0"
+  },
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "amqplib": "0.10.5",
