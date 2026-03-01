@@ -128,13 +128,19 @@ En los dos consumers principales se aplica estrategia Redis `messageReliability`
 - lock temporal por mensaje (evita doble procesamiento en paralelo)
 - marca de procesado con TTL (evita reprocesado duplicado)
 
-## Pruebas de integracion reales (Rabbit + Redis + Postgres)
+## Pruebas de integracion reales (Rabbit + Postgres)
 
 Existe suite dedicada para validar el circuito completo en local sin depender de otros MS:
 
 - test: `tests/integration/rabbitmq/update-service-in-event.rabbitmq.integration.test.ts`
 - entorno: `docker-compose.integration.yml`
 - variables: `tests/integration/env/rabbitmq.integration.env`
+- comando dedicado: `npm run test:integration:rabbitmq`
+
+Importante:
+
+- `npm test` y `npm run test:integration` no ejecutan esta suite; ambas corren solo tests HTTP mockeados.
+- esta suite de Rabbit se ejecuta con `ENABLE_REDIS=false` en su env de test; Redis no es requisito para correrla.
 
 Comandos:
 

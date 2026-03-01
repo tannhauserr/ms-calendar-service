@@ -1,7 +1,6 @@
 import { connect, Channel, Connection } from "amqplib";
 import { beforeAll, beforeEach, afterAll, describe, expect, it, jest } from "@jest/globals";
 import prisma from "../../../src/lib/prisma";
-import { RedisCacheService } from "../../../src/services/@redis/cache/redis.service";
 import { RabbitMQKeys } from "../../../src/services/@rabbitmq/keys/rabbitmq.keys";
 import {
     updateServiceInEventConsumer,
@@ -112,29 +111,10 @@ describe("RabbitMQ integration: updateServiceInEvent consumer", () => {
         await safePurgeQueue(QUEUE);
         await safePurgeQueue(DLQ);
         await safePurgeQueue(RETRY_QUEUE);
-        await RedisCacheService.instance.clear();
     });
 
     afterAll(async () => {
         // await cleanupDatabaseRows();
-
-        try {
-            await RedisCacheService.instance.clear();
-        } catch {
-            // ignore cleanup errors
-        }
-
-        const redisService = RedisCacheService.instance as any;
-        try {
-            await redisService.redisClient?.quit();
-        } catch {
-            // ignore close errors
-        }
-        try {
-            await redisService.subscriberClient?.quit();
-        } catch {
-            // ignore close errors
-        }
 
         if (publisherChannel) {
             await publisherChannel.close();
