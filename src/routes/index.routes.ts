@@ -70,9 +70,6 @@ router.use("/api/ms/internal", microservicesRouter);
 // Para acceder a archivos estáticos
 router.use("/", require('./cache-control/cache-control.routes'));
 
-// upload file
-router.use("/api", require('./upload-file/upload-file.routes'));
-
 // Calendar routes
 // router.use("/api", require('./calendar.routes'));
 
