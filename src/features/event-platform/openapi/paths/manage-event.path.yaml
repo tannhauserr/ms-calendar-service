@@ -4,8 +4,7 @@ post:
   summary: Create or update a booking group from platform sidebar
   description: >
     Upserts events for a booking group. Optional query params let you choose worker,
-    start slot (15-minute increments), and event status. `sendNotification` is forced
-    to `false` by backend.
+    start slot (15-minute increments), and event status.
   security:
     - bearerAuth: []
   parameters:
