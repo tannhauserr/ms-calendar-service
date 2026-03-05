@@ -1,8 +1,6 @@
-import dotenv from "dotenv";
 import { z } from "zod";
 import { bootstrapLogger } from "./bootstrap-logger";
-
-const runtimeNodeEnv = process.env.NODE_ENV ?? "development";
+import "./load-env";
 
 const booleanFromEnv = z.preprocess((value) => {
     if (typeof value === "string") {
@@ -12,9 +10,6 @@ const booleanFromEnv = z.preprocess((value) => {
     }
     return value;
 }, z.boolean());
-
-dotenv.config();
-dotenv.config({ path: `.env.${runtimeNodeEnv}` });
 
 const envSchema = z
     .object({
@@ -46,6 +41,7 @@ const envSchema = z
         TOKEN_MS_LOGIN: z.string().min(1),
         TOKEN_MS_CATALOG: z.string().min(1),
         TOKEN_CLIENT: z.string().min(1),
+        INTERNAL_MS_SECRET: z.string().min(1),
         TOKEN_MS_CALENDAR: z.string().min(1),
 
         URL_BACK_MS_GATEWAY: z.string().min(1),
@@ -58,6 +54,9 @@ const envSchema = z
         DESCRYPT_KEY_VERSION: z.coerce.number().int().positive().default(1),
         DEFAULT_ID_COMPANY_FK: z.string().optional(),
         DEFAULT_COMPANY_FK: z.string().optional(),
+
+
+
     })
     .loose();
 

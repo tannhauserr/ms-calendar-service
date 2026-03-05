@@ -47,6 +47,21 @@ async function getServiceToken(aud: string, sub: string): Promise<string> {
     return token;
 }
 
+function setAuthorizationHeader(config: { headers?: unknown }, token: string): void {
+    const headers = (config.headers ?? {}) as {
+        set?: (name: string, value: string) => void;
+        Authorization?: string;
+    };
+
+    if (typeof headers.set === "function") {
+        headers.set("Authorization", `Bearer ${token}`);
+    } else {
+        headers.Authorization = `Bearer ${token}`;
+    }
+
+    config.headers = headers;
+}
+
 export function attachServiceAuth(
     instance: ReturnType<typeof axios.create>,
     aud: string,
@@ -54,7 +69,7 @@ export function attachServiceAuth(
 ) {
     instance.interceptors.request.use(async (config) => {
         const tok = await getServiceToken(aud, sub);
-        config.headers = { ...(config.headers || {}), Authorization: `Bearer ${tok}` };
+        setAuthorizationHeader(config, tok);
         return config;
     });
 
@@ -65,7 +80,7 @@ export function attachServiceAuth(
             config._retry = true;
             cache.delete(aud);
             const tok = await getServiceToken(aud, sub);
-            config.headers = { ...(config.headers || {}), Authorization: `Bearer ${tok}` };
+            setAuthorizationHeader(config, tok);
             return axios.request(config);
         }
         throw error;

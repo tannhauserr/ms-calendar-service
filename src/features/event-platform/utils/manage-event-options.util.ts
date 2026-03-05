@@ -43,8 +43,8 @@ export const applyManageEventOptions = (
 ): SidebarBackendBookingPayload => {
     const payload: SidebarBackendBookingPayload = {
         ...rawPayload,
-        // Required by request: keep demo/portfolio deterministic and dependency-light.
-        sendNotification: false,
+        // Preserve caller intent; default to false when omitted.
+        sendNotification: rawPayload.sendNotification ?? false,
         services: Array.isArray(rawPayload.services) ? rawPayload.services.map((service) => ({ ...service })) : [],
         clients: Array.isArray(rawPayload.clients) ? rawPayload.clients.map((client) => ({ ...client })) : [],
     };
